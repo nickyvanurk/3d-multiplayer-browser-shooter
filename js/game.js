@@ -2,7 +2,6 @@ class Game {
   constructor() {
     this.resourcesLoaded = false;
 
-    // Initial three.js setup
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
     this.camera.position.set(0, 0, 100);
@@ -10,11 +9,12 @@ class Game {
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     document.getElementById('container').appendChild(this.renderer.domElement);
 
-    // Light up the scene to view our models
     let directionalLight = new THREE.DirectionalLight(0xffeedd);
     directionalLight.position.set(0, 0, 2);
     this.scene.add(directionalLight);
     this.scene.add(new THREE.HemisphereLight());
+
+    this.controls = new THREE.TrackballControls(this.camera);
 
     this.models = {
       spaceship: {
@@ -34,7 +34,7 @@ class Game {
   }
 
   init() {
-    
+    this.scene.add(this.models.spaceship.mesh);
   }
 
   processEvents(event) {
@@ -42,7 +42,7 @@ class Game {
   }
 
   update() {
-    
+    this.controls.update();
   }
 
   render(nextFrameAmount) {

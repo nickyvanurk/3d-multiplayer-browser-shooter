@@ -9,15 +9,13 @@ let previous = performance.now();
 let lag = 0;
 
 function gameLoop() {
-  if (!game.resourcesLoaded) return;
-
   const current = performance.now();
   const elapsed = current - previous;
 
   previous = current;
   lag += elapsed;
 
-  while (lag >= MS_PER_UPDATE) {
+  while (lag >= MS_PER_UPDATE && game.resourcesLoaded) {
     game.update();
     lag -= MS_PER_UPDATE;
   }
