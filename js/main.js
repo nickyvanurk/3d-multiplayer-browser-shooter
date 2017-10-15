@@ -9,6 +9,8 @@ let previous = performance.now();
 let lag = 0;
 
 function gameLoop() {
+  if (!game.resourcesLoaded) return;
+
   const current = performance.now();
   const elapsed = current - previous;
 
