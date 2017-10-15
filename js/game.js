@@ -1,10 +1,21 @@
+class Player {
+  constructor(id, mesh, scene) {
+    this.id = id;
+    this.mesh = mesh;
+    this.velocity = new THREE.Vector3();
+    this.acceleration = new THREE.Vector3();
+    this.mesh.rotation.set(-Math.PI / 2, 0, -Math.PI / 2);
+  }
+}
+
 class Game {
   constructor() {
     this.resourcesLoaded = false;
+    this.clock = new THREE.Clock();
 
     this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-    this.camera.position.set(0, 0, 100);
+    this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1e7);
+    this.camera.position.set(0, 10, 100);
     this.renderer = new THREE.WebGLRenderer({antialias:true});
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     document.getElementById('container').appendChild(this.renderer.domElement);
@@ -14,7 +25,12 @@ class Game {
     this.scene.add(directionalLight);
     this.scene.add(new THREE.HemisphereLight());
 
-    this.controls = new THREE.TrackballControls(this.camera);
+    this.controls = new THREE.FlyControls(this.camera);
+    this.controls.movementSpeed = 1000;
+    this.controls.domElement = document.getElementById('container');
+    this.controls.rollSpeed = Math.PI / 12;
+    this.controls.autoForward = false;
+    this.controls.dragToLook = false;
 
     this.models = {
       spaceship: {
@@ -34,7 +50,10 @@ class Game {
   }
 
   init() {
-    this.scene.add(this.models.spaceship.mesh);
+    this.player = new Player(0, this.models.spaceship.mesh.clone());
+    this.player.mesh.position.set(0, -15, -100);
+    this.camera.add(this.player.mesh);
+    this.scene.add(this.camera);
   }
 
   processEvents(event) {
@@ -42,7 +61,7 @@ class Game {
   }
 
   update() {
-    this.controls.update();
+    this.controls.update(this.clock.getDelta());
   }
 
   render(nextFrameAmount) {
