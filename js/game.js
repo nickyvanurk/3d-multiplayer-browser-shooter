@@ -30,11 +30,12 @@ class Game {
     this.loadModels(this.models, this.loadingManager);
   }
 
-  init() {
+  init() {1
+    this.scene.add(this.models.spaceship.mesh.clone());
+
     this.createStarfield(6371);
 
-    this.player = new Player(0, this.models.spaceship.mesh.clone());
-    this.scene.add(this.player.mesh);
+    this.player = new Player(0, this.models.spaceship.mesh.clone(), this.scene);
 
     this.player.mesh.add(this.camera);
     this.camera.rotation.set(0, Math.PI / 2, Math.PI / 2);
@@ -54,6 +55,8 @@ class Game {
 
         case 81: /* Q */ this.player.yawLeft = 1; break;
         case 69: /* E */ this.player.yawRight = 1; break;
+
+        case 32: /* Space */ this.player.canShoot = true; break;
       }
 
       this.player.updateRotationVector();
@@ -69,6 +72,8 @@ class Game {
 
         case 81: /* Q */ this.player.yawLeft = 0; break;
         case 69: /* E */ this.player.yawRight = 0; break;
+
+        case 32: /* Space */ this.player.canShoot = false; break;
       }
 
       this.player.updateRotationVector();

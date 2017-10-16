@@ -3,6 +3,7 @@ class Player {
     this.id = id;
     this.mesh = mesh;
     this.mesh.rotation.set(-Math.PI / 2, 0, -Math.PI / 2);
+    this.scene = scene;
 
     this.magnitude = 0;
     this.maxMagnitude = 50;
@@ -25,6 +26,13 @@ class Player {
 
     this.tmpQuaternion = new THREE.Quaternion();
     this.rotationVector = new THREE.Vector3();
+
+    this.canShoot = false;
+    this.shootInterval = 10;
+    this.projectiles = [];
+    this.projectileLifetime = 1500;
+
+    this.scene.add(this.mesh);
   }
 
   update() {
@@ -46,6 +54,44 @@ class Player {
       this.magnitude -= this.acceleration + (this.acceleration * 3 * this.break);
       if (this.magnitude < this.minMagnitude) this.magnitude = this.minMagnitude;
     }
+
+    for (let i = 0; i < this.projectiles.length; i++) {
+      if (this.projectiles[i] == undefined) continue;
+      if (this.projectiles[i].alive == false) {
+        this.projectiles.splice(i, 1);
+        continue;
+      }
+      this.projectiles[i].update();
+    }
+
+    if (this.canShoot && this.shootInterval == 0) {
+      this.shootInterval = 10;
+      this.shoot();
+    }
+
+    if (this.shootInterval > 0) this.shootInterval -= 1;
+  }
+
+  shoot() {
+    var projectile1 = new Bullet(this, this.scene);
+    projectile1.mesh.translateX(-11);
+    projectile1.mesh.translateY(11.1);
+    projectile1.mesh.translateZ(-0.7);
+    this.projectiles.push(projectile1);
+
+    var projectile2 = new Bullet(this, this.scene);
+    projectile2.mesh.translateX(-11);
+    projectile2.mesh.translateY(-11.1);
+    projectile2.mesh.translateZ(-0.7);
+    this.projectiles.push(projectile2);
+
+    setTimeout(function () {
+      projectile1.alive = false;
+      this.scene.remove(projectile1.mesh);
+
+      projectile2.alive = false;
+      this.scene.remove(projectile2.mesh);
+    }.bind(this), this.projectileLifetime);
   }
 
   updateRotationVector() {
