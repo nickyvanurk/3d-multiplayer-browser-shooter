@@ -4,6 +4,7 @@ const game = new Game();
 
 window.addEventListener('keydown', game.processEvents.bind(game));
 window.addEventListener('keyup', game.processEvents.bind(game));
+window.addEventListener('mousemove', game.processEvents.bind(game));
 
 let previous = performance.now();
 let lag = 0;
