@@ -7,6 +7,19 @@
   </head>
   <body>
     <div id="container"></div>
+    <script src="lib/firebase.js"></script>
+    <script>
+      var config = {
+        apiKey: "AIzaSyDMVi6wcbcZiYI633lk2rHsnJF8bLVj3sI",
+        authDomain: "void-af8c9.firebaseapp.com",
+        databaseURL: "https://void-af8c9.firebaseio.com",
+        projectId: "void-af8c9",
+        storageBucket: "void-af8c9.appspot.com",
+        messagingSenderId: "744479293465"
+      };
+      firebase.initializeApp(config);
+      let fbRef = firebase.database().ref("data");
+    </script>
     <script src="lib/three.min.js"></script>
     <script src="lib/TDSLoader.js"></script>
     <script src="js/bullet.js"></script>
