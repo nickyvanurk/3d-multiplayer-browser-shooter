@@ -44,6 +44,8 @@ class Server {
     client.on('close', () => {
       console.log(`Client ${client.id} disconnected`);
       delete this.clients[client.id];
+      
+      this.broadcastClientDisconnect(client);
     });
   }
 
@@ -57,6 +59,17 @@ class Server {
 
   sendClientId(client) {
     client.send(JSON.stringify({type: 'id', id: client.id}));
+  }
+
+  broadcastClientDisconnect(client) {
+    for (const key in this.clients) {
+      if (this.clients[key].readyState === WebSocket.OPEN) {
+        this.clients[key].send(JSON.stringify({
+          type: 'disconnect',
+          id: client.id
+        }));
+      }
+    }
   }
 
   setUpdateRate(hz) {

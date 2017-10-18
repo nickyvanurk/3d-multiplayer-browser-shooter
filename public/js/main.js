@@ -89,6 +89,13 @@ class Client {
           entity.setPosition(state.position);
         }
         break;
+      case 'disconnect':
+        if (this.entities[message.id]) {
+          console.log(`Client ${message.id} disconnected`);
+          this.scene.remove(this.entities[message.id].mesh);
+          delete this.entities[message.id];
+        }
+        break;
     }
   }
 }
