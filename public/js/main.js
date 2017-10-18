@@ -19,6 +19,9 @@ class Client {
         this.id = message.id;
         console.log(`Client ID set to: ${this.id}`);
         break;
+      case 'worldState':
+        console.log(message.states);
+        break;
     }
   }
 }

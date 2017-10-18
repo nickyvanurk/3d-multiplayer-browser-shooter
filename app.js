@@ -23,6 +23,8 @@ class Server {
 
     this.clients = {};
     this.entities = {};
+
+    this.setUpdateRate(10);
   }
 
   onConnection(client) {
@@ -55,6 +57,39 @@ class Server {
 
   sendClientId(client) {
     client.send(JSON.stringify({type: 'id', id: client.id}));
+  }
+
+  setUpdateRate(hz) {
+    this.updateRate = hz;
+
+    clearInterval(this.updateInterval);
+    this.updateInterval = setInterval(this.update.bind(this), 1000 / this.updateRate);
+  }
+
+  update() {
+    this.sendWorldState();
+  }
+
+  sendWorldState() {
+    let worldState = [];
+    for (let key in this.clients) {
+      let client = this.clients[key];
+      let entity = this.entities[client.id];
+      worldState.push({
+        id: entity.id,
+        position: {x: entity.x, y: entity.y, z: entity.z}
+      });
+    }
+
+    for (const key in this.clients) {
+      const client = this.clients[key];
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify({
+          type: 'worldState',
+          states: worldState
+        }));
+      }
+    }
   }
 
   listen(port) {
