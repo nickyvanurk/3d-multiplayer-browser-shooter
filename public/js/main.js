@@ -1,14 +1,9 @@
 class Entity {
-  constructor(scene) {
-    this.x = 0;
-    this.y = 0;
-    this.z = 0;
-
+  constructor(scene, position) {
     this.mesh = new THREE.Mesh(
       new THREE.BoxGeometry(1, 1, 1),
       new THREE.MeshLambertMaterial({color: 0xff0000})
     );
-    this.mesh.position.set(this.x, this.y, this.z);
     scene.add(this.mesh);
   }
 
