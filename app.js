@@ -6,9 +6,11 @@ const app = express();
 
 app.use(express.static('public'));
 
-class Entity() {
+class Entity {
   constructor() {
-    this.position = new THREE.Vector3();
+    this.x = 0;
+    this.y = 0;
+    this.z = 0;
   }
 }
 
@@ -20,6 +22,7 @@ class Server {
     this.wss.on('connection', this.onConnection.bind(this));
 
     this.clients = {};
+    this.entities = {};
   }
 
   onConnection(client) {
@@ -28,6 +31,13 @@ class Server {
     this.clients[client.id] = client;
 
     this.sendClientId(client);
+
+    let entity = new Entity();
+    entity.id = client.id;
+    entity.x = Math.floor(Math.random() * 10) + 1;
+    entity.y = Math.floor(Math.random() * 10) + 1;
+    entity.z = Math.floor(Math.random() * 10) + 1;
+    this.entities[entity.id] = entity;
 
     client.on('close', () => {
       console.log(`Client ${client.id} disconnected`);
