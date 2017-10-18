@@ -12,14 +12,33 @@ class Server {
     this.wss = new WebSocket.Server({server: this.httpServer});
 
     this.wss.on('connection', this.onConnection.bind(this));
+
+    this.clients = {};
   }
 
   onConnection(client) {
-    client.entityId = this.wss.clients.size - 1;
+    client.id = this.getAvailableClientId();
+    console.log(`Client connected, set ID to: ${client.id}`);
+    this.clients[client.id] = client;
+
+    this.sendClientId(client);
 
     client.on('close', () => {
-      console.log('client disconnected');
+      console.log(`Client ${client.id} disconnected`);
+      delete this.clients[client.id];
     });
+  }
+
+  getAvailableClientId() {
+    for (let i = 0; i < Object.keys(this.clients).length; i++) {
+      if (!this.clients.hasOwnProperty(i)) return i;
+    }
+
+    return Object.keys(this.clients).length;
+  }
+
+  sendClientId(client) {
+    client.send(JSON.stringify({type: 'id', id: client.id}));
   }
 
   listen(port) {

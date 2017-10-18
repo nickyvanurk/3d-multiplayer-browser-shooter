@@ -4,7 +4,7 @@ class Client {
     this.ws.onopen = this.onConnection;
     this.ws.onmessage = this.processServerMessages;
 
-    this.entityId = null;
+    this.id = null;
   }
 
   onConnection() {
@@ -13,6 +13,13 @@ class Client {
 
   processServerMessages(event) {
     let message = JSON.parse(event.data);
+    
+    switch(message.type) {
+      case 'id':
+        this.id = message.id;
+        console.log(`Client ID set to: ${this.id}`);
+        break;
+    }
   }
 }
 
