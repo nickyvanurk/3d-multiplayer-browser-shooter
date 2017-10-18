@@ -1,10 +1,19 @@
-const ws = new WebSocket('ws://localhost:8080');
+class Client {
+  constructor() {
+    this.ws = new WebSocket('ws://localhost:8080');
+    this.ws.onopen = this.onConnection;
+    this.ws.onmessage = this.processServerMessages;
 
-ws.onopen = () => {
-  console.log('connected');
-  ws.send('client message');
-};
+    this.entityId = null;
+  }
 
-ws.onmessage = (message) => {
-  console.log(message);
-};
+  onConnection() {
+    console.log('Connected to server');
+  }
+
+  processServerMessages(event) {
+    let message = JSON.parse(event.data);
+  }
+}
+
+const client = new Client();
