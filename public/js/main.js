@@ -23,6 +23,14 @@ class Client {
     this.entities = {};
 
     this.setUpdateRate(60);
+
+    this.keys = {
+      left: false,
+      right: false
+    };
+
+    document.body.onkeydown = this.processEvents.bind(this);
+    document.body.onkeyup = this.processEvents.bind(this);
   }
 
   onConnection() {
@@ -41,6 +49,25 @@ class Client {
     light.position.set(10, 0, 10);
     this.scene.add(light);
     this.scene.add(new THREE.HemisphereLight());
+
+    this.clock = new THREE.Clock();
+  }
+
+  processEvents(event) {
+    if (event.keyCode == 37) this.keys.left = event.type == 'keydown';
+    else if (event.key == 'a') this.keys.left = event.type == 'keydown';
+    if (event.keyCode == 39) this.keys.right = event.type == 'keydown';
+    else if (event.key == 'd') this.keys.right = event.type == 'keydown';
+  }
+
+  processInputs() {
+    if (!this.keys.left && !this.keys.right) return;
+
+    let input = {id: this.id, pressTime: this.clock.getDelta()};
+    if (this.keys.left) input.key = 'left';
+    if (this.keys.right) input.key = 'right';
+
+    this.ws.send(JSON.stringify(input));
   }
 
   setUpdateRate(hz) {
@@ -53,6 +80,7 @@ class Client {
   update() {
     if (this.id == null) return;
 
+    this.processInputs();
     this.render();
   }
 
@@ -62,7 +90,7 @@ class Client {
 
   processServerMessages(event) {
     let message = JSON.parse(event.data);
-    
+
     switch(message.type) {
       case 'id':
         this.id = message.id;

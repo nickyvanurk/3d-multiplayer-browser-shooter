@@ -11,6 +11,12 @@ class Entity {
     this.x = 0;
     this.y = 0;
     this.z = 0;
+    this.speed = 2; // units/s
+  }
+
+  applyInput(input) {
+    if (input.key === 'left') this.x -= this.speed * input.pressTime;
+    if (input.key === 'right') this.x += this.speed * input.pressTime;
   }
 }
 
@@ -41,12 +47,26 @@ class Server {
     entity.z = Math.floor(Math.random() * 10) + 1;
     this.entities[entity.id] = entity;
 
+    client.on('message', this.processInputs.bind(this));
+
     client.on('close', () => {
       console.log(`Client ${client.id} disconnected`);
       delete this.clients[client.id];
-      
+
       this.broadcastClientDisconnect(client);
     });
+  }
+
+  validateInput(input) {
+    return input < 1 / 40;
+  }
+
+  processInputs(msg) {
+    let message = JSON.parse(msg);
+
+    if (this.validateInput(message.pressTime)) {
+      this.entities[message.id].applyInput(message);
+    }
   }
 
   getAvailableClientId() {
