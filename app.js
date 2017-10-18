@@ -6,6 +6,12 @@ const app = express();
 
 app.use(express.static('public'));
 
+class Entity() {
+  constructor() {
+    this.position = new THREE.Vector3();
+  }
+}
+
 class Server {
   constructor(app) {
     this.httpServer = http.createServer(app);
