@@ -1,5 +1,6 @@
 class Entity {
   constructor(scene, position) {
+    this.positionBuffer = [];
     this.mesh = new THREE.Mesh(
       new THREE.BoxGeometry(1, 1, 1),
       new THREE.MeshLambertMaterial({color: 0xff0000})
@@ -17,6 +18,8 @@ class Client {
     this.ws = new WebSocket('ws://localhost:8080');
     this.ws.onopen = this.onConnection.bind(this);
     this.ws.onmessage = this.processServerMessages.bind(this);
+
+    this.serverUpdateRate = 10;
 
     this.id = null;
 
@@ -81,6 +84,7 @@ class Client {
     if (this.id == null) return;
 
     this.processInputs();
+    this.interpolateEntities();
     this.render();
   }
 
@@ -104,12 +108,20 @@ class Client {
           if (!this.entities[state.id]) {
             let entity = new Entity(this.scene);
             entity.id = state.id;
+            entity.setPosition(state.position);
             this.entities[state.id] = entity;
           }
 
           let entity = this.entities[state.id];
 
-          entity.setPosition(state.position);
+          if (state.id == this.id) {
+            // received the authoritative positon of this client's entity
+            entity.setPosition(state.position);
+          } else {
+            // received the position of an entity other than this client
+            let timestamp = +new Date();
+            entity.positionBuffer.push([timestamp, state.position]);
+          }
         }
         break;
       case 'disconnect':
@@ -119,6 +131,34 @@ class Client {
           delete this.entities[message.id];
         }
         break;
+    }
+  }
+
+  interpolateEntities() {
+    let now = +new Date();
+    let renderTimestamp = now - (1000.0 / this.serverUpdateRate);
+
+    for (let i in this.entities) {
+      let entity = this.entities[i];
+
+      if (entity.id == this.id) continue;
+
+      let buffer = entity.positionBuffer;
+
+      while (buffer.length >= 2 && buffer[1][0] <= renderTimestamp) {
+        buffer.shift();
+      }
+
+      if (buffer.length >= 2 && buffer[0][0] <= renderTimestamp && renderTimestamp <= buffer[1][0]) {
+        let p0 = buffer[0][1];
+        let p1 = buffer[1][1];
+        let t0 = buffer[0][0];
+        let t1 = buffer[1][0];
+
+        entity.mesh.position.x = p0.x + (p1.x - p0.x) * (renderTimestamp - t0) / (t1 - t0);
+        entity.mesh.position.y = p0.y + (p1.y - p0.y) * (renderTimestamp - t0) / (t1 - t0);
+        entity.mesh.position.z = p0.z + (p1.z - p0.z) * (renderTimestamp - t0) / (t1 - t0);
+      }
     }
   }
 }
