@@ -1,5 +1,6 @@
 class Entity {
   constructor(scene, position) {
+    this.speed = 2; // units/s
     this.positionBuffer = [];
     this.mesh = new THREE.Mesh(
       new THREE.BoxGeometry(1, 1, 1),
@@ -10,6 +11,11 @@ class Entity {
 
   setPosition(position) {
     this.mesh.position.set(position.x, position.y, position.z);
+  }
+
+  applyInput(input) {
+    if (input.key === 'left') this.mesh.position.x -= this.speed * input.pressTime;
+    if (input.key === 'right') this.mesh.position.x += this.speed * input.pressTime;
   }
 }
 
@@ -52,8 +58,6 @@ class Client {
     light.position.set(10, 0, 10);
     this.scene.add(light);
     this.scene.add(new THREE.HemisphereLight());
-
-    this.clock = new THREE.Clock();
   }
 
   processEvents(event) {
@@ -64,13 +68,21 @@ class Client {
   }
 
   processInputs() {
+    let nowTs = +new Date();
+    let lastTs = this.lastTs || nowTs;
+    let dtSec = (nowTs - lastTs) / 1000.0;
+    this.lastTs = nowTs;
+
     if (!this.keys.left && !this.keys.right) return;
 
-    let input = {id: this.id, pressTime: this.clock.getDelta()};
+    let input = {id: this.id, pressTime: dtSec};
     if (this.keys.left) input.key = 'left';
     if (this.keys.right) input.key = 'right';
 
     this.ws.send(JSON.stringify(input));
+
+    // do client-side prediction
+    this.entities[this.id].applyInput(input);
   }
 
   setUpdateRate(hz) {
