@@ -14,6 +14,7 @@ class Entity {
   }
 
   applyInput(input) {
+    if (input.key === 'forward') this.mesh.position.z -= this.speed * input.pressTime;
     if (input.key === 'left') this.mesh.position.x -= this.speed * input.pressTime;
     if (input.key === 'right') this.mesh.position.x += this.speed * input.pressTime;
   }
@@ -64,10 +65,9 @@ class Client {
   }
 
   processEvents(event) {
-    if (event.keyCode == 37) this.keys.left = event.type == 'keydown';
-    else if (event.key == 'a') this.keys.left = event.type == 'keydown';
-    if (event.keyCode == 39) this.keys.right = event.type == 'keydown';
-    else if (event.key == 'd') this.keys.right = event.type == 'keydown';
+    if (event.key == 'w' || event.keyCode == 38) this.keys.forward = event.type == 'keydown';
+    if (event.key == 'a' || event.keyCode == 37) this.keys.left = event.type == 'keydown';
+    if (event.key == 'd' || event.keyCode == 39) this.keys.right = event.type == 'keydown';
   }
 
   processInputs() {
@@ -76,12 +76,13 @@ class Client {
     let dtSec = (nowTs - lastTs) / 1000.0;
     this.lastTs = nowTs;
 
-    if ((!this.keys.left && !this.keys.right) ||
-         (this.keys.left && this.keys.right)) {
+    if ((!this.keys.left && !this.keys.right && !this.keys.forward) ||
+         (this.keys.left && this.keys.right && !this.keys.forward)) {
       return;
     }
 
     let input = {id: this.id, pressTime: dtSec, inputSequenceNumber: this.inputSequenceNumber++};
+    if (this.keys.forward) input.key = 'forward';
     if (this.keys.left) input.key = 'left';
     if (this.keys.right) input.key = 'right';
 

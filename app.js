@@ -16,6 +16,7 @@ class Entity {
   }
 
   applyInput(input) {
+    if (input.key === 'forward') this.z -= this.speed * input.pressTime;
     if (input.key === 'left') this.x -= this.speed * input.pressTime;
     if (input.key === 'right') this.x += this.speed * input.pressTime;
   }
