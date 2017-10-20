@@ -10,6 +10,7 @@
   "license": "MIT",
   "dependencies": {
     "express": "^4.16.2",
+    "three": "^0.87.1",
     "ws": "^3.2.0"
   }
 }
