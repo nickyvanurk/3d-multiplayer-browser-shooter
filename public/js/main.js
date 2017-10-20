@@ -17,9 +17,9 @@ class Entity {
   }
 
   applyInput(input) {
-    if (input.key === 'forward') this.mesh.translateZ(-this.speed * input.pressTime);
-    if (input.key === 'left') this.mesh.rotation.y += this.speed * input.pressTime;
-    if (input.key === 'right') this.mesh.rotation.y -= this.speed * input.pressTime;
+    if (input.keys.includes('forward')) this.mesh.translateZ(-this.speed * input.pressTime);
+    if (input.keys.includes('left')) this.mesh.rotation.y += this.speed * input.pressTime;
+    if (input.keys.includes('right')) this.mesh.rotation.y -= this.speed * input.pressTime;
   }
 }
 
@@ -98,10 +98,16 @@ class Client {
       return;
     }
 
-    let input = {id: this.id, pressTime: dtSec, inputSequenceNumber: this.inputSequenceNumber++};
-    if (this.keys.forward) input.key = 'forward';
-    if (this.keys.left) input.key = 'left';
-    if (this.keys.right) input.key = 'right';
+    let input = {
+      id: this.id,
+      pressTime: dtSec,
+      inputSequenceNumber: this.inputSequenceNumber++,
+      keys: ''
+    };
+    
+    if (this.keys.forward) input.keys += 'forward';
+    if (this.keys.left) input.keys += 'left';
+    if (this.keys.right) input.keys += 'right';
 
     this.ws.send(JSON.stringify(input));
 

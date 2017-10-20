@@ -18,9 +18,9 @@ class Entity {
   }
 
   applyInput(input) {
-    if (input.key === 'forward') this.mesh.translateZ(-this.speed * input.pressTime);
-    if (input.key === 'left') this.mesh.rotation.y += this.speed * input.pressTime;
-    if (input.key === 'right') this.mesh.rotation.y -= this.speed * input.pressTime;
+    if (input.keys.includes('forward')) this.mesh.translateZ(-this.speed * input.pressTime);
+    if (input.keys.includes('left')) this.mesh.rotation.y += this.speed * input.pressTime;
+    if (input.keys.includes('right')) this.mesh.rotation.y -= this.speed * input.pressTime;
   }
 }
 
