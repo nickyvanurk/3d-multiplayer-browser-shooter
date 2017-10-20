@@ -4,8 +4,10 @@ class Entity {
     this.positionBuffer = [];
     this.mesh = new THREE.Mesh(
       new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshLambertMaterial({color: 0xff0000})
+      new THREE.MeshPhongMaterial({color: 0xff0000})
     );
+    this.mesh.receiveShadow = true;
+    this.mesh.castShadow = true;
     scene.add(this.mesh);
   }
 
@@ -52,6 +54,7 @@ class Client {
 
     this.renderer = new THREE.WebGLRenderer();
     this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.renderer.shadowMap.enabled = true;
     document.getElementById('container').appendChild(this.renderer.domElement);
 
     this.scene = new THREE.Scene();
@@ -60,10 +63,22 @@ class Client {
     this.camera.position.z = 15;
     this.camera.position.y = 2;
 
-    let light = new THREE.PointLight(0xFFFFFF);
-    light.position.set(10, 0, 10);
+    this.scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+
+    let light = new THREE.PointLight(0xffffff, 0.8, 18);
+    light.position.set(3, 12, 3);
+    light.castShadow = true;
+    light.shadow.camera.near = 0.1;
+    light.shadow.camera.far = 25;
     this.scene.add(light);
-    this.scene.add(new THREE.HemisphereLight());
+
+    let plane = new THREE.Mesh(
+      new THREE.PlaneGeometry(200, 200),
+      new THREE.MeshPhongMaterial({color:0xffffff})
+    );
+    plane.rotation.x -= Math.PI / 2;
+    plane.receiveShadow = true;
+    this.scene.add(plane);
   }
 
   processEvents(event) {

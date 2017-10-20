@@ -9,9 +9,10 @@ app.use(express.static('public'));
 
 class Entity {
   constructor() {
+    this.height = 1;
     this.speed = 2; // units/s
     this.mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
+      new THREE.BoxGeometry(1, this.height, 1),
       new THREE.MeshLambertMaterial({color: 0xff0000})
     );
   }
@@ -48,7 +49,7 @@ class Server {
     let entity = new Entity();
     entity.id = client.id;
     entity.mesh.position.x = Math.floor(Math.random() * 10) + 1;
-    entity.mesh.position.y = Math.floor(Math.random() * 10) + 1;
+    entity.mesh.position.y = entity.height / 2;
     entity.mesh.position.z = Math.floor(Math.random() * 10) + 1;
     this.entities[entity.id] = entity;
 
