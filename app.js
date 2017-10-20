@@ -30,6 +30,8 @@ class Server {
     this.clients = {};
     this.entities = {};
 
+    this.lastProcessedInput = [];
+
     this.setUpdateRate(10);
   }
 
@@ -66,6 +68,7 @@ class Server {
 
     if (this.validateInput(message.pressTime)) {
       this.entities[message.id].applyInput(message);
+      this.lastProcessedInput[message.id] = message.inputSequenceNumber;
     }
   }
 
@@ -110,7 +113,8 @@ class Server {
       let entity = this.entities[client.id];
       worldState.push({
         id: entity.id,
-        position: {x: entity.x, y: entity.y, z: entity.z}
+        position: {x: entity.x, y: entity.y, z: entity.z},
+        lastProcessedInput: this.lastProcessedInput[client.id]
       });
     }
 

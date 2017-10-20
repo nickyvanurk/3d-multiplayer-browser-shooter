@@ -40,6 +40,9 @@ class Client {
 
     document.body.onkeydown = this.processEvents.bind(this);
     document.body.onkeyup = this.processEvents.bind(this);
+
+    this.inputSequenceNumber = 0;
+    this.pendingInputs = [];
   }
 
   onConnection() {
@@ -78,7 +81,7 @@ class Client {
       return;
     }
 
-    let input = {id: this.id, pressTime: dtSec};
+    let input = {id: this.id, pressTime: dtSec, inputSequenceNumber: this.inputSequenceNumber++};
     if (this.keys.left) input.key = 'left';
     if (this.keys.right) input.key = 'right';
 
@@ -86,6 +89,9 @@ class Client {
 
     // do client-side prediction
     this.entities[this.id].applyInput(input);
+
+    // save this input for later reconciliation
+    this.pendingInputs.push(input);
   }
 
   setUpdateRate(hz) {
@@ -132,6 +138,19 @@ class Client {
           if (state.id == this.id) {
             // received the authoritative positon of this client's entity
             entity.setPosition(state.position);
+
+            let j = 0;
+            while (j < this.pendingInputs.length) {
+              let input = this.pendingInputs[j];
+              if (input.inputSequenceNumber <= state.lastProcessedInput) {
+                // Already processed; its effect is already taken into
+                // account into the world update.
+                this.pendingInputs.splice(j, 1);
+              } else {
+                entity.applyInput(input);
+                j++;
+              }
+            }
           } else {
             // received the position of an entity other than this client
             let timestamp = +new Date();
