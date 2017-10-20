@@ -73,7 +73,10 @@ class Client {
     let dtSec = (nowTs - lastTs) / 1000.0;
     this.lastTs = nowTs;
 
-    if (!this.keys.left && !this.keys.right) return;
+    if ((!this.keys.left && !this.keys.right) ||
+         (this.keys.left && this.keys.right)) {
+      return;
+    }
 
     let input = {id: this.id, pressTime: dtSec};
     if (this.keys.left) input.key = 'left';
