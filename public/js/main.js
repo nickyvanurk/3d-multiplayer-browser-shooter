@@ -57,7 +57,8 @@ class Client {
     this.scene = new THREE.Scene();
 
     this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 10000);
-    this.camera.position.z = 50;
+    this.camera.position.z = 15;
+    this.camera.position.y = 2;
 
     let light = new THREE.PointLight(0xFFFFFF);
     light.position.set(10, 0, 10);
@@ -132,6 +133,9 @@ class Client {
             let entity = new Entity(this.scene);
             entity.id = state.id;
             entity.setOrientation(state.position, state.rotation);
+
+            if (state.id == this.id) entity.mesh.add(this.camera);
+
             this.entities[state.id] = entity;
           }
 
