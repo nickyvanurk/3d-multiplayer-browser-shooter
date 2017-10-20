@@ -9,16 +9,17 @@ app.use(express.static('public'));
 
 class Entity {
   constructor() {
-    this.x = 0;
-    this.y = 0;
-    this.z = 0;
     this.speed = 2; // units/s
+    this.mesh = new THREE.Mesh(
+      new THREE.BoxGeometry(1, 1, 1),
+      new THREE.MeshLambertMaterial({color: 0xff0000})
+    );
   }
 
   applyInput(input) {
-    if (input.key === 'forward') this.z -= this.speed * input.pressTime;
-    if (input.key === 'left') this.x -= this.speed * input.pressTime;
-    if (input.key === 'right') this.x += this.speed * input.pressTime;
+    if (input.key === 'forward') this.mesh.position.z -= this.speed * input.pressTime;
+    if (input.key === 'left') this.mesh.position.x -= this.speed * input.pressTime;
+    if (input.key === 'right') this.mesh.position.x += this.speed * input.pressTime;
   }
 }
 
@@ -46,9 +47,9 @@ class Server {
 
     let entity = new Entity();
     entity.id = client.id;
-    entity.x = Math.floor(Math.random() * 10) + 1;
-    entity.y = Math.floor(Math.random() * 10) + 1;
-    entity.z = Math.floor(Math.random() * 10) + 1;
+    entity.mesh.position.x = Math.floor(Math.random() * 10) + 1;
+    entity.mesh.position.y = Math.floor(Math.random() * 10) + 1;
+    entity.mesh.position.z = Math.floor(Math.random() * 10) + 1;
     this.entities[entity.id] = entity;
 
     client.on('message', this.processInputs.bind(this));
@@ -115,7 +116,11 @@ class Server {
       let entity = this.entities[client.id];
       worldState.push({
         id: entity.id,
-        position: {x: entity.x, y: entity.y, z: entity.z},
+        position: {
+          x: entity.mesh.position.x,
+          y: entity.mesh.position.y,
+          z: entity.mesh.position.z
+        },
         lastProcessedInput: this.lastProcessedInput[client.id]
       });
     }
