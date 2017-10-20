@@ -17,9 +17,9 @@ class Entity {
   }
 
   applyInput(input) {
-    if (input.key === 'forward') this.mesh.position.z -= this.speed * input.pressTime;
-    if (input.key === 'left') this.mesh.position.x -= this.speed * input.pressTime;
-    if (input.key === 'right') this.mesh.position.x += this.speed * input.pressTime;
+    if (input.key === 'forward') this.mesh.translateZ(-this.speed * input.pressTime);
+    if (input.key === 'left') this.mesh.rotation.y += this.speed * input.pressTime;
+    if (input.key === 'right') this.mesh.rotation.y -= this.speed * input.pressTime;
   }
 }
 
@@ -120,6 +120,11 @@ class Server {
           x: entity.mesh.position.x,
           y: entity.mesh.position.y,
           z: entity.mesh.position.z
+        },
+        rotation: {
+          x: entity.mesh.rotation.x,
+          y: entity.mesh.rotation.y,
+          z: entity.mesh.rotation.z
         },
         lastProcessedInput: this.lastProcessedInput[client.id]
       });

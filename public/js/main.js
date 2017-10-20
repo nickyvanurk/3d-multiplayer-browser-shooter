@@ -9,14 +9,15 @@ class Entity {
     scene.add(this.mesh);
   }
 
-  setPosition(position) {
+  setOrientation(position, rotation) {
     this.mesh.position.set(position.x, position.y, position.z);
+    this.mesh.rotation.set(rotation.x, rotation.y, rotation.z);
   }
 
   applyInput(input) {
-    if (input.key === 'forward') this.mesh.position.z -= this.speed * input.pressTime;
-    if (input.key === 'left') this.mesh.position.x -= this.speed * input.pressTime;
-    if (input.key === 'right') this.mesh.position.x += this.speed * input.pressTime;
+    if (input.key === 'forward') this.mesh.translateZ(-this.speed * input.pressTime);
+    if (input.key === 'left') this.mesh.rotation.y += this.speed * input.pressTime;
+    if (input.key === 'right') this.mesh.rotation.y -= this.speed * input.pressTime;
   }
 }
 
@@ -130,7 +131,7 @@ class Client {
           if (!this.entities[state.id]) {
             let entity = new Entity(this.scene);
             entity.id = state.id;
-            entity.setPosition(state.position);
+            entity.setOrientation(state.position, state.rotation);
             this.entities[state.id] = entity;
           }
 
@@ -138,7 +139,7 @@ class Client {
 
           if (state.id == this.id) {
             // received the authoritative positon of this client's entity
-            entity.setPosition(state.position);
+            entity.setOrientation(state.position, state.rotation);
 
             let j = 0;
             while (j < this.pendingInputs.length) {
@@ -155,7 +156,7 @@ class Client {
           } else {
             // received the position of an entity other than this client
             let timestamp = +new Date();
-            entity.positionBuffer.push([timestamp, state.position]);
+            entity.positionBuffer.push([timestamp, state.position, state.rotation]);
           }
         }
         break;
@@ -187,12 +188,18 @@ class Client {
       if (buffer.length >= 2 && buffer[0][0] <= renderTimestamp && renderTimestamp <= buffer[1][0]) {
         let p0 = buffer[0][1];
         let p1 = buffer[1][1];
+        let r0 = buffer[0][2];
+        let r1 = buffer[1][2];
         let t0 = buffer[0][0];
         let t1 = buffer[1][0];
 
         entity.mesh.position.x = p0.x + (p1.x - p0.x) * (renderTimestamp - t0) / (t1 - t0);
         entity.mesh.position.y = p0.y + (p1.y - p0.y) * (renderTimestamp - t0) / (t1 - t0);
         entity.mesh.position.z = p0.z + (p1.z - p0.z) * (renderTimestamp - t0) / (t1 - t0);
+
+        entity.mesh.rotation.x = r0.x + (r1.x - r0.x) * (renderTimestamp - t0) / (t1 - t0);
+        entity.mesh.rotation.y = r0.y + (r1.y - r0.y) * (renderTimestamp - t0) / (t1 - t0);
+        entity.mesh.rotation.z = r0.z + (r1.z - r0.z) * (renderTimestamp - t0) / (t1 - t0);
       }
     }
   }
