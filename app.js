@@ -53,7 +53,9 @@ class Server {
     entity.mesh.position.z = Math.floor(Math.random() * 10) + 1;
     this.entities[entity.id] = entity;
 
-    client.on('message', this.processInputs.bind(this));
+    client.on('message', function (msg) {
+      this.processInputs(msg, client);
+    }.bind(this));
 
     client.on('close', () => {
       console.log(`Client ${client.id} disconnected`);
@@ -63,14 +65,14 @@ class Server {
     });
   }
 
-  validateInput(input) {
-    return input < 1 / 40;
+  validateInput(input, clientId) {
+    return clientId === input.id && input.pressTime < 1 / 40;
   }
 
-  processInputs(msg) {
+  processInputs(msg, client) {
     let message = JSON.parse(msg);
 
-    if (this.validateInput(message.pressTime)) {
+    if (this.validateInput(message, client.id)) {
       this.entities[message.id].applyInput(message);
       this.lastProcessedInput[message.id] = message.inputSequenceNumber;
     }
