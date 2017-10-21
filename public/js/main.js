@@ -84,7 +84,7 @@ class Client {
     this.ws.onopen = this.onConnection.bind(this);
     this.ws.onmessage = this.processServerMessages.bind(this);
 
-    this.serverUpdateRate = 10;
+    this.serverUpdateRate = 20;
 
     this.id = null;
 
@@ -143,12 +143,7 @@ class Client {
     if (event.keyCode == 32) this.keys.shoot = event.type == 'keydown';
   }
 
-  processInputs() {
-    let nowTs = +new Date();
-    let lastTs = this.lastTs || nowTs;
-    let dtSec = (nowTs - lastTs) / 1000.0;
-    this.lastTs = nowTs;
-
+  processInputs(dt) {
     if ((!this.keys.left && !this.keys.right && !this.keys.forward && !this.keys.shoot) ||
          (this.keys.left && this.keys.right && !this.keys.forward)) {
       return;
@@ -156,7 +151,7 @@ class Client {
 
     let input = {
       id: this.id,
-      pressTime: dtSec,
+      pressTime: dt,
       inputSequenceNumber: this.inputSequenceNumber++,
       keys: ''
     };
@@ -183,10 +178,15 @@ class Client {
   }
 
   update() {
+    let nowTs = +new Date();
+    let lastTs = this.lastTs || nowTs;
+    let dt = (nowTs - lastTs) / 1000.0;
+    this.lastTs = nowTs;
+
     if (this.id == null) return;
 
-    this.processInputs();
-    this.interpolateEntities();
+    this.processInputs(dt);
+    this.interpolateEntities(dt);
     this.render();
   }
 
@@ -229,13 +229,14 @@ class Client {
           }
 
           while (player.bullets.length < state.bullets.length) {
-            player.bullets.push(new Bullet(this.scene, new THREE.Vector3(), new THREE.Vector3()));
+            player.bullets.push(new Bullet(this.scene, player.mesh.position, player.mesh.rotation));
           }
 
           for (let i = 0; i < player.bullets.length; i++) {
             let bullet = player.bullets[i];
             let position = state.bullets[i].position;
             let rotation = state.bullets[i].rotation;
+
             bullet.mesh.position.set(position.x, position.y, position.z);
             bullet.mesh.rotation.set(rotation.x, rotation.y, rotation.z);
           }
@@ -273,7 +274,7 @@ class Client {
     }
   }
 
-  interpolateEntities() {
+  interpolateEntities(dt) {
     let now = +new Date();
     let renderTimestamp = now - (1000.0 / this.serverUpdateRate);
 
@@ -281,6 +282,11 @@ class Client {
       let player = this.players[i];
 
       player.updateHealthBarOrientation(this.camera);
+
+      for (let j = 0; j < player.bullets.length; j++) {
+        let bullet = player.bullets[j];
+        bullet.mesh.translateZ(-bullet.speed * dt);
+      }
 
       if (player.id == this.id) continue;
 

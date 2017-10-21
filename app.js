@@ -86,7 +86,7 @@ class Server {
 
     this.lastProcessedInput = [];
 
-    this.setUpdateRate(10);
+    this.setUpdateRate(20);
   }
 
   onConnection(client) {
