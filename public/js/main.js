@@ -46,6 +46,9 @@ class Player extends Entity {
 
   updateHealth(health) {
     this.healthBar.scale.x = health / 100;
+    if (this.healthBar.scale.x == 0) {
+      this.healthBar.scale.x = 0.00001;
+    }
   }
 
   updateHealthBarOrientation(camera) {
