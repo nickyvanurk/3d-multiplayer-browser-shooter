@@ -223,6 +223,7 @@ class Client {
           }
 
           let player = this.players[state.id];
+          player.updateHealth(state.health)
 
           while (player.bullets.length > state.bullets.length) {
             player.bullets.shift().destroy();

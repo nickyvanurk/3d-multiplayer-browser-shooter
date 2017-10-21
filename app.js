@@ -64,6 +64,7 @@ class Bullet extends Entity {
     super(new THREE.Vector3(0.2, 0.2, 0.2));
 
     this.speed = 10;
+    this.damage = 10;
 
     this.mesh.position.set(position.x, position.y, position.z);
     this.mesh.rotation.set(rotation.x, rotation.y, rotation.z);
@@ -71,6 +72,12 @@ class Bullet extends Entity {
 
   update(dt) {
     this.mesh.translateZ(-this.speed * dt);
+  }
+
+  isColliding(object) {
+    let a = new THREE.Box3().setFromObject(this.mesh);
+    let b = new THREE.Box3().setFromObject(object);
+    return a.intersectsBox(b);
   }
 }
 
@@ -162,6 +169,24 @@ class Server {
     for (let key in this.clients) {
       this.players[this.clients[key].id].update(1 / this.updateRate);
     }
+
+    for (let i in this.clients) {
+      let player1 = this.players[this.clients[i].id];
+
+      for (let j in player1.bullets) {
+        let bullet = player1.bullets[j];
+
+        for (let k in this.clients) {
+          let player2 = this.players[this.clients[k].id]
+          if (player1 == player2 || player2.health == 0) continue;
+
+          if (bullet.isColliding(player2.mesh)) {
+            player2.health -= bullet.damage;
+          }
+        }
+      }
+    }
+
     this.sendWorldState();
   }
 
