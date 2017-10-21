@@ -20,6 +20,8 @@ class Player extends Entity {
 
     this.speed = 2; // units/s
 
+    this.bullets = [];
+
     this.positionBuffer = [];
 
     this.mesh.receiveShadow = true;
@@ -57,6 +59,22 @@ class Player extends Entity {
     if (input.keys.includes('forward')) this.mesh.translateZ(-this.speed * input.pressTime);
     if (input.keys.includes('left')) this.mesh.rotation.y += this.speed * input.pressTime;
     if (input.keys.includes('right')) this.mesh.rotation.y -= this.speed * input.pressTime;
+  }
+}
+
+class Bullet extends Entity {
+  constructor(scene, position, rotation) {
+    super(scene, new THREE.Vector3(0.2, 0.2, 0.2));
+    this.scene = scene;
+
+    this.speed = 10;
+
+    this.mesh.position.set(position.x, position.y, position.z);
+    this.mesh.rotation.set(rotation.x, rotation.y, rotation.z);
+  }
+
+  destroy() {
+    this.scene.remove(this.mesh);
   }
 }
 
@@ -122,6 +140,7 @@ class Client {
     if (event.key == 'w' || event.keyCode == 38) this.keys.forward = event.type == 'keydown';
     if (event.key == 'a' || event.keyCode == 37) this.keys.left = event.type == 'keydown';
     if (event.key == 'd' || event.keyCode == 39) this.keys.right = event.type == 'keydown';
+    if (event.keyCode == 32) this.keys.shoot = event.type == 'keydown';
   }
 
   processInputs() {
@@ -130,7 +149,7 @@ class Client {
     let dtSec = (nowTs - lastTs) / 1000.0;
     this.lastTs = nowTs;
 
-    if ((!this.keys.left && !this.keys.right && !this.keys.forward) ||
+    if ((!this.keys.left && !this.keys.right && !this.keys.forward && !this.keys.shoot) ||
          (this.keys.left && this.keys.right && !this.keys.forward)) {
       return;
     }
@@ -145,6 +164,7 @@ class Client {
     if (this.keys.forward) input.keys += 'forward';
     if (this.keys.left) input.keys += 'left';
     if (this.keys.right) input.keys += 'right';
+    if (this.keys.shoot) input.keys += 'shoot';
 
     this.ws.send(JSON.stringify(input));
 
@@ -192,12 +212,33 @@ class Client {
             player.id = state.id;
             player.setOrientation(state.position, state.rotation);
 
+            for (let i = 0; i < state.bullets.length; i++) {
+              let bullet = state.bullets[i];
+              player.bullets.push(new Bullet(this.scene, bullet.position, bullet.rotation));
+            }
+
             if (state.id == this.id) player.mesh.add(this.camera);
 
             this.players[state.id] = player;
           }
 
           let player = this.players[state.id];
+
+          while (player.bullets.length > state.bullets.length) {
+            player.bullets.shift().destroy();
+          }
+
+          while (player.bullets.length < state.bullets.length) {
+            player.bullets.push(new Bullet(this.scene, new THREE.Vector3(), new THREE.Vector3()));
+          }
+
+          for (let i = 0; i < player.bullets.length; i++) {
+            let bullet = player.bullets[i];
+            let position = state.bullets[i].position;
+            let rotation = state.bullets[i].rotation;
+            bullet.mesh.position.set(position.x, position.y, position.z);
+            bullet.mesh.rotation.set(rotation.x, rotation.y, rotation.z);
+          }
 
           if (state.id == this.id) {
             // received the authoritative positon of this client's player
