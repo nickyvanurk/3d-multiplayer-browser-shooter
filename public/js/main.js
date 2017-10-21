@@ -1,15 +1,30 @@
 class Entity {
-  constructor(scene, position) {
-    this.height = 1;
-    this.speed = 2; // units/s
-    this.positionBuffer = [];
+  constructor(scene, size) {
     this.mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(1, this.height, 1),
+      new THREE.BoxGeometry(size.x, size.y, size.z),
       new THREE.MeshPhongMaterial({color: 0xff0000})
     );
+    scene.add(this.mesh);
+  }
+
+  setOrientation(position, rotation) {
+    this.mesh.position.set(position.x, position.y, position.z);
+    this.mesh.rotation.set(rotation.x, rotation.y, rotation.z);
+  }
+}
+
+class Player extends Entity {
+  constructor(scene) {
+    super(scene, new THREE.Vector3(1, 1, 1));
+    this.scene = scene;
+
+    this.speed = 2; // units/s
+
+    this.positionBuffer = [];
+
     this.mesh.receiveShadow = true;
     this.mesh.castShadow = true;
-    scene.add(this.mesh);
+
     this.healthBar = new THREE.Mesh(
       new THREE.BoxGeometry(1, 0.1, 0),
       new THREE.MeshBasicMaterial({color: 0x00ff00})
@@ -19,19 +34,23 @@ class Entity {
     this.healthBar.position.x -= this.healthBar.geometry.parameters.width / 2;
     this.healthBarPivot = new THREE.Object3D();
     this.healthBarPivot.add(this.healthBar);
-    scene.add(this.healthBarPivot);
+    this.scene.add(this.healthBarPivot);
   }
 
-  setOrientation(position, rotation) {
-    this.mesh.position.set(position.x, position.y, position.z);
-    this.mesh.rotation.set(rotation.x, rotation.y, rotation.z);
-
-    this.healthBarPivot.position.copy(this.mesh.position);
-    this.healthBarPivot.position.y = this.height + this.height / 3;
+  destroy() {
+    this.scene.remove(this.mesh);
+    this.scene.remove(this.healthBarPivot);
   }
 
   updateHealth(health) {
     this.healthBar.scale.x = health / 100;
+  }
+
+  updateHealthBarOrientation(camera) {
+    this.healthBarPivot.position.copy(this.mesh.position);
+    let height = this.healthBar.geometry.parameters.width;
+    this.healthBarPivot.position.y = height + height / 3;
+    this.healthBarPivot.lookAt(camera.getWorldPosition());
   }
 
   applyInput(input) {
@@ -51,7 +70,7 @@ class Client {
 
     this.id = null;
 
-    this.entities = {};
+    this.players = {};
 
     this.setUpdateRate(60);
 
@@ -130,7 +149,7 @@ class Client {
     this.ws.send(JSON.stringify(input));
 
     // do client-side prediction
-    this.entities[this.id].applyInput(input);
+    this.players[this.id].applyInput(input);
 
     // save this input for later reconciliation
     this.pendingInputs.push(input);
@@ -167,23 +186,22 @@ class Client {
         for (let i = 0; i < message.states.length; i++) {
           let state = message.states[i];
 
-          // if this is the first time we see this entity, create local representation
-          if (!this.entities[state.id]) {
-            let entity = new Entity(this.scene);
-            entity.id = state.id;
-            entity.setOrientation(state.position, state.rotation);
+          // if this is the first time we see this player, create local representation
+          if (!this.players[state.id]) {
+            let player = new Player(this.scene);
+            player.id = state.id;
+            player.setOrientation(state.position, state.rotation);
 
-            if (state.id == this.id) entity.mesh.add(this.camera);
+            if (state.id == this.id) player.mesh.add(this.camera);
 
-            this.entities[state.id] = entity;
+            this.players[state.id] = player;
           }
 
-          let entity = this.entities[state.id];
-          entity.updateHealth(state.health);
+          let player = this.players[state.id];
 
           if (state.id == this.id) {
-            // received the authoritative positon of this client's entity
-            entity.setOrientation(state.position, state.rotation);
+            // received the authoritative positon of this client's player
+            player.setOrientation(state.position, state.rotation);
 
             let j = 0;
             while (j < this.pendingInputs.length) {
@@ -193,22 +211,22 @@ class Client {
                 // account into the world update.
                 this.pendingInputs.splice(j, 1);
               } else {
-                entity.applyInput(input);
+                player.applyInput(input);
                 j++;
               }
             }
           } else {
-            // received the position of an entity other than this client
+            // received the position of an player other than this client
             let timestamp = +new Date();
-            entity.positionBuffer.push([timestamp, state.position, state.rotation]);
+            player.positionBuffer.push([timestamp, state.position, state.rotation]);
           }
         }
         break;
       case 'disconnect':
-        if (this.entities[message.id]) {
+        if (this.players[message.id]) {
           console.log(`Client ${message.id} disconnected`);
-          this.scene.remove(this.entities[message.id].mesh);
-          delete this.entities[message.id];
+          this.players[message.id].destroy();
+          delete this.players[message.id];
         }
         break;
     }
@@ -218,14 +236,14 @@ class Client {
     let now = +new Date();
     let renderTimestamp = now - (1000.0 / this.serverUpdateRate);
 
-    for (let i in this.entities) {
-      let entity = this.entities[i];
+    for (let i in this.players) {
+      let player = this.players[i];
 
-      entity.healthBarPivot.lookAt(this.camera.getWorldPosition());
+      player.updateHealthBarOrientation(this.camera);
 
-      if (entity.id == this.id) continue;
+      if (player.id == this.id) continue;
 
-      let buffer = entity.positionBuffer;
+      let buffer = player.positionBuffer;
 
       while (buffer.length >= 2 && buffer[1][0] <= renderTimestamp) {
         buffer.shift();
@@ -239,13 +257,13 @@ class Client {
         let t0 = buffer[0][0];
         let t1 = buffer[1][0];
 
-        entity.mesh.position.x = p0.x + (p1.x - p0.x) * (renderTimestamp - t0) / (t1 - t0);
-        entity.mesh.position.y = p0.y + (p1.y - p0.y) * (renderTimestamp - t0) / (t1 - t0);
-        entity.mesh.position.z = p0.z + (p1.z - p0.z) * (renderTimestamp - t0) / (t1 - t0);
+        player.mesh.position.x = p0.x + (p1.x - p0.x) * (renderTimestamp - t0) / (t1 - t0);
+        player.mesh.position.y = p0.y + (p1.y - p0.y) * (renderTimestamp - t0) / (t1 - t0);
+        player.mesh.position.z = p0.z + (p1.z - p0.z) * (renderTimestamp - t0) / (t1 - t0);
 
-        entity.mesh.rotation.x = r0.x + (r1.x - r0.x) * (renderTimestamp - t0) / (t1 - t0);
-        entity.mesh.rotation.y = r0.y + (r1.y - r0.y) * (renderTimestamp - t0) / (t1 - t0);
-        entity.mesh.rotation.z = r0.z + (r1.z - r0.z) * (renderTimestamp - t0) / (t1 - t0);
+        player.mesh.rotation.x = r0.x + (r1.x - r0.x) * (renderTimestamp - t0) / (t1 - t0);
+        player.mesh.rotation.y = r0.y + (r1.y - r0.y) * (renderTimestamp - t0) / (t1 - t0);
+        player.mesh.rotation.z = r0.z + (r1.z - r0.z) * (renderTimestamp - t0) / (t1 - t0);
       }
     }
   }

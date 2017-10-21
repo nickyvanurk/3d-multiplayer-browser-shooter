@@ -8,14 +8,20 @@ const app = express();
 app.use(express.static('public'));
 
 class Entity {
-  constructor() {
-    this.height = 1;
-    this.speed = 2; // units/s
-    this.health = 100;
+  constructor(size) {
     this.mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(1, this.height, 1),
+      new THREE.BoxGeometry(size.x, size.y, size.z),
       new THREE.MeshLambertMaterial({color: 0xff0000})
     );
+  }
+}
+
+class Player extends Entity {
+  constructor() {
+    super(new THREE.Vector3(1, 1, 1));
+
+    this.speed = 2; // units/s
+    this.health = 100;
   }
 
   applyInput(input) {
@@ -33,7 +39,7 @@ class Server {
     this.wss.on('connection', this.onConnection.bind(this));
 
     this.clients = {};
-    this.entities = {};
+    this.players = {};
 
     this.lastProcessedInput = [];
 
@@ -47,12 +53,12 @@ class Server {
 
     this.sendClientId(client);
 
-    let entity = new Entity();
-    entity.id = client.id;
-    entity.mesh.position.x = Math.floor(Math.random() * 10) + 1;
-    entity.mesh.position.y = entity.height / 2;
-    entity.mesh.position.z = Math.floor(Math.random() * 10) + 1;
-    this.entities[entity.id] = entity;
+    let player = new Player();
+    player.id = client.id;
+    player.mesh.position.x = Math.floor(Math.random() * 10) + 1;
+    player.mesh.position.y = player.mesh.geometry.parameters.height / 2;
+    player.mesh.position.z = Math.floor(Math.random() * 10) + 1;
+    this.players[player.id] = player;
 
     client.on('message', function (msg) {
       this.processInputs(msg, client);
@@ -74,7 +80,7 @@ class Server {
     let message = JSON.parse(msg);
 
     if (this.validateInput(message, client.id)) {
-      this.entities[message.id].applyInput(message);
+      this.players[message.id].applyInput(message);
       this.lastProcessedInput[message.id] = message.inputSequenceNumber;
     }
   }
@@ -117,21 +123,21 @@ class Server {
     let worldState = [];
     for (let key in this.clients) {
       let client = this.clients[key];
-      let entity = this.entities[client.id];
+      let player = this.players[client.id];
       worldState.push({
-        id: entity.id,
+        id: player.id,
         position: {
-          x: entity.mesh.position.x,
-          y: entity.mesh.position.y,
-          z: entity.mesh.position.z
+          x: player.mesh.position.x,
+          y: player.mesh.position.y,
+          z: player.mesh.position.z
         },
         rotation: {
-          x: entity.mesh.rotation.x,
-          y: entity.mesh.rotation.y,
-          z: entity.mesh.rotation.z
+          x: player.mesh.rotation.x,
+          y: player.mesh.rotation.y,
+          z: player.mesh.rotation.z
         },
         lastProcessedInput: this.lastProcessedInput[client.id],
-        health: entity.health
+        health: player.health
       });
     }
 
