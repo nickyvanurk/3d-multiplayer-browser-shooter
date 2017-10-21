@@ -11,6 +11,7 @@ class Entity {
   constructor() {
     this.height = 1;
     this.speed = 2; // units/s
+    this.health = 100;
     this.mesh = new THREE.Mesh(
       new THREE.BoxGeometry(1, this.height, 1),
       new THREE.MeshLambertMaterial({color: 0xff0000})
@@ -129,7 +130,8 @@ class Server {
           y: entity.mesh.rotation.y,
           z: entity.mesh.rotation.z
         },
-        lastProcessedInput: this.lastProcessedInput[client.id]
+        lastProcessedInput: this.lastProcessedInput[client.id],
+        health: entity.health
       });
     }
 

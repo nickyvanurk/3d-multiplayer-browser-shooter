@@ -1,19 +1,37 @@
 class Entity {
   constructor(scene, position) {
+    this.height = 1;
     this.speed = 2; // units/s
     this.positionBuffer = [];
     this.mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
+      new THREE.BoxGeometry(1, this.height, 1),
       new THREE.MeshPhongMaterial({color: 0xff0000})
     );
     this.mesh.receiveShadow = true;
     this.mesh.castShadow = true;
     scene.add(this.mesh);
+    this.healthBar = new THREE.Mesh(
+      new THREE.BoxGeometry(1, 0.1, 0),
+      new THREE.MeshBasicMaterial({color: 0x00ff00})
+    );
+    this.healthBar.geometry.translate(this.healthBar.geometry.parameters.width / 2, 0, 0 );
+    this.healthBar.geometry.verticesNeedUpdate = true;
+    this.healthBar.position.x -= this.healthBar.geometry.parameters.width / 2;
+    this.healthBarPivot = new THREE.Object3D();
+    this.healthBarPivot.add(this.healthBar);
+    scene.add(this.healthBarPivot);
   }
 
   setOrientation(position, rotation) {
     this.mesh.position.set(position.x, position.y, position.z);
     this.mesh.rotation.set(rotation.x, rotation.y, rotation.z);
+
+    this.healthBarPivot.position.copy(this.mesh.position);
+    this.healthBarPivot.position.y = this.height + this.height / 3;
+  }
+
+  updateHealth(health) {
+    this.healthBar.scale.x = health / 100;
   }
 
   applyInput(input) {
@@ -104,7 +122,7 @@ class Client {
       inputSequenceNumber: this.inputSequenceNumber++,
       keys: ''
     };
-    
+
     if (this.keys.forward) input.keys += 'forward';
     if (this.keys.left) input.keys += 'left';
     if (this.keys.right) input.keys += 'right';
@@ -161,6 +179,7 @@ class Client {
           }
 
           let entity = this.entities[state.id];
+          entity.updateHealth(state.health);
 
           if (state.id == this.id) {
             // received the authoritative positon of this client's entity
@@ -201,6 +220,8 @@ class Client {
 
     for (let i in this.entities) {
       let entity = this.entities[i];
+
+      entity.healthBarPivot.lookAt(this.camera.getWorldPosition());
 
       if (entity.id == this.id) continue;
 
