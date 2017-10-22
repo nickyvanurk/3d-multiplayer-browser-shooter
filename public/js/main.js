@@ -21,6 +21,7 @@ class Player extends Entity {
     this.speed = 8; // units/s
     this.rotationSpeed = 2;
     this.health = 100;
+    this.alive = true;
 
     this.positionBuffer = [];
 
@@ -185,7 +186,9 @@ class Client {
     ]));
 
     // do client-side prediction
-    this.players[this.id].applyInput(input);
+    if (this.players[this.id].alive) {
+      this.players[this.id].applyInput(input);
+    }
 
     // save this input for later reconciliation
     this.pendingInputs.push(input);
@@ -250,6 +253,7 @@ class Client {
             player.id = state.id;
             player.setOrientation(state.position, state.rotation);
             player.health = state.health;
+            player.alive = player.health != 0;
 
             if (state.id == this.id) player.mesh.add(this.camera);
 
@@ -257,6 +261,14 @@ class Client {
           }
 
           let player = this.players[state.id];
+          
+          player.health = state.health;
+
+          if (player.health == 0 && player.alive) {
+            player.alive = false;
+          } else if (player.health == 100 && !player.alive) {
+            player.alive = true;
+          }
 
           if (state.id == this.id) {
             // received the authoritative positon of this client's player
@@ -270,7 +282,9 @@ class Client {
                 // account into the world update.
                 this.pendingInputs.splice(j, 1);
               } else {
-                player.applyInput(input);
+                if (player.alive) {
+                  player.applyInput(input);
+                }
                 j++;
               }
             }
@@ -283,8 +297,6 @@ class Client {
               player.positionBuffer.push([timestamp, state.position, state.rotation]);
             }
           }
-
-          player.health = state.health;
         }
         break;
       case 'disconnect':

@@ -23,6 +23,7 @@ class Player extends Entity {
     this.speed = 8; // units/s
     this.rotationSpeed = 2;
     this.health = 100;
+    this.alive = true;
 
     this.shootInterval = 100; // milliseconds
     this.canShoot = true;
@@ -43,6 +44,7 @@ class Player extends Entity {
   reset() {
     this.canShoot = true;
     this.health = 100;
+    this.alive = true;
   }
 
   respawn() {
@@ -135,6 +137,9 @@ class Server {
 
     if (this.validateInput(input, client.id)) {
       let player = this.players[input.id];
+
+      if (!player.alive) return;
+
       player.applyInput(input);
       this.lastProcessedInput[input.id] = input.inputSequenceNumber;
 
@@ -241,9 +246,13 @@ class Server {
         if (bullet.playerId == player.id) continue;
 
         if (bullet.isColliding(player)) {
-          player.health -= bullet.damage;
+          if (player.alive) {
+            player.health -= bullet.damage;
+          }
 
-          if (player.health == 0) {
+          if (player.health == 0 && player.alive) {
+            player.alive = false;
+
             setTimeout(() => {
               player.respawn();
             }, this.respawnTime);
