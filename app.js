@@ -33,10 +33,10 @@ class Player extends Entity {
   }
 
   applyInput(input) {
-    if (input.keys.includes('forward')) this.mesh.translateZ(-this.speed * input.pressTime);
-    if (input.keys.includes('left')) this.mesh.rotation.y += this.speed * input.pressTime;
-    if (input.keys.includes('right')) this.mesh.rotation.y -= this.speed * input.pressTime;
-    if (input.keys.includes('shoot')) this.shoot();
+    if ((input.keys & 1) == 1) this.mesh.translateZ(-this.speed * input.pressTime);
+    if ((input.keys & 2) == 2) this.mesh.rotation.y += this.speed * input.pressTime;
+    if ((input.keys & 4) == 4) this.mesh.rotation.y -= this.speed * input.pressTime;
+    if ((input.keys & 8) == 8) this.shoot();
   }
 
   shoot() {
@@ -146,9 +146,16 @@ class Server {
   processInputs(msg, client) {
     let message = JSON.parse(msg);
 
-    if (this.validateInput(message, client.id)) {
-      this.players[message.id].applyInput(message);
-      this.lastProcessedInput[message.id] = message.inputSequenceNumber;
+    let input = {
+      id: message[0],
+      pressTime: message[1],
+      inputSequenceNumber: message[2],
+      keys: message[3]
+    };
+
+    if (this.validateInput(input, client.id)) {
+      this.players[input.id].applyInput(input);
+      this.lastProcessedInput[input.id] = input.inputSequenceNumber;
     }
   }
 

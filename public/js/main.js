@@ -71,9 +71,9 @@ class Player extends Entity {
   }
 
   applyInput(input) {
-    if (input.keys.includes('forward')) this.mesh.translateZ(-this.speed * input.pressTime);
-    if (input.keys.includes('left')) this.mesh.rotation.y += this.speed * input.pressTime;
-    if (input.keys.includes('right')) this.mesh.rotation.y -= this.speed * input.pressTime;
+    if ((input.keys & 1) == 1) this.mesh.translateZ(-this.speed * input.pressTime);
+    if ((input.keys & 2) == 2) this.mesh.rotation.y += this.speed * input.pressTime;
+    if ((input.keys & 4) == 4) this.mesh.rotation.y -= this.speed * input.pressTime;
   }
 }
 
@@ -168,17 +168,20 @@ class Client {
       id: this.id,
       pressTime: dt,
       inputSequenceNumber: this.inputSequenceNumber++,
-      keys: ''
+      keys: 0
     };
 
-    if (this.keys.forward) input.keys += 'forward';
-    if (this.keys.left) input.keys += 'left';
-    if (this.keys.right) input.keys += 'right';
-    if (this.keys.shoot) input.keys += 'shoot';
+    if (this.keys.forward) input.keys += 1;
+    if (this.keys.left) input.keys += 2;
+    if (this.keys.right) input.keys += 4;
+    if (this.keys.shoot) input.keys += 8;
 
-    console.log(getUTF8Size(JSON.stringify(input)));
-
-    this.ws.send(JSON.stringify(input));
+    this.ws.send(JSON.stringify([
+      input.id,
+      input.pressTime,
+      input.inputSequenceNumber,
+      input.keys
+    ]));
 
     // do client-side prediction
     this.players[this.id].applyInput(input);
