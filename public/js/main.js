@@ -52,13 +52,13 @@ class Player extends Entity {
       this.healthBar.scale.x = 0.00001;
     }
 
-    if (this.mesh.material.color.b != 1 && this.health == 0) {
+    if (this.mesh.material.color.b != 1 && !this.alive) {
       this.mesh.material.color.setHex(0x0000ff);
-    } else if (this.mesh.material.color.r != 1 && this.health == 100) {
+    } else if (this.mesh.material.color.r != 1 && this.alive) {
       this.mesh.material.color.setHex(0xff0000);
     }
 
-    if (this.health == 0 && this.positionBuffer.length) {
+    if (!this.alive && this.positionBuffer.length) {
       this.positionBuffer = [];
     }
   }
@@ -209,8 +209,6 @@ class Client {
 
     if (this.id == null) return;
 
-    this.processInputs(dt);
-
     for (let key in this.players) {
       this.players[key].update(dt);
       this.players[key].updateHealthBarOrientation(this.camera);
@@ -220,6 +218,7 @@ class Client {
       this.bullets[key].mesh.translateZ(-this.bullets[key].speed * dt);
     }
 
+    this.processInputs(dt);
     this.interpolateEntities(dt);
     this.render();
   }
@@ -261,13 +260,14 @@ class Client {
           }
 
           let player = this.players[state.id];
-          
+
           player.health = state.health;
 
           if (player.health == 0 && player.alive) {
             player.alive = false;
-          } else if (player.health == 100 && !player.alive) {
+          }if (player.health == 100 && !player.alive) {
             player.alive = true;
+            player.setOrientation(state.position, state.rotation);
           }
 
           if (state.id == this.id) {
@@ -290,9 +290,7 @@ class Client {
             }
           } else {
             // received the position of an player other than this client
-            if (player.health == 0 && state.health == 100) {
-              player.setOrientation(state.position, state.rotation);
-            } else {
+            if (player.alive) {
               let timestamp = +new Date();
               player.positionBuffer.push([timestamp, state.position, state.rotation]);
             }
