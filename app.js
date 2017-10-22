@@ -24,24 +24,14 @@ class Player extends Entity {
     this.rotationSpeed = 2;
     this.health = 100;
 
-    this.bullets = [];
     this.shootInterval = 100; // milliseconds
     this.canShoot = true;
-  }
-
-  update(dt) {
-    for (let i in this.bullets) this.bullets[i].update(dt);
   }
 
   applyInput(input) {
     if ((input.keys & 1) == 1) this.mesh.translateZ(-this.speed * input.pressTime);
     if ((input.keys & 2) == 2) this.mesh.rotation.y += this.rotationSpeed * input.pressTime;
     if ((input.keys & 4) == 4) this.mesh.rotation.y -= this.rotationSpeed * input.pressTime;
-  }
-
-  spawnBullet() {
-    this.bullets.push(new Bullet(this.mesh.position, this.mesh.rotation));
-    return this.bullets[this.bullets.length - 1];
   }
 
   spawn() {
@@ -51,7 +41,6 @@ class Player extends Entity {
   }
 
   reset() {
-    this.bullets = [];
     this.canShoot = true;
     this.health = 100;
   }
@@ -63,8 +52,9 @@ class Player extends Entity {
 }
 
 class Bullet extends Entity {
-  constructor(position, rotation) {
+  constructor(playerId, position, rotation) {
     super(new THREE.Vector3(0.2, 0.2, 0.2));
+    this.playerId = playerId;
 
     this.speed = 20;
     this.damage = 10;
@@ -81,7 +71,7 @@ class Bullet extends Entity {
 
   isColliding(object) {
     let a = new THREE.Box3().setFromObject(this.mesh);
-    let b = new THREE.Box3().setFromObject(object);
+    let b = new THREE.Box3().setFromObject(object.mesh);
     return a.intersectsBox(b);
   }
 }
@@ -95,6 +85,7 @@ class Server {
 
     this.clients = {};
     this.players = {};
+    this.bullets = {};
 
     this.lastProcessedInput = [];
 
@@ -104,7 +95,7 @@ class Server {
   }
 
   onConnection(client) {
-    client.id = this.getAvailableClientId();
+    client.id = this.getAvailableId(this.clients);
     console.log(`Client connected, set ID to: ${client.id}`);
     this.clients[client.id] = client;
 
@@ -122,6 +113,7 @@ class Server {
     client.on('close', () => {
       console.log(`Client ${client.id} disconnected`);
       delete this.clients[client.id];
+      delete this.players[client.id];
 
       this.broadcastClientDisconnect(client);
     });
@@ -148,16 +140,18 @@ class Server {
 
       if ((input.keys & 8) == 8) { // shoot
         if (player.canShoot) {
-          let bullet = player.spawnBullet();
           player.canShoot = false;
+          let bulletId = this.getAvailableId(this.bullets);
+          let bullet = new Bullet(player.id, player.mesh.position, player.mesh.rotation);
 
-          this.broadcastBulletSpawn(bullet, input.id);
+          this.bullets[bulletId] = bullet;
+          this.broadcastBulletSpawn(bullet, bulletId, input.id);
 
           setTimeout(() => {
-            player.bullets.shift();
+            delete this.bullets[bulletId];
 
             if (bullet.alive) {
-              this.broadcastBulletDestroy(input.id);
+              this.broadcastBulletDestroy(bulletId);
             }
           }, 2000);
 
@@ -169,13 +163,14 @@ class Server {
     }
   }
 
-  getAvailableClientId() {
-    for (let i = 0; i < Object.keys(this.clients).length; i++) {
-      if (!this.clients.hasOwnProperty(i)) return i;
+  getAvailableId(object) {
+    for (let i = 0; i < Object.keys(object).length; i++) {
+      if (!object.hasOwnProperty(i)) return i;
     }
 
-    return Object.keys(this.clients).length;
+    return Object.keys(object).length;
   }
+
 
   sendClientId(client) {
     client.send(JSON.stringify({type: 'id', id: client.id}));
@@ -192,12 +187,13 @@ class Server {
     }
   }
 
-  broadcastBulletSpawn(bullet, id) {
+  broadcastBulletSpawn(bullet, bulletId, playerId) {
     for (const key in this.clients) {
       if (this.clients[key].readyState === WebSocket.OPEN) {
         this.clients[key].send(JSON.stringify({
           type: 'bulletSpawn',
-          id: id,
+          id: bulletId,
+          playerId: playerId,
           position: {
             x: bullet.mesh.position.x,
             y: bullet.mesh.position.y,
@@ -232,39 +228,29 @@ class Server {
   }
 
   update() {
-    for (let key in this.clients) {
-      this.players[this.clients[key].id].update(1 / this.updateRate);
-    }
+    for (let bulletId in this.bullets) {
+      let bullet = this.bullets[bulletId];
 
-    for (let i in this.clients) {
-      let player1 = this.players[this.clients[i].id];
+      if (!bullet.alive) continue;
 
-      for (let j in player1.bullets) {
-        let bullet = player1.bullets[j];
+      bullet.update(1 / this.updateRate);
 
-        if (!bullet.alive) continue;
+      for (let key in this.clients) {
+        let player = this.players[this.clients[key].id];
 
-        let bulletCollision = false;
+        if (bullet.playerId == player.id) continue;
 
-        for (let k in this.clients) {
-          let player2 = this.players[this.clients[k].id]
-          if (player1 == player2 || player2.health == 0) continue;
+        if (bullet.isColliding(player)) {
+          player.health -= bullet.damage;
 
-          if (bullet.isColliding(player2.mesh)) {
-            player2.health -= bullet.damage;
-            if (!bulletCollision) bulletCollision = true;
-
-            if (player2.health == 0) {
-              setTimeout(() => {
-                player2.respawn();
-              }, this.respawnTime);
-            }
+          if (player.health == 0) {
+            setTimeout(() => {
+              player.respawn();
+            }, this.respawnTime);
           }
-        }
 
-        if (bulletCollision) {
           bullet.alive = false;
-          this.broadcastBulletDestroy(player1.id);
+          this.broadcastBulletDestroy(bulletId);
         }
       }
     }
@@ -296,7 +282,7 @@ class Server {
       });
     }
 
-    console.log(getUTF8Size(JSON.stringify(worldState)));
+    //console.log(getUTF8Size(JSON.stringify(worldState)));
 
     for (const key in this.clients) {
       const client = this.clients[key];

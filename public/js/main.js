@@ -22,8 +22,6 @@ class Player extends Entity {
     this.rotationSpeed = 2;
     this.health = 100;
 
-    this.bullets = [];
-
     this.positionBuffer = [];
 
     this.mesh.receiveShadow = true;
@@ -47,11 +45,6 @@ class Player extends Entity {
   }
 
   update(dt) {
-    for (let j = 0; j < this.bullets.length; j++) {
-      let bullet = this.bullets[j];
-      bullet.mesh.translateZ(-bullet.speed * dt);
-    }
-
     this.healthBar.scale.x = this.health / 100;
 
     if (this.healthBar.scale.x == 0) {
@@ -84,9 +77,10 @@ class Player extends Entity {
 }
 
 class Bullet extends Entity {
-  constructor(scene, position, rotation) {
+  constructor(scene, playerId, position, rotation) {
     super(scene, new THREE.Vector3(0.2, 0.2, 0.2));
     this.scene = scene;
+    this.playerId = playerId;
 
     this.speed = 20;
 
@@ -110,6 +104,7 @@ class Client {
     this.id = null;
 
     this.players = {};
+    this.bullets = {};
 
     this.setUpdateRate(60);
 
@@ -211,12 +206,15 @@ class Client {
 
     if (this.id == null) return;
 
-
     this.processInputs(dt);
 
     for (let key in this.players) {
       this.players[key].update(dt);
       this.players[key].updateHealthBarOrientation(this.camera);
+    }
+
+    for (let key in this.bullets) {
+      this.bullets[key].mesh.translateZ(-this.bullets[key].speed * dt);
     }
 
     this.interpolateEntities(dt);
@@ -236,10 +234,11 @@ class Client {
         console.log(`Client ID set to: ${this.id}`);
         break;
       case 'bulletSpawn':
-        this.players[message.id].bullets.push(new Bullet(this.scene, message.position, message.rotation));
+        this.bullets[message.id] = new Bullet(this.scene, message.playerId, message.position, message.rotation);
         break;
       case 'bulletDestroy':
-        this.players[message.id].bullets.shift().destroy();
+        this.bullets[message.id].destroy();
+        delete this.bullets[message.id];
         break;
       case 'worldState':
         for (let i = 0; i < message.states.length; i++) {
@@ -291,6 +290,14 @@ class Client {
       case 'disconnect':
         if (this.players[message.id]) {
           console.log(`Client ${message.id} disconnected`);
+
+          for (let id in this.bullets) {
+            if (message.id == this.bullets[id].playerId) {
+              this.bullets[id].destroy();
+              delete this.bullets[id];
+            }
+          }
+
           this.players[message.id].destroy();
           delete this.players[message.id];
         }
