@@ -45,7 +45,12 @@ class Player extends Entity {
     this.scene.remove(this.healthBarPivot);
   }
 
-  update() {
+  update(dt) {
+    for (let j = 0; j < this.bullets.length; j++) {
+      let bullet = this.bullets[j];
+      bullet.mesh.translateZ(-bullet.speed * dt);
+    }
+
     this.healthBar.scale.x = this.health / 100;
 
     if (this.healthBar.scale.x == 0) {
@@ -209,7 +214,7 @@ class Client {
     this.processInputs(dt);
 
     for (let key in this.players) {
-      this.players[key].update();
+      this.players[key].update(dt);
       this.players[key].updateHealthBarOrientation(this.camera);
     }
 
@@ -229,6 +234,12 @@ class Client {
         this.id = message.id;
         console.log(`Client ID set to: ${this.id}`);
         break;
+      case 'bulletSpawn':
+        this.players[message.id].bullets.push(new Bullet(this.scene, message.position, message.rotation));
+        break;
+      case 'bulletDestroy':
+        this.players[message.id].bullets.shift().destroy();
+        break;
       case 'worldState':
         for (let i = 0; i < message.states.length; i++) {
           let state = message.states[i];
@@ -240,34 +251,12 @@ class Client {
             player.setOrientation(state.position, state.rotation);
             player.health = state.health;
 
-            for (let i = 0; i < state.bullets.length; i++) {
-              let bullet = state.bullets[i];
-              player.bullets.push(new Bullet(this.scene, bullet.position, bullet.rotation));
-            }
-
             if (state.id == this.id) player.mesh.add(this.camera);
 
             this.players[state.id] = player;
           }
 
           let player = this.players[state.id];
-
-          while (player.bullets.length > state.bullets.length) {
-            player.bullets.shift().destroy();
-          }
-
-          while (player.bullets.length < state.bullets.length) {
-            player.bullets.push(new Bullet(this.scene, player.mesh.position, player.mesh.rotation));
-          }
-
-          for (let i = 0; i < player.bullets.length; i++) {
-            let bullet = player.bullets[i];
-            let position = state.bullets[i].position;
-            let rotation = state.bullets[i].rotation;
-
-            bullet.mesh.position.set(position.x, position.y, position.z);
-            bullet.mesh.rotation.set(rotation.x, rotation.y, rotation.z);
-          }
 
           if (state.id == this.id) {
             // received the authoritative positon of this client's player
@@ -314,11 +303,6 @@ class Client {
 
     for (let i in this.players) {
       let player = this.players[i];
-
-      for (let j = 0; j < player.bullets.length; j++) {
-        let bullet = player.bullets[j];
-        bullet.mesh.translateZ(-bullet.speed * dt);
-      }
 
       if (player.id == this.id) continue;
 

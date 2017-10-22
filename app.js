@@ -36,26 +36,11 @@ class Player extends Entity {
     if ((input.keys & 1) == 1) this.mesh.translateZ(-this.speed * input.pressTime);
     if ((input.keys & 2) == 2) this.mesh.rotation.y += this.speed * input.pressTime;
     if ((input.keys & 4) == 4) this.mesh.rotation.y -= this.speed * input.pressTime;
-    if ((input.keys & 8) == 8) this.shoot();
-  }
-
-  shoot() {
-    if (this.canShoot) {
-      this.spawnBullet();
-      this.canShoot = false;
-
-      setTimeout(() => {
-        this.canShoot = true;
-      }, this.shootInterval);
-    }
   }
 
   spawnBullet() {
     this.bullets.push(new Bullet(this.mesh.position, this.mesh.rotation));
-
-    setTimeout(() => {
-      this.bullets.shift();
-    }, 2000);
+    return this.bullets[this.bullets.length - 1];
   }
 
   spawn() {
@@ -82,6 +67,8 @@ class Bullet extends Entity {
 
     this.speed = 10;
     this.damage = 10;
+
+    this.alive = true;
 
     this.mesh.position.set(position.x, position.y, position.z);
     this.mesh.rotation.set(rotation.x, rotation.y, rotation.z);
@@ -154,8 +141,30 @@ class Server {
     };
 
     if (this.validateInput(input, client.id)) {
-      this.players[input.id].applyInput(input);
+      let player = this.players[input.id];
+      player.applyInput(input);
       this.lastProcessedInput[input.id] = input.inputSequenceNumber;
+
+      if ((input.keys & 8) == 8) { // shoot
+        if (player.canShoot) {
+          let bullet = player.spawnBullet();
+          player.canShoot = false;
+
+          this.broadcastBulletSpawn(bullet, input.id);
+
+          setTimeout(() => {
+            player.bullets.shift();
+
+            if (bullet.alive) {
+              this.broadcastBulletDestroy(input.id);
+            }
+          }, 2000);
+
+          setTimeout(() => {
+            player.canShoot = true;
+          }, player.shootInterval);
+        }
+      }
     }
   }
 
@@ -182,6 +191,38 @@ class Server {
     }
   }
 
+  broadcastBulletSpawn(bullet, id) {
+    for (const key in this.clients) {
+      if (this.clients[key].readyState === WebSocket.OPEN) {
+        this.clients[key].send(JSON.stringify({
+          type: 'bulletSpawn',
+          id: id,
+          position: {
+            x: bullet.mesh.position.x,
+            y: bullet.mesh.position.y,
+            z: bullet.mesh.position.z,
+          },
+          rotation: {
+            x: bullet.mesh.rotation.x,
+            y: bullet.mesh.rotation.y,
+            z: bullet.mesh.rotation.z,
+          }
+        }));
+      }
+    }
+  }
+
+  broadcastBulletDestroy(id) {
+    for (const key in this.clients) {
+      if (this.clients[key].readyState === WebSocket.OPEN) {
+        this.clients[key].send(JSON.stringify({
+          type: 'bulletDestroy',
+          id: id
+        }));
+      }
+    }
+  }
+
   setUpdateRate(hz) {
     this.updateRate = hz;
 
@@ -200,12 +241,17 @@ class Server {
       for (let j in player1.bullets) {
         let bullet = player1.bullets[j];
 
+        if (!bullet.alive) continue;
+
+        let bulletCollision = false;
+
         for (let k in this.clients) {
           let player2 = this.players[this.clients[k].id]
           if (player1 == player2 || player2.health == 0) continue;
 
           if (bullet.isColliding(player2.mesh)) {
             player2.health -= bullet.damage;
+            if (!bulletCollision) bulletCollision = true;
 
             if (player2.health == 0) {
               setTimeout(() => {
@@ -213,6 +259,11 @@ class Server {
               }, this.respawnTime);
             }
           }
+        }
+
+        if (bulletCollision) {
+          bullet.alive = false;
+          this.broadcastBulletDestroy(player1.id);
         }
       }
     }
@@ -225,25 +276,7 @@ class Server {
     for (let key in this.clients) {
       let client = this.clients[key];
       let player = this.players[client.id];
-      let bullets = [];
-
-      for (let i = 0; i < player.bullets.length; i++) {
-        let bullet = player.bullets[i];
-
-        bullets.push({
-          position: {
-            x: bullet.mesh.position.x,
-            y: bullet.mesh.position.y,
-            z: bullet.mesh.position.z,
-          },
-          rotation: {
-            x: bullet.mesh.rotation.x,
-            y: bullet.mesh.rotation.y,
-            z: bullet.mesh.rotation.z,
-          }
-        });
-      }
-
+      
       worldState.push({
         id: player.id,
         position: {
@@ -258,7 +291,7 @@ class Server {
         },
         lastProcessedInput: this.lastProcessedInput[client.id],
         health: player.health,
-        bullets: bullets
+        //bullets: bullets
       });
     }
 
