@@ -255,6 +255,8 @@ class Server {
       });
     }
 
+    console.log(getUTF8Size(JSON.stringify(worldState)));
+
     for (const key in this.clients) {
       const client = this.clients[key];
       if (client.readyState === WebSocket.OPEN) {
@@ -275,3 +277,18 @@ class Server {
 
 const server = new Server(app);
 server.listen(8080);
+
+
+/* Helpers */
+function getUTF8Size(str) {
+  var sizeInBytes = str.split('')
+    .map(function (ch) {
+      return ch.charCodeAt(0);
+    }).map(function( uchar ) {
+      return uchar < 128 ? 1 : 2;
+    }).reduce(function (curr, next) {
+      return curr + next;
+    });
+
+  return sizeInBytes;
+};

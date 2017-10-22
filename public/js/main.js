@@ -176,6 +176,8 @@ class Client {
     if (this.keys.right) input.keys += 'right';
     if (this.keys.shoot) input.keys += 'shoot';
 
+    console.log(getUTF8Size(JSON.stringify(input)));
+
     this.ws.send(JSON.stringify(input));
 
     // do client-side prediction
@@ -344,3 +346,17 @@ class Client {
 }
 
 const client = new Client();
+
+/* Helpers */
+function getUTF8Size(str) {
+  var sizeInBytes = str.split('')
+    .map(function (ch) {
+      return ch.charCodeAt(0);
+    }).map(function( uchar ) {
+      return uchar < 128 ? 1 : 2;
+    }).reduce(function (curr, next) {
+      return curr + next;
+    });
+
+  return sizeInBytes;
+};
