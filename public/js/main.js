@@ -18,7 +18,8 @@ class Player extends Entity {
     super(scene, new THREE.Vector3(1, 1, 1));
     this.scene = scene;
 
-    this.speed = 2; // units/s
+    this.speed = 8; // units/s
+    this.rotationSpeed = 2;
     this.health = 100;
 
     this.bullets = [];
@@ -77,8 +78,8 @@ class Player extends Entity {
 
   applyInput(input) {
     if ((input.keys & 1) == 1) this.mesh.translateZ(-this.speed * input.pressTime);
-    if ((input.keys & 2) == 2) this.mesh.rotation.y += this.speed * input.pressTime;
-    if ((input.keys & 4) == 4) this.mesh.rotation.y -= this.speed * input.pressTime;
+    if ((input.keys & 2) == 2) this.mesh.rotation.y += this.rotationSpeed * input.pressTime;
+    if ((input.keys & 4) == 4) this.mesh.rotation.y -= this.rotationSpeed * input.pressTime;
   }
 }
 
@@ -87,7 +88,7 @@ class Bullet extends Entity {
     super(scene, new THREE.Vector3(0.2, 0.2, 0.2));
     this.scene = scene;
 
-    this.speed = 10;
+    this.speed = 20;
 
     this.mesh.position.set(position.x, position.y, position.z);
     this.mesh.rotation.set(rotation.x, rotation.y, rotation.z);

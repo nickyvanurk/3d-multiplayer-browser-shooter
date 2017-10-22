@@ -20,7 +20,8 @@ class Player extends Entity {
   constructor() {
     super(new THREE.Vector3(1, 1, 1));
 
-    this.speed = 2; // units/s
+    this.speed = 8; // units/s
+    this.rotationSpeed = 2;
     this.health = 100;
 
     this.bullets = [];
@@ -34,8 +35,8 @@ class Player extends Entity {
 
   applyInput(input) {
     if ((input.keys & 1) == 1) this.mesh.translateZ(-this.speed * input.pressTime);
-    if ((input.keys & 2) == 2) this.mesh.rotation.y += this.speed * input.pressTime;
-    if ((input.keys & 4) == 4) this.mesh.rotation.y -= this.speed * input.pressTime;
+    if ((input.keys & 2) == 2) this.mesh.rotation.y += this.rotationSpeed * input.pressTime;
+    if ((input.keys & 4) == 4) this.mesh.rotation.y -= this.rotationSpeed * input.pressTime;
   }
 
   spawnBullet() {
@@ -65,7 +66,7 @@ class Bullet extends Entity {
   constructor(position, rotation) {
     super(new THREE.Vector3(0.2, 0.2, 0.2));
 
-    this.speed = 10;
+    this.speed = 20;
     this.damage = 10;
 
     this.alive = true;
@@ -276,7 +277,7 @@ class Server {
     for (let key in this.clients) {
       let client = this.clients[key];
       let player = this.players[client.id];
-      
+
       worldState.push({
         id: player.id,
         position: {
