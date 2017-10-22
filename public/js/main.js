@@ -19,6 +19,7 @@ class Player extends Entity {
     this.scene = scene;
 
     this.speed = 2; // units/s
+    this.health = 100;
 
     this.bullets = [];
 
@@ -44,10 +45,21 @@ class Player extends Entity {
     this.scene.remove(this.healthBarPivot);
   }
 
-  updateHealth(health) {
-    this.healthBar.scale.x = health / 100;
+  update() {
+    this.healthBar.scale.x = this.health / 100;
+
     if (this.healthBar.scale.x == 0) {
       this.healthBar.scale.x = 0.00001;
+    }
+
+    if (this.mesh.material.color.b != 1 && this.health == 0) {
+      this.mesh.material.color.setHex(0x0000ff);
+    } else if (this.mesh.material.color.r != 1 && this.health == 100) {
+      this.mesh.material.color.setHex(0xff0000);
+    }
+
+    if (this.health == 0 && this.positionBuffer.length) {
+      this.positionBuffer = [];
     }
   }
 
@@ -188,7 +200,14 @@ class Client {
 
     if (this.id == null) return;
 
+
     this.processInputs(dt);
+
+    for (let key in this.players) {
+      this.players[key].update();
+      this.players[key].updateHealthBarOrientation(this.camera);
+    }
+
     this.interpolateEntities(dt);
     this.render();
   }
@@ -214,6 +233,7 @@ class Client {
             let player = new Player(this.scene);
             player.id = state.id;
             player.setOrientation(state.position, state.rotation);
+            player.health = state.health;
 
             for (let i = 0; i < state.bullets.length; i++) {
               let bullet = state.bullets[i];
@@ -226,7 +246,6 @@ class Client {
           }
 
           let player = this.players[state.id];
-          player.updateHealth(state.health)
 
           while (player.bullets.length > state.bullets.length) {
             player.bullets.shift().destroy();
@@ -263,9 +282,15 @@ class Client {
             }
           } else {
             // received the position of an player other than this client
-            let timestamp = +new Date();
-            player.positionBuffer.push([timestamp, state.position, state.rotation]);
+            if (player.health == 0 && state.health == 100) {
+              player.setOrientation(state.position, state.rotation);
+            } else {
+              let timestamp = +new Date();
+              player.positionBuffer.push([timestamp, state.position, state.rotation]);
+            }
           }
+
+          player.health = state.health;
         }
         break;
       case 'disconnect':
@@ -284,8 +309,6 @@ class Client {
 
     for (let i in this.players) {
       let player = this.players[i];
-
-      player.updateHealthBarOrientation(this.camera);
 
       for (let j = 0; j < player.bullets.length; j++) {
         let bullet = player.bullets[j];

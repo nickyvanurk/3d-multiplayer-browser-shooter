@@ -57,6 +57,23 @@ class Player extends Entity {
       this.bullets.shift();
     }, 2000);
   }
+
+  spawn() {
+    this.mesh.position.x = Math.floor(Math.random() * 10) + 1;
+    this.mesh.position.y = this.mesh.geometry.parameters.height / 2;
+    this.mesh.position.z = Math.floor(Math.random() * 10) + 1;
+  }
+
+  reset() {
+    this.bullets = [];
+    this.canShoot = true;
+    this.health = 100;
+  }
+
+  respawn() {
+    this.reset();
+    this.spawn();
+  }
 }
 
 class Bullet extends Entity {
@@ -93,6 +110,8 @@ class Server {
 
     this.lastProcessedInput = [];
 
+    this.respawnTime = 1000; // milliseconds
+
     this.setUpdateRate(20);
   }
 
@@ -105,9 +124,7 @@ class Server {
 
     let player = new Player();
     player.id = client.id;
-    player.mesh.position.x = Math.floor(Math.random() * 10) + 1;
-    player.mesh.position.y = player.mesh.geometry.parameters.height / 2;
-    player.mesh.position.z = Math.floor(Math.random() * 10) + 1;
+    player.spawn();
     this.players[player.id] = player;
 
     client.on('message', function (msg) {
@@ -182,6 +199,12 @@ class Server {
 
           if (bullet.isColliding(player2.mesh)) {
             player2.health -= bullet.damage;
+
+            if (player2.health == 0) {
+              setTimeout(() => {
+                player2.respawn();
+              }, this.respawnTime);
+            }
           }
         }
       }
