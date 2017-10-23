@@ -10,12 +10,12 @@ class Entity {
 
   setOrientation(position, rotation) {
     this.mesh.position.set(position.x, position.y, position.z);
-    this.mesh.rotation.set(rotation.x, rotation.y, rotation.z);
+    this.mesh.rotation.set(rotation.x, rotation.y, rotation.z);    
   }
 }
 
 class Player extends Entity {
-  constructor(scene, id, position, rotation, health) {
+  constructor(scene, id, position, rotation, health, color, name) {
     super(scene, new THREE.Vector3(1, 1, 1), position, rotation);
     this.scene = scene;
     this.id = id;
@@ -24,6 +24,8 @@ class Player extends Entity {
     this.rotationSpeed = 2;
     this.health = health;
     this.alive = health > 0;
+    this.color = color;
+    this.name = name;
 
     this.positionBuffer = [];
 
@@ -44,7 +46,7 @@ class Player extends Entity {
     let loader = new THREE.FontLoader();
 
     loader.load('../fonts/helvetiker_regular.typeface.json', function (font) {
-      let geometry = new THREE.TextGeometry(this.id, {
+      let geometry = new THREE.TextGeometry(this.name, {
         font: font,
         size: 0.3,
         height: 0,
@@ -81,7 +83,7 @@ class Player extends Entity {
 
     if (this.mesh.material.color.b != 1 && !this.alive) {
       this.mesh.material.color.setHex(0x0000ff);
-    } else if (this.mesh.material.color.r != 1 && this.alive) {
+    } else if (this.mesh.material.color != this.color && this.alive) {
       this.mesh.material.color.setHex(0xff0000);
     }
 
@@ -96,6 +98,15 @@ class Player extends Entity {
     }
 
     this.updateHealthBarOrientation(camera);
+  }
+
+  setName(name) {
+    this.nameTag.geometry.parameters.text = name;
+  }
+
+  setColor(color) {
+    this.color = color;
+    this.mesh.material.color = color;
   }
 
   updateHealthBarOrientation(camera) {
@@ -133,6 +144,7 @@ class Bullet extends Entity {
 class Camera {
   constructor() {
     this.body = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 10000);
+    this.body.position.y = 2;
     this.offset = new THREE.Vector3(0, 3, 15);
     this.smoothSpeed = 0.125;
     this.target =  null;
@@ -173,6 +185,8 @@ class Client {
     this.serverUpdateRate = 20;
 
     this.id = null;
+    this.color = null;
+    this.name = null;
 
     this.players = {};
     this.bullets = {};
@@ -193,9 +207,14 @@ class Client {
     this.setUpdateRate(60);
 
     this.chatbox = document.getElementById('chatbox');
+    this.chatInput = document.getElementById('chat-input');
+    this.chatStatus = document.getElementById('chat-status');
   }
 
   onConnection() {
+    this.chatStatus.textContent = 'Choose name:';
+    this.chatInput.removeAttribute('disabled');
+    this.chatInput.focus();
     this.init();
   }
 
@@ -232,6 +251,25 @@ class Client {
     if (event.keyCode == 65 || event.keyCode == 37) this.keys.left = event.type == 'keydown';
     if (event.keyCode == 68 || event.keyCode == 39) this.keys.right = event.type == 'keydown';
     if (event.keyCode == 32) this.keys.shoot = event.type == 'keydown';
+
+    if (event.keyCode == 13) {
+      let msg = this.chatInput.value;
+
+      if (!msg) {
+        return;
+      }
+
+      this.chatInput.value = '';
+      this.chatInput.setAttribute('disabled', 'disabled');
+
+      if (this.name === null) {
+        this.name = msg;
+        this.ws.send(JSON.stringify({
+          type: 'setName',
+          name: msg
+        }));
+      }
+    }
   }
 
   processInputs(dt) {
@@ -283,7 +321,10 @@ class Client {
 
     this.camera.update();
 
-    this.processInputs(dt);
+    if (this.players[this.id]) {
+      this.processInputs(dt);
+    }
+
     this.interpolatePlayers(dt);
     this.render();
   }
@@ -296,11 +337,47 @@ class Client {
     let msg = JSON.parse(event.data);
 
     switch(msg.type) {
+      case 'init':
+        this.id = msg.id;
+        this.color = msg.color;
+        for (let i = 0; i < msg.players.length; i++) {
+          this.spawnPlayer(
+            msg.players[i].id,
+            msg.players[i].position,
+            msg.players[i].rotation,
+            msg.players[i].health,
+            msg.players[i].color,
+            msg.players[i].name
+          );
+        }
+        break;
+      case 'color':
+        this.color = msg.color;
+        break;
       case 'message':
         this.addMessage(msg.author, msg.content, msg.color, new Date(msg.time));
         break;
       case 'id':
         this.id = msg.id;
+        break;
+      case 'spawnPlayer':
+        if (!this.players[msg.id]) {
+          let player = this.spawnPlayer(
+            msg.id,
+            msg.position,
+            msg.rotation,
+            msg.health,
+            msg.color,
+            msg.name
+          );
+
+          if (msg.id == this.id) {
+            this.camera.setTarget(player);
+            this.players[this.id] = player;
+          } else {
+            this.players[msg.id] = player;
+          }
+        }
         break;
       case 'bulletSpawn':
         this.spawnBullet(msg.id, msg.playerId, msg.position, msg.rotation);
@@ -311,15 +388,6 @@ class Client {
       case 'worldState':
         for (let i = 0; i < msg.states.length; i++) {
           let state = msg.states[i];
-
-          // if this is the first time we see this player, create local representation
-          if (!this.players[state.id]) {
-            let player = this.spawnPlayer(state.id, state.position, state.rotation, state.health);
-
-            if (state.id == this.id) {
-              this.camera.setTarget(player);
-            }
-          }
 
           let player = this.players[state.id];
 
@@ -396,8 +464,8 @@ class Client {
     }
   }
 
-  spawnPlayer(id, position, rotation, health) {
-    this.players[id] = new Player(this.scene, id, position, rotation, health);
+  spawnPlayer(id, position, rotation, health, color, name) {
+    this.players[id] = new Player(this.scene, id, position, rotation, health, color, name);
     return this.players[id];
   }
 

@@ -105,13 +105,67 @@ class Server {
 
     this.sendClientId(client);
 
-    let player = new Player();
-    player.id = client.id;
-    player.spawn();
-    this.players[player.id] = player;
+    
 
-    client.on('message', function (msg) {
-      this.processInputs(msg, client);
+    client.color = this.getRandomColor();
+
+    // let players = [];
+
+    // for (const key in this.clients) {
+    //   const c = this.clients[key];
+
+    //   if (client.id == c.id) {
+    //     continue;
+    //   }
+
+    //   const player = this.players[c.id];
+
+    //   players.push({
+    //     id: player.id,
+    //     position: {
+    //       x: player.mesh.position.x,
+    //       y: player.mesh.position.y,
+    //       z: player.mesh.position.z
+    //     },
+    //     rotation: {
+    //       x: player.mesh.rotation.x,
+    //       y: player.mesh.rotation.y,
+    //       z: player.mesh.rotation.z
+    //     },
+    //     health: player.health,
+    //     color: c.color,
+    //     name: c.name
+    //   });
+    // }
+
+    /*client.send(JSON.stringify({
+      type: 'init',
+      id: client.id,
+      color: client.color,
+      players: players
+    }));*/
+
+
+
+
+
+    client.on('message', function (message) {
+      let msg = JSON.parse(message);
+
+      if (msg.type === 'setName' && !client.name) {
+        let player = new Player();
+        player.id = client.id;
+        player.spawn();
+        this.players[player.id] = player;
+
+        client.name = msg.name;
+        client.color = this.getRandomColor();
+        client.send(JSON.stringify({type: 'color', color: client.color}));
+
+        this.broadcastPlayerSpawn(client);
+      } else {
+        this.processInputs(msg, client);
+      }
     }.bind(this));
 
     client.on('close', () => {
@@ -123,18 +177,20 @@ class Server {
     });
   }
 
+  getRandomColor() {
+    return "#" + ("000000" + Math.floor(Math.random() * 16777216).toString(16)).substr(-6);
+  }
+
   validateInput(input, clientId) {
     return clientId === input.id && input.pressTime < 1 / 40;
   }
 
   processInputs(msg, client) {
-    let message = JSON.parse(msg);
-
     let input = {
-      id: message[0],
-      pressTime: message[1],
-      inputSequenceNumber: message[2],
-      keys: message[3]
+      id: msg[0],
+      pressTime: msg[1],
+      inputSequenceNumber: msg[2],
+      keys: msg[3]
     };
 
     if (this.validateInput(input, client.id)) {
@@ -166,6 +222,31 @@ class Server {
             player.canShoot = true;
           }, player.shootInterval);
         }
+      }
+    }
+  }
+
+  broadcastPlayerSpawn(client) {
+    for (const key in this.clients) {
+      if (this.clients[key].readyState === WebSocket.OPEN) {
+        let player = this.players[client.id];
+        this.clients[key].send(JSON.stringify({
+          type: 'spawnPlayer',
+          id: player.id,
+          position: {
+            x: player.mesh.position.x,
+            y: player.mesh.position.y,
+            z: player.mesh.position.z
+          },
+          rotation: {
+            x: player.mesh.rotation.x,
+            y: player.mesh.rotation.y,
+            z: player.mesh.rotation.z
+          },
+          health: player.health,
+          color: client.color,
+          name: client.name
+        }));
       }
     }
   }
@@ -256,8 +337,8 @@ class Server {
 
       bullet.update(1 / this.updateRate);
 
-      for (let key in this.clients) {
-        let player = this.players[this.clients[key].id];
+      for (let id in this.players) {
+        let player = this.players[id];
 
         if (bullet.playerId == player.id) continue;
 
@@ -285,9 +366,8 @@ class Server {
 
   sendWorldState() {
     let worldState = [];
-    for (let key in this.clients) {
-      let client = this.clients[key];
-      let player = this.players[client.id];
+    for (let id in this.players) {
+      let player = this.players[id];
 
       worldState.push({
         id: player.id,
@@ -301,9 +381,8 @@ class Server {
           y: player.mesh.rotation.y,
           z: player.mesh.rotation.z
         },
-        lastProcessedInput: this.lastProcessedInput[client.id],
+        lastProcessedInput: this.lastProcessedInput[id],
         health: player.health,
-        //bullets: bullets
       });
     }
 
