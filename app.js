@@ -171,7 +171,10 @@ class Server {
       delete this.players[client.id];
 
       this.broadcastClientDisconnect(client);
-      this.broadcastMessage('System', 'orange', `${client.name} left the game.`, +new Date());
+
+      if (client.name) {
+        this.broadcastMessage('System', 'orange', `${client.name} left the game.`, +new Date());
+      }
     });
   }
 
