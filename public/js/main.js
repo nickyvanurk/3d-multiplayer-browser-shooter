@@ -14,9 +14,10 @@ class Entity {
 }
 
 class Player extends Entity {
-  constructor(scene) {
+  constructor(scene, id) {
     super(scene, new THREE.Vector3(1, 1, 1));
     this.scene = scene;
+    this.id = id;
 
     this.speed = 8; // units/s
     this.rotationSpeed = 2;
@@ -38,6 +39,31 @@ class Player extends Entity {
     this.healthBarPivot = new THREE.Object3D();
     this.healthBarPivot.add(this.healthBar);
     this.scene.add(this.healthBarPivot);
+
+    let loader = new THREE.FontLoader();
+
+    loader.load('../fonts/helvetiker_regular.typeface.json', function (font) {
+      let geometry = new THREE.TextGeometry(this.id, {
+        font: font,
+        size: 0.3,
+        height: 0,
+        curveSegments: 12,
+      });
+
+      geometry.computeBoundingBox();
+
+      this.nameTag = new THREE.Mesh(
+        geometry,
+        new THREE.MeshBasicMaterial({color: 0xffff00, flatShading: true})
+      );
+
+      var centerOffset = -0.5 * (this.nameTag.geometry.boundingBox.max.x -
+        this.nameTag.geometry.boundingBox.min.x);
+      this.nameTag.position.x = centerOffset;
+      this.nameTag.position.y = this.mesh.geometry.parameters.height / 4;
+
+      this.healthBarPivot.add(this.nameTag);
+    }.bind(this));
   }
 
   destroy() {
@@ -65,8 +91,8 @@ class Player extends Entity {
 
   updateHealthBarOrientation(camera) {
     this.healthBarPivot.position.copy(this.mesh.position);
-    let height = this.healthBar.geometry.parameters.width;
-    this.healthBarPivot.position.y = height + height / 3;
+    let height = this.mesh.geometry.parameters.height;
+    this.healthBarPivot.position.y = height + height / 4;
     this.healthBarPivot.lookAt(camera.getWorldPosition());
   }
 
@@ -107,8 +133,6 @@ class Client {
     this.players = {};
     this.bullets = {};
 
-    this.setUpdateRate(60);
-
     this.keys = {
       left: false,
       right: false
@@ -119,6 +143,8 @@ class Client {
 
     this.inputSequenceNumber = 0;
     this.pendingInputs = [];
+
+    this.setUpdateRate(60);
   }
 
   onConnection() {
@@ -248,8 +274,7 @@ class Client {
 
           // if this is the first time we see this player, create local representation
           if (!this.players[state.id]) {
-            let player = new Player(this.scene);
-            player.id = state.id;
+            let player = new Player(this.scene, state.id);
             player.setOrientation(state.position, state.rotation);
             player.health = state.health;
             player.alive = player.health != 0;
