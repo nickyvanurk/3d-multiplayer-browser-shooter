@@ -36,9 +36,11 @@ class Player extends Entity {
   }
 
   spawn() {
-    this.mesh.position.x = Math.floor(Math.random() * 10) + 1;
+    this.mesh.position.x = Math.floor(Math.random() * 41) - 20;
     this.mesh.position.y = this.mesh.geometry.parameters.height / 2;
-    this.mesh.position.z = Math.floor(Math.random() * 10) + 1;
+    this.mesh.position.z = Math.floor(Math.random() * 41) - 20;
+
+    this.mesh.rotation.y = Math.random() * 361 * Math.PI / 180;
   }
 
   reset() {
