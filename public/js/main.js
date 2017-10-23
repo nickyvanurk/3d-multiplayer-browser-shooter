@@ -130,6 +130,40 @@ class Bullet extends Entity {
   }
 }
 
+class Camera {
+  constructor() {
+    this.body = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 10000);
+    this.offset = new THREE.Vector3(0, 3, 15);
+    this.smoothSpeed = 0.125;
+    this.target =  null;
+  }
+
+  update() {
+    if (!this.target) {
+      return;
+    }
+
+    this.followTarget();
+  }
+
+  followTarget() {
+    var relativeCameraOffset = new THREE.Vector3().copy(this.offset);
+    let desiredPosition = relativeCameraOffset.applyMatrix4(this.target.mesh.matrixWorld);
+    let smoothedPosition = new THREE.Vector3().lerpVectors(this.body.position, desiredPosition, this.smoothSpeed);
+    this.body.position.copy(smoothedPosition);
+    this.body.lookAt(this.target.mesh.position);
+  }
+
+  setTarget(entity) {
+    this.target = entity;
+    this.body.position.copy(entity.mesh.position);
+    this.body.rotation.set(entity.mesh.rotation.x, entity.mesh.rotation.y, entity.mesh.rotation.z);
+    this.body.translateX(this.offset.x)
+    this.body.translateY(this.offset.y);
+    this.body.translateZ(this.offset.z);
+  }
+}
+
 class Client {
   constructor() {
     this.ws = new WebSocket('ws://localhost:8080');
@@ -172,9 +206,7 @@ class Client {
 
     this.scene = new THREE.Scene();
 
-    this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 10000);
-    this.camera.position.z = 15;
-    this.camera.position.y = 2;
+    this.camera = new Camera();
 
     this.scene.add(new THREE.AmbientLight(0xffffff, 0.4));
 
@@ -241,12 +273,14 @@ class Client {
     let dt = this.getDeltaTime();
 
     for (let key in this.players) {
-      this.players[key].update(dt, this.camera);
+      this.players[key].update(dt, this.camera.body);
     }
 
     for (let key in this.bullets) {
       this.bullets[key].update(dt);
     }
+
+    this.camera.update();
 
     this.processInputs(dt);
     this.interpolatePlayers(dt);
@@ -254,7 +288,7 @@ class Client {
   }
 
   render() {
-    this.renderer.render(this.scene, this.camera);
+    this.renderer.render(this.scene, this.camera.body);
   }
 
   processServerMessages(event) {
@@ -280,7 +314,7 @@ class Client {
             let player = this.spawnPlayer(state.id, state.position, state.rotation, state.health);
 
             if (state.id == this.id) {
-              player.mesh.add(this.camera);
+              this.camera.setTarget(player);
             }
           }
 
