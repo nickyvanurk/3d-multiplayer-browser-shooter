@@ -191,10 +191,11 @@ class Client {
     this.pendingInputs = [];
 
     this.setUpdateRate(60);
+
+    this.chatbox = document.getElementById('chatbox');
   }
 
   onConnection() {
-    console.log('Connected to server');
     this.init();
   }
 
@@ -295,9 +296,11 @@ class Client {
     let msg = JSON.parse(event.data);
 
     switch(msg.type) {
+      case 'message':
+        this.addMessage(msg.author, msg.content, msg.color, new Date(msg.time));
+        break;
       case 'id':
         this.id = msg.id;
-        console.log(`Client ID set to: ${this.id}`);
         break;
       case 'bulletSpawn':
         this.spawnBullet(msg.id, msg.playerId, msg.position, msg.rotation);
@@ -353,8 +356,6 @@ class Client {
         break;
       case 'disconnect':
         if (this.players[msg.id]) {
-          console.log(`Client ${msg.id} disconnected`);
-
           this.destroyPlayer(msg.id);
         }
         break;
@@ -427,6 +428,20 @@ class Client {
 
     clearInterval(this.updateInterval);
     this.updateInterval = setInterval(this.update.bind(this), 1000 / this.updateRate);
+  }
+
+  addMessage(author, message, color, dt) {
+    let p = document.createElement('p');
+    p.className = 'chat-message';
+    p.innerHTML = '[' + (dt.getHours() < 10 ? '0'
+      + dt.getHours() : dt.getHours()) + ':'
+      + (dt.getMinutes() < 10
+        ? '0' + dt.getMinutes() : dt.getMinutes())
+      + '] <span style="color:' + color + '">'
+      + author + '</span> : ' + message;
+
+    this.chatbox.appendChild(p);
+    this.chatbox.scrollTop = this.chatbox.scrollHeight;
   }
 }
 

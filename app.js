@@ -100,8 +100,8 @@ class Server {
 
   onConnection(client) {
     client.id = this.getAvailableId(this.clients);
-    console.log(`Client connected, set ID to: ${client.id}`);
     this.clients[client.id] = client;
+    this.broadcastMessage('System', 'orange', `Client #${client.id} connected`, +new Date());
 
     this.sendClientId(client);
 
@@ -115,11 +115,11 @@ class Server {
     }.bind(this));
 
     client.on('close', () => {
-      console.log(`Client ${client.id} disconnected`);
       delete this.clients[client.id];
       delete this.players[client.id];
 
       this.broadcastClientDisconnect(client);
+      this.broadcastMessage('System', 'orange', `Client #${client.id} disconnected`, +new Date());
     });
   }
 
@@ -222,6 +222,20 @@ class Server {
         this.clients[key].send(JSON.stringify({
           type: 'bulletDestroy',
           id: id
+        }));
+      }
+    }
+  }
+
+  broadcastMessage(author, color, msg, time) {
+    for (const key in this.clients) {
+      if (this.clients[key].readyState === WebSocket.OPEN) {
+        this.clients[key].send(JSON.stringify({
+          type: 'message',
+          author: author,
+          color: color,
+          content: msg,
+          time: time
         }));
       }
     }
