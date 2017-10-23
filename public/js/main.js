@@ -132,7 +132,6 @@ class Bullet extends Entity {
 
     this.speed = 20;
 
-    console.log(color)
     this.mesh.material.color = new THREE.Color(color);
   }
 
@@ -354,6 +353,7 @@ class Client {
 
     switch(msg.type) {
       case 'init':
+        console.log(msg);
         this.id = msg.id;
         this.color = msg.color;
         for (let i = 0; i < msg.players.length; i++) {
@@ -364,6 +364,17 @@ class Client {
             msg.players[i].health,
             msg.players[i].color,
             msg.players[i].name
+          );
+        }
+
+        for (let i = 0; i < msg.bullets.length; i++) {
+          let color = this.players[msg.bullets[i].playerId].color;
+          this.spawnBullet(
+            msg.bullets[i].id,
+            msg.bullets[i].playerId,
+            msg.bullets[i].position,
+            msg.bullets[i].rotation,
+            color
           );
         }
         break;

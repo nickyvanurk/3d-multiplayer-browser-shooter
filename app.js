@@ -104,41 +104,65 @@ class Server {
     this.clients[client.id] = client;
     this.sendClientId(client);
 
-    // let players = [];
+    let players = [];
 
-    // for (const key in this.clients) {
-    //   const c = this.clients[key];
+    for (const key in this.clients) {
+      const client = this.clients[key];
 
-    //   if (client.id == c.id) {
-    //     continue;
-    //   }
+      if (!client.name) continue;
 
-    //   const player = this.players[c.id];
+      const player = this.players[client.id];
 
-    //   players.push({
-    //     id: player.id,
-    //     position: {
-    //       x: player.mesh.position.x,
-    //       y: player.mesh.position.y,
-    //       z: player.mesh.position.z
-    //     },
-    //     rotation: {
-    //       x: player.mesh.rotation.x,
-    //       y: player.mesh.rotation.y,
-    //       z: player.mesh.rotation.z
-    //     },
-    //     health: player.health,
-    //     color: c.color,
-    //     name: c.name
-    //   });
-    // }
+      if (!player) continue;
 
-    /*client.send(JSON.stringify({
+      players.push({
+        id: player.id,
+        position: {
+          x: player.mesh.position.x,
+          y: player.mesh.position.y,
+          z: player.mesh.position.z
+        },
+        rotation: {
+          x: player.mesh.rotation.x,
+          y: player.mesh.rotation.y,
+          z: player.mesh.rotation.z
+        },
+        health: player.health,
+        color: client.color,
+        name: client.name
+      });
+    }
+
+    let bullets = [];
+
+    for (const key in this.bullets) {
+      const bullet = this.bullets[key];
+
+      if (!bullet) continue;
+
+      bullets.push({
+        id: key,
+        playerId: bullet.playerId,
+        position: {
+          x: bullet.mesh.position.x,
+          y: bullet.mesh.position.y,
+          z: bullet.mesh.position.z
+        },
+        rotation: {
+          x: bullet.mesh.rotation.x,
+          y: bullet.mesh.rotation.y,
+          z: bullet.mesh.rotation.z
+        }
+      });
+    }
+
+    client.send(JSON.stringify({
       type: 'init',
       id: client.id,
       color: client.color,
-      players: players
-    }));*/
+      players: players,
+      bullets: bullets
+    }));
 
 
 
