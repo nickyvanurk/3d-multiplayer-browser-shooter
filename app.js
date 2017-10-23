@@ -100,14 +100,9 @@ class Server {
 
   onConnection(client) {
     client.id = this.getAvailableId(this.clients);
-    this.clients[client.id] = client;
-    this.broadcastMessage('System', 'orange', `Client #${client.id} connected`, +new Date());
-
-    this.sendClientId(client);
-
-    
-
     client.color = this.getRandomColor();
+    this.clients[client.id] = client;
+    this.sendClientId(client);
 
     // let players = [];
 
@@ -163,6 +158,9 @@ class Server {
         client.send(JSON.stringify({type: 'color', color: client.color}));
 
         this.broadcastPlayerSpawn(client);
+        this.broadcastMessage('System', 'orange', `${client.name} joined the game!`, +new Date());
+      } else if (msg.type === 'msg') {
+        this.broadcastMessage(client.name, client.color, msg.content, msg.time);
       } else {
         this.processInputs(msg, client);
       }
@@ -173,7 +171,7 @@ class Server {
       delete this.players[client.id];
 
       this.broadcastClientDisconnect(client);
-      this.broadcastMessage('System', 'orange', `Client #${client.id} disconnected`, +new Date());
+      this.broadcastMessage('System', 'orange', `${client.name} left the game.`, +new Date());
     });
   }
 

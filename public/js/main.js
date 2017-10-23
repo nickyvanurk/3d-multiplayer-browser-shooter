@@ -256,15 +256,19 @@ class Client {
     if (event.keyCode == 68 || event.keyCode == 39) this.keys.right = event.type == 'keydown';
     if (event.keyCode == 32) this.keys.shoot = event.type == 'keydown';
 
-    if (event.keyCode == 13) {
+    if (event.keyCode == 13 && event.type == 'keydown') {
+      if (this.chatInput.disabled) {
+        this.chatInput.removeAttribute('disabled');
+        this.chatInput.focus();
+      } else {
+        this.chatInput.setAttribute('disabled', 'disabled');
+      }
+
       let msg = this.chatInput.value;
 
       if (!msg) {
         return;
       }
-
-      this.chatInput.value = '';
-      this.chatInput.setAttribute('disabled', 'disabled');
 
       if (this.name === null) {
         this.name = msg;
@@ -272,7 +276,15 @@ class Client {
           type: 'setName',
           name: msg
         }));
+      } else {
+        this.ws.send(JSON.stringify({
+          type: 'msg',
+          content: this.chatInput.value,
+          time: +new Date()
+        }));
       }
+
+      this.chatInput.value = '';
     }
   }
 
@@ -325,7 +337,7 @@ class Client {
 
     this.camera.update();
 
-    if (this.players[this.id]) {
+    if (this.players[this.id] && this.chatInput.disabled) {
       this.processInputs(dt);
     }
 
