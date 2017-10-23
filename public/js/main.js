@@ -31,6 +31,7 @@ class Player extends Entity {
 
     this.mesh.receiveShadow = true;
     this.mesh.castShadow = true;
+    this.mesh.material.color = new THREE.Color(this.color);
 
     this.healthBar = new THREE.Mesh(
       new THREE.BoxGeometry(1, 0.1, 0),
@@ -84,7 +85,7 @@ class Player extends Entity {
     if (this.mesh.material.color.b != 1 && !this.alive) {
       this.mesh.material.color.setHex(0x0000ff);
     } else if (this.mesh.material.color != this.color && this.alive) {
-      this.mesh.material.color.setHex(0xff0000);
+      this.mesh.material.color = new THREE.Color(this.color);
     }
 
     if (!this.alive && this.positionBuffer.length) {
@@ -124,12 +125,15 @@ class Player extends Entity {
 }
 
 class Bullet extends Entity {
-  constructor(scene, playerId, position, rotation) {
+  constructor(scene, playerId, position, rotation, color) {
     super(scene, new THREE.Vector3(0.2, 0.2, 0.2), position, rotation);
     this.scene = scene;
     this.playerId = playerId;
 
     this.speed = 20;
+
+    console.log(color)
+    this.mesh.material.color = new THREE.Color(color);
   }
 
   destroy() {
@@ -380,7 +384,8 @@ class Client {
         }
         break;
       case 'bulletSpawn':
-        this.spawnBullet(msg.id, msg.playerId, msg.position, msg.rotation);
+        let color = this.players[msg.playerId].color;
+        this.spawnBullet(msg.id, msg.playerId, msg.position, msg.rotation, color);
         break;
       case 'bulletDestroy':
         this.destroyBullet(msg.id);
@@ -388,6 +393,8 @@ class Client {
       case 'worldState':
         for (let i = 0; i < msg.states.length; i++) {
           let state = msg.states[i];
+
+          if (!this.players[state.id]) continue;
 
           let player = this.players[state.id];
 
@@ -474,8 +481,8 @@ class Client {
     delete this.players[id];
   }
 
-  spawnBullet(id, playerId, position, rotation) {
-    this.bullets[id] = new Bullet(this.scene, playerId, position, rotation);
+  spawnBullet(id, playerId, position, rotation, color) {
+    this.bullets[id] = new Bullet(this.scene, playerId, position, rotation, color);
     return this.bullets[id];
   }
 
