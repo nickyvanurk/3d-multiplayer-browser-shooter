@@ -1,9 +1,10 @@
 class Entity {
-  constructor(scene, size) {
+  constructor(scene, size, position, rotation) {
     this.mesh = new THREE.Mesh(
       new THREE.BoxGeometry(size.x, size.y, size.z),
       new THREE.MeshPhongMaterial({color: 0xff0000})
     );
+    this.setOrientation(position, rotation);
     scene.add(this.mesh);
   }
 
@@ -14,15 +15,15 @@ class Entity {
 }
 
 class Player extends Entity {
-  constructor(scene, id) {
-    super(scene, new THREE.Vector3(1, 1, 1));
+  constructor(scene, id, position, rotation, health) {
+    super(scene, new THREE.Vector3(1, 1, 1), position, rotation);
     this.scene = scene;
     this.id = id;
 
     this.speed = 8; // units/s
     this.rotationSpeed = 2;
-    this.health = 100;
-    this.alive = true;
+    this.health = health;
+    this.alive = health > 0;
 
     this.positionBuffer = [];
 
@@ -71,7 +72,7 @@ class Player extends Entity {
     this.scene.remove(this.healthBarPivot);
   }
 
-  update(dt) {
+  update(dt, camera) {
     this.healthBar.scale.x = this.health / 100;
 
     if (this.healthBar.scale.x == 0) {
@@ -87,6 +88,14 @@ class Player extends Entity {
     if (!this.alive && this.positionBuffer.length) {
       this.positionBuffer = [];
     }
+
+    if (this.health == 0 && this.alive) {
+      this.alive = false;
+    } else if (this.health > 0 && !this.alive) {
+      this.alive = true;
+    }
+
+    this.updateHealthBarOrientation(camera);
   }
 
   updateHealthBarOrientation(camera) {
@@ -105,18 +114,19 @@ class Player extends Entity {
 
 class Bullet extends Entity {
   constructor(scene, playerId, position, rotation) {
-    super(scene, new THREE.Vector3(0.2, 0.2, 0.2));
+    super(scene, new THREE.Vector3(0.2, 0.2, 0.2), position, rotation);
     this.scene = scene;
     this.playerId = playerId;
 
     this.speed = 20;
-
-    this.mesh.position.set(position.x, position.y, position.z);
-    this.mesh.rotation.set(rotation.x, rotation.y, rotation.z);
   }
 
   destroy() {
     this.scene.remove(this.mesh);
+  }
+
+  update(dt) {
+    this.mesh.translateZ(-this.speed * dt);
   }
 }
 
@@ -134,8 +144,10 @@ class Client {
     this.bullets = {};
 
     this.keys = {
+      forward: false,
       left: false,
-      right: false
+      right: false,
+      shoot: false
     };
 
     document.body.onkeydown = this.processEvents.bind(this);
@@ -149,7 +161,10 @@ class Client {
 
   onConnection() {
     console.log('Connected to server');
+    this.init();
+  }
 
+  init() {
     this.renderer = new THREE.WebGLRenderer();
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.shadowMap.enabled = true;
@@ -180,9 +195,9 @@ class Client {
   }
 
   processEvents(event) {
-    if (event.key == 'w' || event.keyCode == 38) this.keys.forward = event.type == 'keydown';
-    if (event.key == 'a' || event.keyCode == 37) this.keys.left = event.type == 'keydown';
-    if (event.key == 'd' || event.keyCode == 39) this.keys.right = event.type == 'keydown';
+    if (event.keyCode == 87 || event.keyCode == 38) this.keys.forward = event.type == 'keydown';
+    if (event.keyCode == 65 || event.keyCode == 37) this.keys.left = event.type == 'keydown';
+    if (event.keyCode == 68 || event.keyCode == 39) this.keys.right = event.type == 'keydown';
     if (event.keyCode == 32) this.keys.shoot = event.type == 'keydown';
   }
 
@@ -220,32 +235,21 @@ class Client {
     this.pendingInputs.push(input);
   }
 
-  setUpdateRate(hz) {
-    this.updateRate = hz;
-
-    clearInterval(this.updateInterval);
-    this.updateInterval = setInterval(this.update.bind(this), 1000 / this.updateRate);
-  }
-
   update() {
-    let nowTs = +new Date();
-    let lastTs = this.lastTs || nowTs;
-    let dt = (nowTs - lastTs) / 1000.0;
-    this.lastTs = nowTs;
-
     if (this.id == null) return;
 
+    let dt = this.getDeltaTime();
+
     for (let key in this.players) {
-      this.players[key].update(dt);
-      this.players[key].updateHealthBarOrientation(this.camera);
+      this.players[key].update(dt, this.camera);
     }
 
     for (let key in this.bullets) {
-      this.bullets[key].mesh.translateZ(-this.bullets[key].speed * dt);
+      this.bullets[key].update(dt);
     }
 
     this.processInputs(dt);
-    this.interpolateEntities(dt);
+    this.interpolatePlayers(dt);
     this.render();
   }
 
@@ -254,54 +258,43 @@ class Client {
   }
 
   processServerMessages(event) {
-    let message = JSON.parse(event.data);
+    let msg = JSON.parse(event.data);
 
-    switch(message.type) {
+    switch(msg.type) {
       case 'id':
-        this.id = message.id;
+        this.id = msg.id;
         console.log(`Client ID set to: ${this.id}`);
         break;
       case 'bulletSpawn':
-        this.bullets[message.id] = new Bullet(this.scene, message.playerId, message.position, message.rotation);
+        this.spawnBullet(msg.id, msg.playerId, msg.position, msg.rotation);
         break;
       case 'bulletDestroy':
-        this.bullets[message.id].destroy();
-        delete this.bullets[message.id];
+        this.destroyBullet(msg.id);
         break;
       case 'worldState':
-        for (let i = 0; i < message.states.length; i++) {
-          let state = message.states[i];
+        for (let i = 0; i < msg.states.length; i++) {
+          let state = msg.states[i];
 
           // if this is the first time we see this player, create local representation
           if (!this.players[state.id]) {
-            let player = new Player(this.scene, state.id);
-            player.setOrientation(state.position, state.rotation);
-            player.health = state.health;
-            player.alive = player.health != 0;
+            let player = this.spawnPlayer(state.id, state.position, state.rotation, state.health);
 
-            if (state.id == this.id) player.mesh.add(this.camera);
-
-            this.players[state.id] = player;
+            if (state.id == this.id) {
+              player.mesh.add(this.camera);
+            }
           }
 
           let player = this.players[state.id];
 
           player.health = state.health;
 
-          if (player.health == 0 && player.alive) {
-            player.alive = false;
-          }if (player.health == 100 && !player.alive) {
-            player.alive = true;
-            player.setOrientation(state.position, state.rotation);
-          }
-
           if (state.id == this.id) {
             // received the authoritative positon of this client's player
             player.setOrientation(state.position, state.rotation);
 
-            let j = 0;
-            while (j < this.pendingInputs.length) {
+            for (let j = 0; j < this.pendingInputs.length;) {
               let input = this.pendingInputs[j];
+
               if (input.inputSequenceNumber <= state.lastProcessedInput) {
                 // Already processed; its effect is already taken into
                 // account into the world update.
@@ -310,37 +303,31 @@ class Client {
                 if (player.alive) {
                   player.applyInput(input);
                 }
+
                 j++;
               }
             }
           } else {
             // received the position of an player other than this client
             if (player.alive) {
-              let timestamp = +new Date();
-              player.positionBuffer.push([timestamp, state.position, state.rotation]);
+              player.positionBuffer.push([+new Date(), state.position, state.rotation]);
+            } else {
+              player.setOrientation(state.position, state.rotation);
             }
           }
         }
         break;
       case 'disconnect':
-        if (this.players[message.id]) {
-          console.log(`Client ${message.id} disconnected`);
+        if (this.players[msg.id]) {
+          console.log(`Client ${msg.id} disconnected`);
 
-          for (let id in this.bullets) {
-            if (message.id == this.bullets[id].playerId) {
-              this.bullets[id].destroy();
-              delete this.bullets[id];
-            }
-          }
-
-          this.players[message.id].destroy();
-          delete this.players[message.id];
+          this.destroyPlayer(msg.id);
         }
         break;
     }
   }
 
-  interpolateEntities(dt) {
+  interpolatePlayers(dt) {
     let now = +new Date();
     let renderTimestamp = now - (1000.0 / this.serverUpdateRate);
 
@@ -372,6 +359,40 @@ class Client {
         player.mesh.rotation.z = r0.z + (r1.z - r0.z) * (renderTimestamp - t0) / (t1 - t0);
       }
     }
+  }
+
+  spawnPlayer(id, position, rotation, health) {
+    this.players[id] = new Player(this.scene, id, position, rotation, health);
+    return this.players[id];
+  }
+
+  destroyPlayer(id) {
+    this.players[id].destroy();
+    delete this.players[id];
+  }
+
+  spawnBullet(id, playerId, position, rotation) {
+    this.bullets[id] = new Bullet(this.scene, playerId, position, rotation);
+    return this.bullets[id];
+  }
+
+  destroyBullet(id) {
+    this.bullets[id].destroy();
+    delete this.bullets[id];
+  }
+
+  getDeltaTime() {
+    let now = +new Date();
+    let dt =  (now - (this.last || now)) / 1000.0;
+    this.last = now;
+    return dt;
+  }
+
+  setUpdateRate(hz) {
+    this.updateRate = hz;
+
+    clearInterval(this.updateInterval);
+    this.updateInterval = setInterval(this.update.bind(this), 1000 / this.updateRate);
   }
 }
 
