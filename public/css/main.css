@@ -12,7 +12,7 @@ body {
   width: 400px;
   height: 100%;
   max-height: 25vh;
-  bottom: 1em;
+  bottom: 2.5em;
   left: 1em;
 }
 
@@ -36,4 +36,26 @@ body {
 
 .chat-message {
   margin: 0;
+}
+
+#chat-input-container {
+  margin-top: 0.5em;
+}
+
+#chat-status {
+  display: block;
+  float: left;
+  font-size: 12px;
+  width: 100px;
+  line-height: 21px;
+  color: orange;
+}
+
+#chat-input {
+  width: 300px;
+  width: 300px;
+  background: rgba(0,0,0,0.1);
+  border: none;
+  color: white;
+  padding: 0.25em;
 }
