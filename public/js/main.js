@@ -415,7 +415,13 @@ class Client {
         break;
       case 'worldState':
         for (let i = 0; i < msg.states.length; i++) {
-          let state = msg.states[i];
+          let state = {
+            id: msg.states[i][0],
+            position: msg.states[i][1],
+            rotation: msg.states[i][2],
+            lastProcessedInput: msg.states[i][3],
+            health: msg.states[i][4],
+          };
 
           if (!this.players[state.id]) continue;
 

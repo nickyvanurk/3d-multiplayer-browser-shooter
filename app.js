@@ -102,7 +102,7 @@ class Server {
     client.id = this.getAvailableId(this.clients);
     client.color = this.getRandomColor();
     this.clients[client.id] = client;
-    this.sendClientId(client);
+    client.send(JSON.stringify({type: 'id', id: client.id}));
 
     let players = [];
 
@@ -115,18 +115,13 @@ class Server {
 
       if (!player) continue;
 
+      let playerPos = {x: player.mesh.position.x, y: player.mesh.position.y, z: player.mesh.position.z};
+      let playerRot = {x: player.mesh.rotation.x, y: player.mesh.rotation.y, z: player.mesh.rotation.z};
+
       players.push({
         id: player.id,
-        position: {
-          x: player.mesh.position.x,
-          y: player.mesh.position.y,
-          z: player.mesh.position.z
-        },
-        rotation: {
-          x: player.mesh.rotation.x,
-          y: player.mesh.rotation.y,
-          z: player.mesh.rotation.z
-        },
+        position: playerPos,
+        rotation: playerRot,
         health: player.health,
         color: client.color,
         name: client.name
@@ -140,20 +135,10 @@ class Server {
 
       if (!bullet) continue;
 
-      bullets.push({
-        id: key,
-        playerId: bullet.playerId,
-        position: {
-          x: bullet.mesh.position.x,
-          y: bullet.mesh.position.y,
-          z: bullet.mesh.position.z
-        },
-        rotation: {
-          x: bullet.mesh.rotation.x,
-          y: bullet.mesh.rotation.y,
-          z: bullet.mesh.rotation.z
-        }
-      });
+      let bulletPos = {x: bullet.mesh.position.x, y: bullet.mesh.position.y, z: bullet.mesh.position.z};
+      let bulletRot = {x: bullet.mesh.rotation.x, y: bullet.mesh.rotation.y, z: bullet.mesh.rotation.z};
+
+      bullets.push({id: key, playerId: bullet.playerId, position: bulletPos, rotation: bulletRot});
     }
 
     client.send(JSON.stringify({
@@ -163,10 +148,6 @@ class Server {
       players: players,
       bullets: bullets
     }));
-
-
-
-
 
     client.on('message', function (message) {
       let msg = JSON.parse(message);
@@ -194,20 +175,12 @@ class Server {
       delete this.clients[client.id];
       delete this.players[client.id];
 
-      this.broadcastClientDisconnect(client);
+      this.broadcast({type: 'disconnect', id: client.id});
 
       if (client.name) {
         this.broadcastMessage('System', 'orange', `${client.name} left the game.`, +new Date());
       }
     });
-  }
-
-  getRandomColor() {
-    return "#" + ("000000" + Math.floor(Math.random() * 16777216).toString(16)).substr(-6);
-  }
-
-  validateInput(input, clientId) {
-    return clientId === input.id && input.pressTime < 1 / 40;
   }
 
   processInputs(msg, client) {
@@ -239,7 +212,7 @@ class Server {
             delete this.bullets[bulletId];
 
             if (bullet.alive) {
-              this.broadcastBulletDestroy(bulletId);
+              this.broadcast({type: 'bulletDestroy', id: bulletId});
             }
           }, 2000);
 
@@ -249,109 +222,6 @@ class Server {
         }
       }
     }
-  }
-
-  broadcastPlayerSpawn(client) {
-    for (const key in this.clients) {
-      if (this.clients[key].readyState === WebSocket.OPEN) {
-        let player = this.players[client.id];
-        this.clients[key].send(JSON.stringify({
-          type: 'spawnPlayer',
-          id: player.id,
-          position: {
-            x: player.mesh.position.x,
-            y: player.mesh.position.y,
-            z: player.mesh.position.z
-          },
-          rotation: {
-            x: player.mesh.rotation.x,
-            y: player.mesh.rotation.y,
-            z: player.mesh.rotation.z
-          },
-          health: player.health,
-          color: client.color,
-          name: client.name
-        }));
-      }
-    }
-  }
-
-  getAvailableId(object) {
-    for (let i = 0; i < Object.keys(object).length; i++) {
-      if (!object.hasOwnProperty(i)) return i;
-    }
-
-    return Object.keys(object).length;
-  }
-
-
-  sendClientId(client) {
-    client.send(JSON.stringify({type: 'id', id: client.id}));
-  }
-
-  broadcastClientDisconnect(client) {
-    for (const key in this.clients) {
-      if (this.clients[key].readyState === WebSocket.OPEN) {
-        this.clients[key].send(JSON.stringify({
-          type: 'disconnect',
-          id: client.id
-        }));
-      }
-    }
-  }
-
-  broadcastBulletSpawn(bullet, bulletId, playerId) {
-    for (const key in this.clients) {
-      if (this.clients[key].readyState === WebSocket.OPEN) {
-        this.clients[key].send(JSON.stringify({
-          type: 'bulletSpawn',
-          id: bulletId,
-          playerId: playerId,
-          position: {
-            x: bullet.mesh.position.x,
-            y: bullet.mesh.position.y,
-            z: bullet.mesh.position.z,
-          },
-          rotation: {
-            x: bullet.mesh.rotation.x,
-            y: bullet.mesh.rotation.y,
-            z: bullet.mesh.rotation.z,
-          }
-        }));
-      }
-    }
-  }
-
-  broadcastBulletDestroy(id) {
-    for (const key in this.clients) {
-      if (this.clients[key].readyState === WebSocket.OPEN) {
-        this.clients[key].send(JSON.stringify({
-          type: 'bulletDestroy',
-          id: id
-        }));
-      }
-    }
-  }
-
-  broadcastMessage(author, color, msg, time) {
-    for (const key in this.clients) {
-      if (this.clients[key].readyState === WebSocket.OPEN) {
-        this.clients[key].send(JSON.stringify({
-          type: 'message',
-          author: author,
-          color: color,
-          content: msg,
-          time: time
-        }));
-      }
-    }
-  }
-
-  setUpdateRate(hz) {
-    this.updateRate = hz;
-
-    clearInterval(this.updateInterval);
-    this.updateInterval = setInterval(this.update.bind(this), 1000 / this.updateRate);
   }
 
   update() {
@@ -381,7 +251,7 @@ class Server {
           }
 
           bullet.alive = false;
-          this.broadcastBulletDestroy(bulletId);
+          this.broadcast({type: 'bulletDestroy', id: bulletId});
         }
       }
     }
@@ -394,34 +264,85 @@ class Server {
     for (let id in this.players) {
       let player = this.players[id];
 
-      worldState.push({
-        id: player.id,
-        position: {
-          x: player.mesh.position.x,
-          y: player.mesh.position.y,
-          z: player.mesh.position.z
-        },
-        rotation: {
-          x: player.mesh.rotation.x,
-          y: player.mesh.rotation.y,
-          z: player.mesh.rotation.z
-        },
-        lastProcessedInput: this.lastProcessedInput[id],
-        health: player.health,
-      });
+      let playerPos = {x: player.mesh.position.x, y: player.mesh.position.y, z: player.mesh.position.z};
+      let playerRot = {x: player.mesh.rotation.x, y: player.mesh.rotation.y, z: player.mesh.rotation.z};
+
+      worldState.push([player.id, playerPos, playerRot, this.lastProcessedInput[id], player.health]);
     }
 
-    //console.log(getUTF8Size(JSON.stringify(worldState)));
+    // console.log(getUTF8Size(JSON.stringify(worldState)));
 
+    this.broadcast({type: 'worldState', states: worldState});
+  }
+
+  setUpdateRate(hz) {
+    this.updateRate = hz;
+
+    clearInterval(this.updateInterval);
+    this.updateInterval = setInterval(this.update.bind(this), 1000 / this.updateRate);
+  }
+
+  validateInput(input, clientId) {
+    return clientId === input.id && input.pressTime < 1 / 40;
+  }
+
+  getAvailableId(object) {
+    for (let i = 0; i < Object.keys(object).length; i++) {
+      if (!object.hasOwnProperty(i)) {
+        return i;
+      }
+    }
+
+    return Object.keys(object).length;
+  }
+
+  broadcast(object) {
     for (const key in this.clients) {
-      const client = this.clients[key];
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(JSON.stringify({
-          type: 'worldState',
-          states: worldState
+      if (this.clients[key].readyState === WebSocket.OPEN) {
+        this.clients[key].send(JSON.stringify(object));
+      }
+    }
+  }
+
+  broadcastPlayerSpawn(client) {
+    for (const key in this.clients) {
+      if (this.clients[key].readyState === WebSocket.OPEN) {
+        let player = this.players[client.id];
+
+        let playerPos = {x: player.mesh.position.x, y: player.mesh.position.y, z: player.mesh.position.z};
+        let playerRot = {x: player.mesh.rotation.x, y: player.mesh.rotation.y, z: player.mesh.rotation.z};
+
+        this.clients[key].send(JSON.stringify({
+          type: 'spawnPlayer',
+          id: player.id,
+          position: playerPos,
+          rotation: playerRot,
+          health: player.health,
+          color: client.color,
+          name: client.name
         }));
       }
     }
+  }
+
+  broadcastBulletSpawn(bullet, bulletId, playerId) {
+    let bulletPos = {x: bullet.mesh.position.x, y: bullet.mesh.position.y, z: bullet.mesh.position.z};
+    let bulletRot = {x: bullet.mesh.rotation.x, y: bullet.mesh.rotation.y, z: bullet.mesh.rotation.z};
+    this.broadcast({type: 'bulletSpawn', id: bulletId, playerId: playerId, position: bulletPos, rotation: bulletRot});
+  }
+
+  broadcastMessage(author, color, msg, time) {
+    this.broadcast({
+      type: 'message',
+      author: author,
+      color: color,
+      content: msg,
+      time: time
+    });
+  }
+
+  getRandomColor() {
+    return "#" + ("000000" + Math.floor(Math.random() * 16777216).toString(16)).substr(-6);
   }
 
   listen(port) {
