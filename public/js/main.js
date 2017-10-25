@@ -92,15 +92,6 @@ class Player extends Entity {
   }
 
   update(dt, camera) {
-    this.tmpQuaternion.set(
-      this.rotationVector.x * this.pitchSpeed * dt,
-      this.rotationVector.y * this.yawSpeed * dt,
-      this.rotationVector.z * this.rollSpeed * dt,
-      1
-    ).normalize();
-    this.mesh.quaternion.multiply(this.tmpQuaternion);
-    this.mesh.rotation.setFromQuaternion(this.mesh.quaternion, this.mesh.rotation.order);
-
     this.healthBar.scale.x = this.health / 100;
 
     if (this.healthBar.scale.x == 0) {
@@ -151,6 +142,16 @@ class Player extends Entity {
     this.rotationVector.y = -((input.keys & 32) == 32) + ((input.keys & 16) == 16);
     this.rotationVector.z = -((input.keys & 4) == 4) + ((input.keys & 2) == 2);
     if (input.pitch) this.rotationVector.x = -input.pitch;
+
+    this.tmpQuaternion.set(
+      this.rotationVector.x * this.pitchSpeed * input.pressTime,
+      this.rotationVector.y * this.yawSpeed * input.pressTime,
+      this.rotationVector.z * this.rollSpeed * input.pressTime,
+      1
+    ).normalize();
+    this.mesh.quaternion.multiply(this.tmpQuaternion);
+    this.mesh.rotation.setFromQuaternion(this.mesh.quaternion, this.mesh.rotation.order);
+
   }
 }
 
@@ -325,7 +326,7 @@ class Client {
     let dt = this.getDeltaTime();
 
     for (let key in this.players) {
-      this.players[key].update(dt, this.camera.body);
+      this.players[key].update(1 / 60, this.camera.body);
 
       if (key != this.id) {
         if (this.players[this.id]) {

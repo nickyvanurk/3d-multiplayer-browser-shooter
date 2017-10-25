@@ -37,14 +37,6 @@ class Player extends Entity {
   }
 
   update(dt) {
-    this.tmpQuaternion.set(
-      this.rotationVector.x * this.pitchSpeed * dt,
-      this.rotationVector.y * this.yawSpeed * dt,
-      this.rotationVector.z * this.rollSpeed * dt,
-      1
-    ).normalize();
-    this.mesh.quaternion.multiply(this.tmpQuaternion);
-    this.mesh.rotation.setFromQuaternion(this.mesh.quaternion, this.mesh.rotation.order);
   }
 
   applyInput(input) {
@@ -52,6 +44,15 @@ class Player extends Entity {
     this.rotationVector.y = -((input.keys & 32) == 32) + ((input.keys & 16) == 16);
     this.rotationVector.z = -((input.keys & 4) == 4) + ((input.keys & 2) == 2);
     if (input.pitch) this.rotationVector.x = -input.pitch;
+
+    this.tmpQuaternion.set(
+      this.rotationVector.x * this.pitchSpeed * input.pressTime,
+      this.rotationVector.y * this.yawSpeed * input.pressTime,
+      this.rotationVector.z * this.rollSpeed * input.pressTime,
+      1
+    ).normalize();
+    this.mesh.quaternion.multiply(this.tmpQuaternion);
+    this.mesh.rotation.setFromQuaternion(this.mesh.quaternion, this.mesh.rotation.order);
   }
 
   spawn() {
