@@ -244,22 +244,10 @@ class Client {
 
     this.camera = new Camera();
 
-    this.scene.add(new THREE.AmbientLight(0xffffff, 0.4));
-
-    let light = new THREE.PointLight(0xffffff, 0.8, 18);
-    light.position.set(3, 12, 3);
-    light.castShadow = true;
-    light.shadow.camera.near = 0.1;
-    light.shadow.camera.far = 25;
-    this.scene.add(light);
-
-    let plane = new THREE.Mesh(
-      new THREE.PlaneGeometry(200, 200),
-      new THREE.MeshPhongMaterial({color:0xffffff})
-    );
-    plane.rotation.x -= Math.PI / 2;
-    plane.receiveShadow = true;
-    this.scene.add(plane);
+    let directionalLight = new THREE.DirectionalLight(0xffeedd, 0.8);
+    directionalLight.position.set(0, 0, 2);
+    this.scene.add(directionalLight);
+    this.scene.add(new THREE.HemisphereLight());
   }
 
   setEventHandlers() {
