@@ -102,7 +102,6 @@ class Server {
     client.id = this.getAvailableId(this.clients);
     client.color = this.getRandomColor();
     this.clients[client.id] = client;
-    client.send(JSON.stringify({type: 'id', id: client.id}));
 
     let players = [];
 
@@ -141,10 +140,9 @@ class Server {
       bullets.push({id: key, playerId: bullet.playerId, position: bulletPos, rotation: bulletRot});
     }
 
+
     client.send(JSON.stringify({
-      type: 'init',
-      id: client.id,
-      color: client.color,
+      type: 'initWorld',
       players: players,
       bullets: bullets
     }));
@@ -159,8 +157,7 @@ class Server {
         this.players[player.id] = player;
 
         client.name = msg.name;
-        client.color = this.getRandomColor();
-        client.send(JSON.stringify({type: 'color', color: client.color}));
+        client.send(JSON.stringify({type: 'initClient', id: client.id, color: client.color}));
 
         this.broadcastPlayerSpawn(client);
         this.broadcastMessage('System', 'orange', `${client.name} joined the game!`, +new Date());
@@ -175,7 +172,7 @@ class Server {
       delete this.clients[client.id];
       delete this.players[client.id];
 
-      this.broadcast({type: 'disconnect', id: client.id});
+      this.broadcast({type: 'removePlayer', id: client.id});
 
       if (client.name) {
         this.broadcastMessage('System', 'orange', `${client.name} left the game.`, +new Date());
@@ -212,7 +209,7 @@ class Server {
             delete this.bullets[bulletId];
 
             if (bullet.alive) {
-              this.broadcast({type: 'bulletDestroy', id: bulletId});
+              this.broadcast({type: 'removeBullet', id: bulletId});
             }
           }, 2000);
 
@@ -251,7 +248,7 @@ class Server {
           }
 
           bullet.alive = false;
-          this.broadcast({type: 'bulletDestroy', id: bulletId});
+          this.broadcast({type: 'removeBullet', id: bulletId});
         }
       }
     }
@@ -313,7 +310,7 @@ class Server {
         let playerRot = {x: player.mesh.rotation.x, y: player.mesh.rotation.y, z: player.mesh.rotation.z};
 
         this.clients[key].send(JSON.stringify({
-          type: 'spawnPlayer',
+          type: 'addPlayer',
           id: player.id,
           position: playerPos,
           rotation: playerRot,
@@ -328,7 +325,7 @@ class Server {
   broadcastBulletSpawn(bullet, bulletId, playerId) {
     let bulletPos = {x: bullet.mesh.position.x, y: bullet.mesh.position.y, z: bullet.mesh.position.z};
     let bulletRot = {x: bullet.mesh.rotation.x, y: bullet.mesh.rotation.y, z: bullet.mesh.rotation.z};
-    this.broadcast({type: 'bulletSpawn', id: bulletId, playerId: playerId, position: bulletPos, rotation: bulletRot});
+    this.broadcast({type: 'addBullet', id: bulletId, playerId: playerId, position: bulletPos, rotation: bulletRot});
   }
 
   broadcastMessage(author, color, msg, time) {

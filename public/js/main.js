@@ -181,10 +181,6 @@ class Camera {
 
 class Client {
   constructor() {
-    this.ws = new WebSocket('ws://localhost:8080');
-    this.ws.onopen = this.onConnection.bind(this);
-    this.ws.onmessage = this.processServerMessages.bind(this);
-
     this.serverUpdateRate = 20;
 
     this.id = null;
@@ -194,34 +190,19 @@ class Client {
     this.players = {};
     this.bullets = {};
 
-    this.keys = {
-      forward: false,
-      left: false,
-      right: false,
-      shoot: false
-    };
-
-    document.body.onkeydown = this.processEvents.bind(this);
-    document.body.onkeyup = this.processEvents.bind(this);
-
+    this.keys = {forward: false, left: false, right: false, shoot: false};
     this.inputSequenceNumber = 0;
     this.pendingInputs = [];
-
-    this.setUpdateRate(60);
 
     this.chatbox = document.getElementById('chatbox');
     this.chatInput = document.getElementById('chat-input');
     this.chatStatus = document.getElementById('chat-status');
-  }
 
-  onConnection() {
-    this.chatStatus.textContent = 'Choose name:';
-    this.chatInput.removeAttribute('disabled');
-    this.chatInput.focus();
-    this.init();
-  }
+    this.ws = new WebSocket('ws://localhost:8080');
 
-  init() {
+    this.setEventHandlers();
+    this.setUpdateRate(60);
+
     this.renderer = new THREE.WebGLRenderer();
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.shadowMap.enabled = true;
@@ -249,6 +230,35 @@ class Client {
     this.scene.add(plane);
   }
 
+  setEventHandlers() {
+    this.ws.onopen = this.onConnection.bind(this);
+    this.ws.onmessage = this.processServerMessages.bind(this);
+
+    document.body.onkeydown = this.processEvents.bind(this);
+    document.body.onkeyup = this.processEvents.bind(this);
+  }
+
+  onConnection() {
+    this.chatStatus.textContent = 'Choose name:';
+    this.chatInput.removeAttribute('disabled');
+    this.chatInput.focus();
+  }
+
+  processServerMessages(event) {
+    let msg = JSON.parse(event.data);
+
+    switch(msg.type) {
+      case 'initClient': this.onInitClient(msg); break;
+      case 'initWorld': this.onInitWorld(msg); break;
+      case 'message': this.onMessage(msg); break;
+      case 'addPlayer': this.onAddPlayer(msg); break;
+      case 'removePlayer': this.onRemovePlayer(msg); break;
+      case 'addBullet': this.onAddBullet(msg); break;
+      case 'removeBullet': this.onRemoveBullet(msg); break;
+      case 'worldState': this.onWorldState(msg); break;
+    }
+  }
+
   processEvents(event) {
     if (event.keyCode == 87 || event.keyCode == 38) this.keys.forward = event.type == 'keydown';
     if (event.keyCode == 65 || event.keyCode == 37) this.keys.left = event.type == 'keydown';
@@ -271,20 +281,38 @@ class Client {
 
       if (this.name === null) {
         this.name = msg;
-        this.ws.send(JSON.stringify({
-          type: 'setName',
-          name: msg
-        }));
+        this.ws.send(JSON.stringify({type: 'setName', name: msg}));
       } else {
-        this.ws.send(JSON.stringify({
-          type: 'msg',
-          content: this.chatInput.value,
-          time: +new Date()
-        }));
+        this.ws.send(JSON.stringify({type: 'msg', content: this.chatInput.value, time: +new Date()}));
       }
 
       this.chatInput.value = '';
     }
+  }
+
+  update() {
+    let dt = this.getDeltaTime();
+
+    for (let key in this.players) {
+      this.players[key].update(dt, this.camera.body);
+    }
+
+    for (let key in this.bullets) {
+      this.bullets[key].update(dt);
+    }
+
+    this.camera.update();
+
+    if (this.players[this.id] && this.chatInput.disabled) {
+      this.processInputs(dt);
+    }
+
+    this.interpolatePlayers(dt);
+    this.render();
+  }
+
+  render() {
+    this.renderer.render(this.scene, this.camera.body);
   }
 
   processInputs(dt) {
@@ -321,151 +349,6 @@ class Client {
     this.pendingInputs.push(input);
   }
 
-  update() {
-    if (this.id == null) return;
-
-    let dt = this.getDeltaTime();
-
-    for (let key in this.players) {
-      this.players[key].update(dt, this.camera.body);
-    }
-
-    for (let key in this.bullets) {
-      this.bullets[key].update(dt);
-    }
-
-    this.camera.update();
-
-    if (this.players[this.id] && this.chatInput.disabled) {
-      this.processInputs(dt);
-    }
-
-    this.interpolatePlayers(dt);
-    this.render();
-  }
-
-  render() {
-    this.renderer.render(this.scene, this.camera.body);
-  }
-
-  processServerMessages(event) {
-    let msg = JSON.parse(event.data);
-
-    switch(msg.type) {
-      case 'init':
-        console.log(msg);
-        this.id = msg.id;
-        this.color = msg.color;
-        for (let i = 0; i < msg.players.length; i++) {
-          this.spawnPlayer(
-            msg.players[i].id,
-            msg.players[i].position,
-            msg.players[i].rotation,
-            msg.players[i].health,
-            msg.players[i].color,
-            msg.players[i].name
-          );
-        }
-
-        for (let i = 0; i < msg.bullets.length; i++) {
-          let color = this.players[msg.bullets[i].playerId].color;
-          this.spawnBullet(
-            msg.bullets[i].id,
-            msg.bullets[i].playerId,
-            msg.bullets[i].position,
-            msg.bullets[i].rotation,
-            color
-          );
-        }
-        break;
-      case 'color':
-        this.color = msg.color;
-        break;
-      case 'message':
-        this.addMessage(msg.author, msg.content, msg.color, new Date(msg.time));
-        break;
-      case 'id':
-        this.id = msg.id;
-        break;
-      case 'spawnPlayer':
-        if (!this.players[msg.id]) {
-          let player = this.spawnPlayer(
-            msg.id,
-            msg.position,
-            msg.rotation,
-            msg.health,
-            msg.color,
-            msg.name
-          );
-
-          if (msg.id == this.id) {
-            this.camera.setTarget(player);
-            this.players[this.id] = player;
-          } else {
-            this.players[msg.id] = player;
-          }
-        }
-        break;
-      case 'bulletSpawn':
-        let color = this.players[msg.playerId].color;
-        this.spawnBullet(msg.id, msg.playerId, msg.position, msg.rotation, color);
-        break;
-      case 'bulletDestroy':
-        this.destroyBullet(msg.id);
-        break;
-      case 'worldState':
-        for (let i = 0; i < msg.states.length; i++) {
-          let state = {
-            id: msg.states[i][0],
-            position: msg.states[i][1],
-            rotation: msg.states[i][2],
-            lastProcessedInput: msg.states[i][3],
-            health: msg.states[i][4],
-          };
-
-          if (!this.players[state.id]) continue;
-
-          let player = this.players[state.id];
-
-          player.health = state.health;
-
-          if (state.id == this.id) {
-            // received the authoritative positon of this client's player
-            player.setOrientation(state.position, state.rotation);
-
-            for (let j = 0; j < this.pendingInputs.length;) {
-              let input = this.pendingInputs[j];
-
-              if (input.inputSequenceNumber <= state.lastProcessedInput) {
-                // Already processed; its effect is already taken into
-                // account into the world update.
-                this.pendingInputs.splice(j, 1);
-              } else {
-                if (player.alive) {
-                  player.applyInput(input);
-                }
-
-                j++;
-              }
-            }
-          } else {
-            // received the position of an player other than this client
-            if (player.alive) {
-              player.positionBuffer.push([+new Date(), state.position, state.rotation]);
-            } else {
-              player.setOrientation(state.position, state.rotation);
-            }
-          }
-        }
-        break;
-      case 'disconnect':
-        if (this.players[msg.id]) {
-          this.destroyPlayer(msg.id);
-        }
-        break;
-    }
-  }
-
   interpolatePlayers(dt) {
     let now = +new Date();
     let renderTimestamp = now - (1000.0 / this.serverUpdateRate);
@@ -496,6 +379,110 @@ class Client {
         player.mesh.rotation.x = r0.x + (r1.x - r0.x) * (renderTimestamp - t0) / (t1 - t0);
         player.mesh.rotation.y = r0.y + (r1.y - r0.y) * (renderTimestamp - t0) / (t1 - t0);
         player.mesh.rotation.z = r0.z + (r1.z - r0.z) * (renderTimestamp - t0) / (t1 - t0);
+      }
+    }
+  }
+
+  onInitClient(msg) {
+    this.id = msg.id;
+    this.color = msg.color;
+    this.chatStatus.textContent = 'Connected';
+  }
+
+  onInitWorld(msg) {
+    for (let i = 0; i < msg.players.length; i++) {
+      let p = msg.players[i];
+      this.spawnPlayer(p.id, p.position, p.rotation, p.health, p.color, p.name);
+    }
+
+    for (let i = 0; i < msg.bullets.length; i++) {
+      let b = msg.bullets[i];
+      let color = this.players[msg.bullets[i].playerId].color;
+      this.spawnBullet(b.id, b.playerId, b.position, b.rotation, color);
+    }
+  }
+
+  onMessage(msg) {
+    this.addMessage(msg.author, msg.content, msg.color, new Date(msg.time));
+  }
+
+  onAddPlayer(msg) {
+    if (!this.players[msg.id]) {
+      let player = this.spawnPlayer(
+        msg.id,
+        msg.position,
+        msg.rotation,
+        msg.health,
+        msg.color,
+        msg.name
+      );
+
+      if (msg.id == this.id) {
+        this.camera.setTarget(player);
+        this.players[this.id] = player;
+      } else {
+        this.players[msg.id] = player;
+      }
+    }
+  }
+
+  onRemovePlayer(msg) {
+    if (this.players[msg.id]) {
+      this.destroyPlayer(msg.id);
+    }
+  }
+
+  onAddBullet(msg) {
+    let color = this.players[msg.playerId].color;
+    this.spawnBullet(msg.id, msg.playerId, msg.position, msg.rotation, color);
+  }
+
+  onRemoveBullet(msg) {
+    this.destroyBullet(msg.id);
+  }
+
+  onWorldState(msg) {
+    for (let i = 0; i < msg.states.length; i++) {
+      let state = {
+        id: msg.states[i][0],
+        position: msg.states[i][1],
+        rotation: msg.states[i][2],
+        lastProcessedInput: msg.states[i][3],
+        health: msg.states[i][4],
+      };
+
+      if (!this.players[state.id]) continue;
+
+      let player = this.players[state.id];
+
+      player.health = state.health;
+
+      if (state.id == this.id) {
+        // received the authoritative positon of this client's player
+        player.setOrientation(state.position, state.rotation);
+
+        for (let j = 0; j < this.pendingInputs.length;) {
+          let input = this.pendingInputs[j];
+
+          if (input.inputSequenceNumber <= state.lastProcessedInput) {
+            // Already processed; its effect is already taken into
+            // account into the world update.
+            this.pendingInputs.splice(j, 1);
+          } else {
+            if (player.alive) {
+              player.applyInput(input);
+            }
+
+            j++;
+          }
+        }
+      } else {
+        // received the position of an player other than this client
+        if (player.alive) {
+          player.positionBuffer.push([+new Date(), state.position, state.rotation]);
+        } else {
+          player.setOrientation(state.position, state.rotation);
+        }
       }
     }
   }
