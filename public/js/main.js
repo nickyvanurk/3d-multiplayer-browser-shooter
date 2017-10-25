@@ -15,10 +15,11 @@ class Entity {
 }
 
 class Player extends Entity {
-  constructor(scene, id, position, rotation, health, color, name) {
+  constructor(scene, id, position, rotation, health, color, name, isClient = false) {
     super(scene, new THREE.Vector3(1, 1, 1), position, rotation);
     this.scene = scene;
     this.id = id;
+    this.isClient = isClient;
 
     this.speed = 8; // units/s
     this.rotationSpeed = 2;
@@ -49,7 +50,14 @@ class Player extends Entity {
     this.healthBar.position.x -= this.healthBar.geometry.parameters.width / 2;
     this.healthBarPivot = new THREE.Object3D();
     this.healthBarPivot.add(this.healthBar);
-    this.scene.add(this.healthBarPivot);
+
+    let height = this.mesh.geometry.parameters.height;
+    this.healthBar.position.y = height;
+    if (this.isClient) {
+      this.mesh.add(this.healthBarPivot);
+    } else {
+      this.scene.add(this.healthBarPivot);
+    }
 
     let loader = new THREE.FontLoader();
 
@@ -71,7 +79,8 @@ class Player extends Entity {
       var centerOffset = -0.5 * (this.nameTag.geometry.boundingBox.max.x -
         this.nameTag.geometry.boundingBox.min.x);
       this.nameTag.position.x = centerOffset;
-      this.nameTag.position.y = this.mesh.geometry.parameters.height / 4;
+
+      this.nameTag.position.y = height + height / 6;
 
       this.healthBarPivot.add(this.nameTag);
     }.bind(this));
@@ -114,7 +123,9 @@ class Player extends Entity {
       this.alive = true;
     }
 
-    this.updateHealthBarOrientation(camera);
+    if (!this.isClient){
+      this.updateHealthBarOrientation(camera);
+    }
   }
 
   setName(name) {
@@ -127,10 +138,12 @@ class Player extends Entity {
   }
 
   updateHealthBarOrientation(camera) {
-    this.healthBarPivot.position.copy(this.mesh.position);
-    let height = this.mesh.geometry.parameters.height;
-    this.healthBarPivot.position.y = this.mesh.position.y + height + height / 4;
     this.healthBarPivot.lookAt(camera.getWorldPosition());
+    this.healthBarPivot.position.copy(this.mesh.position);
+  }
+
+  setNameTagOrientation(mesh) {
+    this.healthBarPivot.rotation.set(mesh.rotation.x, mesh.rotation.y, mesh.rotation.z);
   }
 
   applyInput(input) {
@@ -323,6 +336,12 @@ class Client {
 
     for (let key in this.players) {
       this.players[key].update(dt, this.camera.body);
+
+      if (key != this.id) {
+        if (this.players[this.id]) {
+          this.players[key].setNameTagOrientation(this.players[this.id].mesh);
+        }
+      }
     }
 
     for (let key in this.bullets) {
@@ -515,7 +534,7 @@ class Client {
   }
 
   spawnPlayer(id, position, rotation, health, color, name) {
-    this.players[id] = new Player(this.scene, id, position, rotation, health, color, name);
+    this.players[id] = new Player(this.scene, id, position, rotation, health, color, name, this.id == id);
     return this.players[id];
   }
 
