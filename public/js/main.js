@@ -28,9 +28,32 @@ class Player extends Entity {
     this.color = color;
     this.name = name;
 
-    this.rollSpeed = 2;
-    this.yawSpeed = 1;
+    this.speed = 0;
+    this.maxSpeed = 1;
+    this.minSpeed = 0;
+    this.acceleration = 0.01;
+    this.maxAcceleration = 1;
+
+    this.rollSpeed = 0;
+    this.maxRollSpeed = 2;
+    this.minRollSpeed = 0;
+    this.rollAccel = 0.06;
+    this.maxRollAccel = 1;
+
+    this.yawSpeed = 0;
+    this.maxYawSpeed = 1;
+    this.minYawSpeed = 0;
+    this.yawAccel = 0.04;
+    this.maxYawAccel = 1;
+
     this.pitchSpeed = 0.6;
+
+    this.forward = 0;
+    this.rollLeft = 0;
+    this.rollRight = 0;
+    this.yawLeft = 0;
+    this.yawRight = 0;
+    this.pitch = 0;
 
     this.tmpQuaternion = new THREE.Quaternion();
     this.rotationVector = new THREE.Vector3();
@@ -138,20 +161,75 @@ class Player extends Entity {
   }
 
   applyInput(input) {
-    if ((input.keys & 1) == 1) this.mesh.translateZ(-this.speed * input.pressTime);
-    this.rotationVector.y = -((input.keys & 32) == 32) + ((input.keys & 16) == 16);
-    this.rotationVector.z = -((input.keys & 4) == 4) + ((input.keys & 2) == 2);
-    if (input.pitch) this.rotationVector.x = -input.pitch;
+    this.forward = ((input.keys & 1) == 1);
+    this.rollLeft = ((input.keys & 2) == 2);
+    this.rollRight = ((input.keys & 4) == 4);
+    this.yawLeft = ((input.keys & 16) == 16);
+    this.yawRight = ((input.keys & 32) == 32);
+    this.pitch = input.pitch || 0;
+
+    this.mesh.translateZ(-this.speed);
+
+    this.rotationVector.x = -this.pitch;
+    this.rotationVector.y = -this.yawRight + this.yawLeft;
+    this.rotationVector.z = -this.rollRight + this.rollLeft;
+
+    if (this.forward) {
+      this.speed += this.acceleration;
+      if (this.speed > this.maxSpeed) this.speed = this.maxSpeed;
+    } else if (this.speed > this.minSpeed) {
+      this.speed -= this.acceleration;
+      if (this.speed < this.minSpeed) this.speed = this.minSpeed;
+    }
+
+    if (this.rollRight) {
+      this.rollSpeed += this.rollAccel;
+      if (this.rollSpeed > this.maxRollSpeed) this.rollSpeed = this.maxRollSpeed;
+    }
+
+    if (this.rollLeft) {
+      this.rollSpeed -= this.rollAccel;
+      if (this.rollSpeed < -this.maxRollSpeed) this.rollSpeed = -this.maxRollSpeed;
+    }
+
+    if (!this.rollLeft && !this.rollRight) {
+      if (this.rollSpeed > this.minRollSpeed) {
+        this.rollSpeed -= this.rollAccel;
+        if (this.rollSpeed < this.minRollSpeed) this.rollSpeed = this.minRollSpeed;
+      } else if (this.rollSpeed < -this.minRollSpeed) {
+        this.rollSpeed += this.rollAccel;
+        if (this.rollSpeed > -this.minRollSpeed) this.rollSpeed = -this.minRollSpeed;
+      }
+    }
+
+    if (this.yawRight) {
+      this.yawSpeed += this.yawAccel;
+      if (this.yawSpeed > this.maxYawSpeed) this.yawSpeed = this.maxYawSpeed;
+    }
+
+    if (this.yawLeft) {
+      this.yawSpeed -= this.yawAccel;
+      if (this.yawSpeed < -this.maxYawSpeed) this.yawSpeed = -this.maxYawSpeed;
+    }
+
+    if (!this.yawLeft && !this.yawRight) {
+      if (this.yawSpeed > this.minYawSpeed) {
+        this.yawSpeed -= this.yawAccel;
+        if (this.yawSpeed < this.minYawSpeed) this.yawSpeed = this.minYawSpeed;
+      } else if (this.yawSpeed < -this.minYawSpeed) {
+        this.yawSpeed += this.yawAccel;
+        if (this.yawSpeed > -this.minYawSpeed) this.yawSpeed = -this.minYawSpeed;
+      }
+    }
 
     this.tmpQuaternion.set(
       this.rotationVector.x * this.pitchSpeed * input.pressTime,
-      this.rotationVector.y * this.yawSpeed * input.pressTime,
-      this.rotationVector.z * this.rollSpeed * input.pressTime,
+      -this.yawSpeed * input.pressTime,
+      -this.rollSpeed * input.pressTime,
       1
     ).normalize();
     this.mesh.quaternion.multiply(this.tmpQuaternion);
     this.mesh.rotation.setFromQuaternion(this.mesh.quaternion, this.mesh.rotation.order);
-
   }
 }
 
@@ -193,13 +271,17 @@ class Camera {
   }
 
   followTarget() {
+    let followSpeed = (this.target.speed / this.target.maxSpeed) > this.smoothSpeed ? 
+                      (this.target.speed / this.target.maxSpeed) :
+                      this.smoothSpeed;
+
     var relativeCameraOffset = new THREE.Vector3().copy(this.offset);
     let desiredPosition = relativeCameraOffset.applyMatrix4(this.target.mesh.matrixWorld);
-    let smoothedPosition = new THREE.Vector3().lerpVectors(this.body.position, desiredPosition, this.smoothSpeed);
+    let smoothedPosition = new THREE.Vector3().lerpVectors(this.body.position, desiredPosition, followSpeed);
     this.body.position.copy(smoothedPosition);
 
     let desiredQuaternion = this.target.mesh.quaternion;
-    this.body.quaternion.slerp(desiredQuaternion, this.smoothSpeed);
+    this.body.quaternion.slerp(desiredQuaternion, followSpeed);
   }
 
   setTarget(entity) {
