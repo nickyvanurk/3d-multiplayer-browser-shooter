@@ -77,6 +77,8 @@ class Player {
       new THREE.BoxGeometry(1, 0.1, 0),
       new THREE.MeshBasicMaterial({color: 0x00ff00})
     );
+    this.healthBar.renderOrder = 999;
+    this.healthBar.onBeforeRender = function (renderer) {renderer.clearDepth();};
     this.healthBar.geometry.translate(this.healthBar.geometry.parameters.width / 2, 0, 0 );
     this.healthBar.geometry.verticesNeedUpdate = true;
     this.healthBar.position.x -= this.healthBar.geometry.parameters.width / 2;
@@ -108,6 +110,8 @@ class Player {
         geometry,
         new THREE.MeshBasicMaterial({color: 0xffff00, flatShading: true})
       );
+      this.nameTag .renderOrder = 999;
+      this.nameTag .onBeforeRender = function( renderer ) {renderer.clearDepth();};
 
       var centerOffset = -0.5 * (geometry.boundingBox.max.x - geometry.boundingBox.min.x);
       this.nameTag.position.x = centerOffset;
