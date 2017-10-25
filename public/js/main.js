@@ -213,7 +213,7 @@ class Camera {
 
 class Client {
   constructor() {
-    this.serverUpdateRate = 20;
+    this.serverUpdateRate = 30;
 
     this.id = null;
     this.color = null;

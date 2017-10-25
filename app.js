@@ -114,7 +114,7 @@ class Server {
 
     this.respawnTime = 1000; // milliseconds
 
-    this.setUpdateRate(20);
+    this.setUpdateRate(30);
   }
 
   onConnection(client) {
