@@ -176,7 +176,7 @@ class Bullet extends Entity {
 
 class Camera {
   constructor() {
-    this.body = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 10000);
+    this.body = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1e7);
     this.body.position.y = 2;
     this.offset = new THREE.Vector3(0, 3, 15);
     this.smoothSpeed = 0.125;
@@ -248,6 +248,8 @@ class Client {
     directionalLight.position.set(0, 0, 2);
     this.scene.add(directionalLight);
     this.scene.add(new THREE.HemisphereLight());
+
+    this.createStarfield(6371);
   }
 
   setEventHandlers() {
@@ -567,6 +569,49 @@ class Client {
 
     this.chatbox.appendChild(p);
     this.chatbox.scrollTop = this.chatbox.scrollHeight;
+  }
+
+  createStarfield(radius) {
+    let starsGeometry = [new THREE.Geometry(), new THREE.Geometry()];
+
+    for (let i = 0; i < 250; i++) {
+      let vertex = new THREE.Vector3();
+      vertex.x = Math.random() * 2 - 1;
+      vertex.y = Math.random() * 2 - 1;
+      vertex.z = Math.random() * 2 - 1;
+      vertex.multiplyScalar(radius);
+      starsGeometry[0].vertices.push(vertex);
+    }
+
+    for (let i = 0; i < 1500; i++) {
+      let vertex = new THREE.Vector3();
+      vertex.x = Math.random() * 2 - 1;
+      vertex.y = Math.random() * 2 - 1;
+      vertex.z = Math.random() * 2 - 1;
+      vertex.multiplyScalar(radius);
+      starsGeometry[1].vertices.push(vertex);
+    }
+
+    let stars;
+    const starsMaterials = [
+      new THREE.PointsMaterial( { color: 0x555555, size: 2, sizeAttenuation: false } ),
+      new THREE.PointsMaterial( { color: 0x555555, size: 1, sizeAttenuation: false } ),
+      new THREE.PointsMaterial( { color: 0x333333, size: 2, sizeAttenuation: false } ),
+      new THREE.PointsMaterial( { color: 0x3a3a3a, size: 1, sizeAttenuation: false } ),
+      new THREE.PointsMaterial( { color: 0x1a1a1a, size: 2, sizeAttenuation: false } ),
+      new THREE.PointsMaterial( { color: 0x1a1a1a, size: 1, sizeAttenuation: false } )
+    ];
+
+    for (let i = 10; i < 30; i++) {
+      stars = new THREE.Points(starsGeometry[i % 2], starsMaterials[i % 6]);
+      stars.rotation.x = Math.random() * 6;
+      stars.rotation.y = Math.random() * 6;
+      stars.rotation.z = Math.random() * 6;
+      stars.scale.setScalar( i * 10 );
+      stars.matrixAutoUpdate = false;
+      stars.updateMatrix();
+      this.scene.add(stars);
+    }
   }
 }
 
