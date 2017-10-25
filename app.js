@@ -354,11 +354,15 @@ class Server {
   broadcastMessage(author, color, msg, time) {
     this.broadcast({
       type: 'message',
-      author: author,
-      color: color,
-      content: msg,
-      time: time
+      author: this.htmlEntities(author),
+      color:  this.htmlEntities(color),
+      content: this.htmlEntities(msg),
+      time: Number.isInteger(time) ? time : 0
     });
+  }
+
+  htmlEntities(str) {
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
   getRandomColor() {
