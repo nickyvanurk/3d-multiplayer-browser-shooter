@@ -27,12 +27,31 @@ class Player extends Entity {
 
     this.shootInterval = 100; // milliseconds
     this.canShoot = true;
+
+    this.rollSpeed = 2;
+    this.yawSpeed = 1;
+    this.pitchSpeed = 1;
+
+    this.tmpQuaternion = new THREE.Quaternion();
+    this.rotationVector = new THREE.Vector3();
+  }
+
+  update(dt) {
+    this.tmpQuaternion.set(
+      this.rotationVector.x * this.pitchSpeed * dt,
+      this.rotationVector.y * this.yawSpeed * dt,
+      this.rotationVector.z * this.rollSpeed * dt,
+      1
+    ).normalize();
+    this.mesh.quaternion.multiply(this.tmpQuaternion);
+    this.mesh.rotation.setFromQuaternion(this.mesh.quaternion, this.mesh.rotation.order);
   }
 
   applyInput(input) {
     if ((input.keys & 1) == 1) this.mesh.translateZ(-this.speed * input.pressTime);
-    if ((input.keys & 2) == 2) this.mesh.rotation.y += this.rotationSpeed * input.pressTime;
-    if ((input.keys & 4) == 4) this.mesh.rotation.y -= this.rotationSpeed * input.pressTime;
+    this.rotationVector.y = -((input.keys & 32) == 32) + ((input.keys & 16) == 16);
+    this.rotationVector.z = -((input.keys & 4) == 4) + ((input.keys & 2) == 2);
+    if (input.pitch) this.rotationVector.x = -input.pitch;
   }
 
   spawn() {
@@ -185,14 +204,14 @@ class Server {
       id: msg[0],
       pressTime: msg[1],
       inputSequenceNumber: msg[2],
-      keys: msg[3]
+      keys: msg[3],
+      pitch: msg[4]
     };
 
     if (this.validateInput(input, client.id)) {
       let player = this.players[input.id];
 
       if (!player.alive) return;
-
       player.applyInput(input);
       this.lastProcessedInput[input.id] = input.inputSequenceNumber;
 
@@ -222,6 +241,10 @@ class Server {
   }
 
   update() {
+    for (let key in this.players) {
+      this.players[key].update(1 / this.updateRate);
+    }
+
     for (let bulletId in this.bullets) {
       let bullet = this.bullets[bulletId];
 

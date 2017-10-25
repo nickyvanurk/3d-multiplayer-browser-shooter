@@ -27,6 +27,13 @@ class Player extends Entity {
     this.color = color;
     this.name = name;
 
+    this.rollSpeed = 2;
+    this.yawSpeed = 1;
+    this.pitchSpeed = 1;
+
+    this.tmpQuaternion = new THREE.Quaternion();
+    this.rotationVector = new THREE.Vector3();
+
     this.positionBuffer = [];
 
     this.mesh.receiveShadow = true;
@@ -76,6 +83,15 @@ class Player extends Entity {
   }
 
   update(dt, camera) {
+    this.tmpQuaternion.set(
+      this.rotationVector.x * this.pitchSpeed * dt,
+      this.rotationVector.y * this.yawSpeed * dt,
+      this.rotationVector.z * this.rollSpeed * dt,
+      1
+    ).normalize();
+    this.mesh.quaternion.multiply(this.tmpQuaternion);
+    this.mesh.rotation.setFromQuaternion(this.mesh.quaternion, this.mesh.rotation.order);
+
     this.healthBar.scale.x = this.health / 100;
 
     if (this.healthBar.scale.x == 0) {
@@ -113,14 +129,15 @@ class Player extends Entity {
   updateHealthBarOrientation(camera) {
     this.healthBarPivot.position.copy(this.mesh.position);
     let height = this.mesh.geometry.parameters.height;
-    this.healthBarPivot.position.y = height + height / 4;
+    this.healthBarPivot.position.y = this.mesh.position.y + height + height / 4;
     this.healthBarPivot.lookAt(camera.getWorldPosition());
   }
 
   applyInput(input) {
     if ((input.keys & 1) == 1) this.mesh.translateZ(-this.speed * input.pressTime);
-    if ((input.keys & 2) == 2) this.mesh.rotation.y += this.rotationSpeed * input.pressTime;
-    if ((input.keys & 4) == 4) this.mesh.rotation.y -= this.rotationSpeed * input.pressTime;
+    this.rotationVector.y = -((input.keys & 32) == 32) + ((input.keys & 16) == 16);
+    this.rotationVector.z = -((input.keys & 4) == 4) + ((input.keys & 2) == 2);
+    if (input.pitch) this.rotationVector.x = -input.pitch;
   }
 }
 
@@ -166,7 +183,9 @@ class Camera {
     let desiredPosition = relativeCameraOffset.applyMatrix4(this.target.mesh.matrixWorld);
     let smoothedPosition = new THREE.Vector3().lerpVectors(this.body.position, desiredPosition, this.smoothSpeed);
     this.body.position.copy(smoothedPosition);
-    this.body.lookAt(this.target.mesh.position);
+
+    let desiredQuaternion = this.target.mesh.quaternion;
+    this.body.quaternion.slerp(desiredQuaternion, this.smoothSpeed);
   }
 
   setTarget(entity) {
@@ -236,6 +255,7 @@ class Client {
 
     document.body.onkeydown = this.processEvents.bind(this);
     document.body.onkeyup = this.processEvents.bind(this);
+    document.body.onmousemove = this.processEvents.bind(this);
   }
 
   onConnection() {
@@ -263,6 +283,9 @@ class Client {
     if (event.keyCode == 87 || event.keyCode == 38) this.keys.forward = event.type == 'keydown';
     if (event.keyCode == 65 || event.keyCode == 37) this.keys.left = event.type == 'keydown';
     if (event.keyCode == 68 || event.keyCode == 39) this.keys.right = event.type == 'keydown';
+    if (event.keyCode == 81) this.keys.yawLeft = event.type == 'keydown';
+    if (event.keyCode == 69) this.keys.yawRight = event.type == 'keydown';
+
     if (event.keyCode == 32) this.keys.shoot = event.type == 'keydown';
 
     if (event.keyCode == 13 && event.type == 'keydown') {
@@ -287,6 +310,11 @@ class Client {
       }
 
       this.chatInput.value = '';
+    }
+
+    if (event.type === 'mousemove') {
+      const halfHeight = window.innerHeight / 2;
+      this.keys.pitch = (event.pageY - halfHeight) / halfHeight;
     }
   }
 
@@ -315,12 +343,7 @@ class Client {
     this.renderer.render(this.scene, this.camera.body);
   }
 
-  processInputs(dt) {
-    if ((!this.keys.left && !this.keys.right && !this.keys.forward && !this.keys.shoot) ||
-         (this.keys.left && this.keys.right && !this.keys.forward)) {
-      return;
-    }
-
+  processInputs(dt) {    
     let input = {
       id: this.id,
       pressTime: dt,
@@ -332,12 +355,16 @@ class Client {
     if (this.keys.left) input.keys += 2;
     if (this.keys.right) input.keys += 4;
     if (this.keys.shoot) input.keys += 8;
+    if (this.keys.yawLeft) input.keys += 16;
+    if (this.keys.yawRight) input.keys += 32;
+    if (this.keys.pitch) input.pitch = this.keys.pitch;
 
     this.ws.send(JSON.stringify([
       input.id,
       input.pressTime,
       input.inputSequenceNumber,
-      input.keys
+      input.keys,
+      input.pitch
     ]));
 
     // do client-side prediction
