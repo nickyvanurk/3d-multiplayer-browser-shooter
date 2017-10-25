@@ -139,9 +139,9 @@ class Player extends Entity {
     this.mesh.position.y = this.mesh.geometry.parameters.height / 2;
     this.mesh.position.z = Math.floor(Math.random() * 41) - 20;
 
-    this.mesh.rotation.x = Math.random() * 361 * Math.PI / 180;
     this.mesh.rotation.y = Math.random() * 361 * Math.PI / 180;
-    this.mesh.rotation.z = Math.random() * 361 * Math.PI / 180;
+    this.mesh.rotation.y = Math.random() * 361 * Math.PI / 180;
+    this.mesh.rotation.y = Math.random() * 361 * Math.PI / 180;
   }
 
   reset() {
@@ -216,7 +216,7 @@ class Server {
       if (!player) continue;
 
       let playerPos = {x: player.mesh.position.x, y: player.mesh.position.y, z: player.mesh.position.z};
-      let playerRot = {x: player.mesh.rotation.x, y: player.mesh.rotation.y, z: player.mesh.rotation.z};
+      let playerRot = {x: player.mesh.quaternion.x, y: player.mesh.quaternion.y, z: player.mesh.quaternion.z, w: player.mesh.quaternion.w};
 
       players.push({
         id: player.id,
@@ -367,7 +367,7 @@ class Server {
       let player = this.players[id];
 
       let playerPos = {x: player.mesh.position.x, y: player.mesh.position.y, z: player.mesh.position.z};
-      let playerRot = {x: player.mesh.rotation.x, y: player.mesh.rotation.y, z: player.mesh.rotation.z};
+      let playerRot = {x: player.mesh.quaternion.x, y: player.mesh.quaternion.y, z: player.mesh.quaternion.z, w: player.mesh.quaternion.w};
 
       worldState.push([player.id, playerPos, playerRot, this.lastProcessedInput[id], player.health]);
     }
@@ -412,7 +412,7 @@ class Server {
         let player = this.players[client.id];
 
         let playerPos = {x: player.mesh.position.x, y: player.mesh.position.y, z: player.mesh.position.z};
-        let playerRot = {x: player.mesh.rotation.x, y: player.mesh.rotation.y, z: player.mesh.rotation.z};
+        let playerRot = {x: player.mesh.quaternion.x, y: player.mesh.quaternion.y, z: player.mesh.quaternion.z, w: player.mesh.quaternion.w};
 
         this.clients[key].send(JSON.stringify({
           type: 'addPlayer',

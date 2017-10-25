@@ -10,7 +10,7 @@ class Entity {
 
   setOrientation(position, rotation) {
     this.mesh.position.set(position.x, position.y, position.z);
-    this.mesh.rotation.set(rotation.x, rotation.y, rotation.z);    
+    this.mesh.quaternion.setFromEuler(new THREE.Euler(rotation.x, rotation.y, rotation.z));
   }
 }
 
@@ -155,7 +155,7 @@ class Player {
 
   setOrientation(position, rotation) {
     this.mesh.position.set(position.x, position.y, position.z);
-    this.mesh.rotation.set(rotation.x, rotation.y, rotation.z);    
+    this.mesh.quaternion.copy(rotation);
   }
 
   setName(name) {
@@ -244,7 +244,7 @@ class Player {
       -this.rollSpeed * input.pressTime,
       1
     ).normalize();
-    console.log(this.tmpQuaternion);
+    this.mesh.quaternion.multiply(this.tmpQuaternion);
     this.mesh.rotation.setFromQuaternion(this.mesh.quaternion, this.mesh.rotation.order);
   }
 }
@@ -529,9 +529,10 @@ class Client {
         player.mesh.position.y = p0.y + (p1.y - p0.y) * (renderTimestamp - t0) / (t1 - t0);
         player.mesh.position.z = p0.z + (p1.z - p0.z) * (renderTimestamp - t0) / (t1 - t0);
 
-        player.mesh.rotation.x = r0.x + (r1.x - r0.x) * (renderTimestamp - t0) / (t1 - t0);
-        player.mesh.rotation.y = r0.y + (r1.y - r0.y) * (renderTimestamp - t0) / (t1 - t0);
-        player.mesh.rotation.z = r0.z + (r1.z - r0.z) * (renderTimestamp - t0) / (t1 - t0);
+
+        r0 = new THREE.Quaternion().set(r0.x, r0.y, r0.z, r0.w);
+        r1 = new THREE.Quaternion().set(r1.x, r1.y, r1.z, r1.w);
+        player.mesh.quaternion.copy(r0.slerp(r1, (renderTimestamp - t0) / (t1 - t0)));
       }
     }
   }
