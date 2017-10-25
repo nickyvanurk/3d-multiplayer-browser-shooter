@@ -14,12 +14,25 @@ class Entity {
   }
 }
 
-class Player extends Entity {
-  constructor(scene, id, position, rotation, health, color, name, isClient = false) {
-    super(scene, new THREE.Vector3(1, 1, 1), position, rotation);
+class Player {
+  constructor(scene, id, position, rotation, health, color, name, mesh, isClient = false) {
     this.scene = scene;
     this.id = id;
     this.isClient = isClient;
+
+    this.scale = 0.1;
+    this.mesh = mesh;
+    this.setOrientation(position, rotation);
+    for (let i = 0, len = this.mesh.children.length; i < len; i++) {
+      this.mesh.children[i].rotateX(-Math.PI / 2);
+      this.mesh.children[i].rotateZ(-Math.PI / 2);
+      this.mesh.children[i].scale.set(this.scale, this.scale, this.scale);
+    }
+    this.mesh.children[4].geometry.computeBoundingBox();
+    this.boundingBox = this.mesh.children[4].geometry.boundingBox;
+    this.mesh.receiveShadow = true;
+    this.mesh.castShadow = true;
+    this.scene.add(this.mesh);
 
     this.speed = 8; // units/s
     this.rotationSpeed = 2;
@@ -60,10 +73,6 @@ class Player extends Entity {
 
     this.positionBuffer = [];
 
-    this.mesh.receiveShadow = true;
-    this.mesh.castShadow = true;
-    this.mesh.material.color = new THREE.Color(this.color);
-
     this.healthBar = new THREE.Mesh(
       new THREE.BoxGeometry(1, 0.1, 0),
       new THREE.MeshBasicMaterial({color: 0x00ff00})
@@ -74,11 +83,12 @@ class Player extends Entity {
     this.healthBarPivot = new THREE.Object3D();
     this.healthBarPivot.add(this.healthBar);
 
-    let height = this.mesh.geometry.parameters.height;
-    this.healthBar.position.y = height;
+    let height = (this.boundingBox.max.z - this.boundingBox.min.z) * this.scale;
     if (this.isClient) {
+      this.healthBar.position.y = height;
       this.mesh.add(this.healthBarPivot);
     } else {
+      this.healthBar.position.y = height * 2.5;
       this.scene.add(this.healthBarPivot);
     }
 
@@ -99,11 +109,14 @@ class Player extends Entity {
         new THREE.MeshBasicMaterial({color: 0xffff00, flatShading: true})
       );
 
-      var centerOffset = -0.5 * (this.nameTag.geometry.boundingBox.max.x -
-        this.nameTag.geometry.boundingBox.min.x);
+      var centerOffset = -0.5 * (geometry.boundingBox.max.x - geometry.boundingBox.min.x);
       this.nameTag.position.x = centerOffset;
 
-      this.nameTag.position.y = height + height / 6;
+      if (this.isClient) {
+        this.nameTag.position.y = height + height / 6;
+      } else {
+        this.nameTag.position.y = height * 2.5 + height / 6;
+      }
 
       this.healthBarPivot.add(this.nameTag);
     }.bind(this));
@@ -121,12 +134,6 @@ class Player extends Entity {
       this.healthBar.scale.x = 0.00001;
     }
 
-    if (this.mesh.material.color.b != 1 && !this.alive) {
-      this.mesh.material.color.setHex(0x0000ff);
-    } else if (this.mesh.material.color != this.color && this.alive) {
-      this.mesh.material.color = new THREE.Color(this.color);
-    }
-
     if (!this.alive && this.positionBuffer.length) {
       this.positionBuffer = [];
     }
@@ -140,6 +147,11 @@ class Player extends Entity {
     if (!this.isClient){
       this.updateHealthBarOrientation(camera);
     }
+  }
+
+  setOrientation(position, rotation) {
+    this.mesh.position.set(position.x, position.y, position.z);
+    this.mesh.rotation.set(rotation.x, rotation.y, rotation.z);    
   }
 
   setName(name) {
@@ -156,8 +168,8 @@ class Player extends Entity {
     this.healthBarPivot.position.copy(this.mesh.position);
   }
 
-  setNameTagOrientation(mesh) {
-    this.healthBarPivot.rotation.set(mesh.rotation.x, mesh.rotation.y, mesh.rotation.z);
+  setNameTagOrientation(camera) {
+    this.healthBarPivot.rotation.set(camera.body.rotation.x, camera.body.rotation.y, camera.body.rotation.z);
   }
 
   applyInput(input) {
@@ -313,9 +325,6 @@ class Client {
     this.chatInput = document.getElementById('chat-input');
     this.chatStatus = document.getElementById('chat-status');
 
-    this.ws = new WebSocket('ws://localhost:8080');
-
-    this.setEventHandlers();
     this.setUpdateRate(60);
 
     this.renderer = new THREE.WebGLRenderer();
@@ -333,6 +342,23 @@ class Client {
     this.scene.add(new THREE.HemisphereLight());
 
     this.createStarfield(6371);
+
+    this.models = {
+      spaceship: {
+        ds: 'models/fighter1.3ds',
+        texture: 'models/crono782.jpg',
+        mesh: null
+      }
+    };
+
+    this.loadingManager = new THREE.LoadingManager();
+    this.loadingManager.onLoad = function () {
+      this.resourcesLoaded = true;
+      this.ws = new WebSocket('ws://localhost:8080');
+      this.setEventHandlers();
+    }.bind(this);
+
+    this.loadModels(this.models, this.loadingManager);
   }
 
   setEventHandlers() {
@@ -407,12 +433,16 @@ class Client {
   update() {
     let dt = this.getDeltaTime();
 
+    if (!this.resourcesLoaded) {
+      return;
+    }
+
     for (let key in this.players) {
       this.players[key].update(1 / 60, this.camera.body);
 
       if (key != this.id) {
         if (this.players[this.id]) {
-          this.players[key].setNameTagOrientation(this.players[this.id].mesh);
+          this.players[key].setNameTagOrientation(this.camera);
         }
       }
     }
@@ -607,7 +637,8 @@ class Client {
   }
 
   spawnPlayer(id, position, rotation, health, color, name) {
-    this.players[id] = new Player(this.scene, id, position, rotation, health, color, name, this.id == id);
+    this.players[id] = new Player(this.scene, id, position, rotation, health, color, name, 
+      this.models.spaceship.mesh.clone(), this.id == id);
     return this.players[id];
   }
 
@@ -694,6 +725,28 @@ class Client {
       stars.matrixAutoUpdate = false;
       stars.updateMatrix();
       this.scene.add(stars);
+    }
+  }
+
+  loadModels(models, loadingManager) {
+    for (var _key in models) {
+      (function (key) {
+        var loader = new THREE.TDSLoader(loadingManager);
+        loader.load(models[key].ds, function (mesh) {
+          mesh.traverse(function (node) {
+            if (node instanceof THREE.Mesh) {
+              if (node.name === "ship") {
+                const imageSrc = node.material.map.image.baseURI + models.spaceship.texture;
+                node.material.map.image.src = imageSrc;
+              }
+
+              node.castShadow = 'castShadow' in models[key] ? models[key].castShadow : true;
+              node.castShadow = 'receiveShadow' in models[key] ? models[key].receiveShadow : true;
+            }
+          });
+          models[key].mesh = mesh;
+        });
+      })(_key);
     }
   }
 }
