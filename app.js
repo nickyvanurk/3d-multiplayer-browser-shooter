@@ -139,7 +139,9 @@ class Player extends Entity {
     this.mesh.position.y = this.mesh.geometry.parameters.height / 2;
     this.mesh.position.z = Math.floor(Math.random() * 41) - 20;
 
+    this.mesh.rotation.x = Math.random() * 361 * Math.PI / 180;
     this.mesh.rotation.y = Math.random() * 361 * Math.PI / 180;
+    this.mesh.rotation.z = Math.random() * 361 * Math.PI / 180;
   }
 
   reset() {

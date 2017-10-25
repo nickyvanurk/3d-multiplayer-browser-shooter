@@ -244,7 +244,7 @@ class Player {
       -this.rollSpeed * input.pressTime,
       1
     ).normalize();
-    this.mesh.quaternion.multiply(this.tmpQuaternion);
+    console.log(this.tmpQuaternion);
     this.mesh.rotation.setFromQuaternion(this.mesh.quaternion, this.mesh.rotation.order);
   }
 }
