@@ -30,7 +30,7 @@ class Player extends Entity {
 
     this.rollSpeed = 2;
     this.yawSpeed = 1;
-    this.pitchSpeed = 1;
+    this.pitchSpeed = 0.6;
 
     this.tmpQuaternion = new THREE.Quaternion();
     this.rotationVector = new THREE.Vector3();
