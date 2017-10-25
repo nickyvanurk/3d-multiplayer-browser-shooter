@@ -160,7 +160,7 @@ class Bullet extends Entity {
     this.scene = scene;
     this.playerId = playerId;
 
-    this.speed = 20;
+    this.speed = 40;
 
     this.mesh.material.color = new THREE.Color(color);
   }
