@@ -347,13 +347,17 @@ class Client {
 
     this.createStarfield(6371);
 
-    this.models = {
-      spaceship: {
-        ds: 'models/fighter1.3ds',
-        texture: 'models/crono782.jpg',
-        mesh: null
-      }
-    };
+    this.models = [
+      {ds: 'models/fighter1.3ds', texture: 'models/kaoskiwi.jpg', mesh: null},
+      {ds: 'models/fighter1.3ds', texture: 'models/idolknight.jpg', mesh: null},
+      {ds: 'models/fighter1.3ds', texture: 'models/cinfa.jpg', mesh: null}
+      {ds: 'models/fighter1.3ds', texture: 'models/thor.jpg', mesh: null},
+      {ds: 'models/fighter1.3ds', texture: 'models/crono782.jpg', mesh: null},
+      {ds: 'models/fighter1.3ds', texture: 'models/jodomatis.jpg', mesh: null},
+      {ds: 'models/fighter1.3ds', texture: 'models/freelancer.jpg', mesh: null},
+      {ds: 'models/fighter1.3ds', texture: 'models/robin.jpg', mesh: null},
+    ];
+    this.numModels = 8;
 
     this.loadingManager = new THREE.LoadingManager();
     this.loadingManager.onLoad = function () {
@@ -642,8 +646,9 @@ class Client {
   }
 
   spawnPlayer(id, position, rotation, health, color, name) {
+    let numPlayers = Object.keys(this.players).length;
     this.players[id] = new Player(this.scene, id, position, rotation, health, color, name, 
-      this.models.spaceship.mesh.clone(), this.id == id);
+      this.models[numPlayers % this.numModels].mesh.clone(), this.id == id);
     return this.players[id];
   }
 
@@ -737,20 +742,23 @@ class Client {
     for (var _key in models) {
       (function (key) {
         var loader = new THREE.TDSLoader(loadingManager);
-        loader.load(models[key].ds, function (mesh) {
-          mesh.traverse(function (node) {
-            if (node instanceof THREE.Mesh) {
-              if (node.name === "ship") {
-                const imageSrc = node.material.map.image.baseURI + models.spaceship.texture;
-                node.material.map.image.src = imageSrc;
-              }
+        for (let p in models) {
+          let model = models[p];
+          loader.load(model.ds, function (mesh) {
+            mesh.traverse(function (node) {
+              if (node instanceof THREE.Mesh) {
+                if (node.name === "ship") {
+                  const imageSrc = node.material.map.image.baseURI + model.texture;
+                  node.material.map.image.src = imageSrc;
+                }
 
-              node.castShadow = 'castShadow' in models[key] ? models[key].castShadow : true;
-              node.castShadow = 'receiveShadow' in models[key] ? models[key].receiveShadow : true;
-            }
+                node.castShadow = 'castShadow' in model ? model.castShadow : true;
+                node.castShadow = 'receiveShadow' in model ? model.receiveShadow : true;
+              }
+            });
+            model.mesh = mesh;
           });
-          models[key].mesh = mesh;
-        });
+        }
       })(_key);
     }
   }
