@@ -70,7 +70,7 @@ class Player extends Entity {
     this.yawRight = ((input.keys & 32) == 32);
     this.pitch = input.pitch || 0;
 
-    this.mesh.translateZ(-this.speed);
+    this.mesh.translateZ(-this.speed * input.pressTime);
 
     this.rotationVector.x = -this.pitch;
     this.rotationVector.y = -this.yawRight + this.yawLeft;
@@ -157,11 +157,11 @@ class Player extends Entity {
 }
 
 class Bullet extends Entity {
-  constructor(playerId, position, rotation) {
+  constructor(playerId, position, rotation, velocity) {
     super(new THREE.Vector3(0.2, 0.2, 0.2));
     this.playerId = playerId;
 
-    this.speed = 40;
+    this.speed = 40 + velocity;
     this.damage = 10;
 
     this.alive = true;
@@ -301,7 +301,7 @@ class Server {
         if (player.canShoot) {
           player.canShoot = false;
           let bulletId = this.getAvailableId(this.bullets);
-          let bullet = new Bullet(player.id, player.mesh.position, player.mesh.rotation);
+          let bullet = new Bullet(player.id, player.mesh.position, player.mesh.rotation, player.speed);
 
           this.bullets[bulletId] = bullet;
           this.broadcastBulletSpawn(bullet, bulletId, input.id);

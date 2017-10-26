@@ -184,7 +184,7 @@ class Player {
     this.yawRight = ((input.keys & 32) == 32);
     this.pitch = input.pitch || 0;
 
-    this.mesh.translateZ(-this.speed);
+    this.mesh.translateZ(-this.speed * input.pressTime);
 
     this.rotationVector.x = -this.pitch;
     this.rotationVector.y = -this.yawRight + this.yawLeft;
@@ -250,12 +250,12 @@ class Player {
 }
 
 class Bullet extends Entity {
-  constructor(scene, playerId, position, rotation, color) {
+  constructor(scene, playerId, position, rotation, color, velocity) {
     super(scene, new THREE.Vector3(0.2, 0.2, 0.2), position, rotation);
     this.scene = scene;
     this.playerId = playerId;
 
-    this.speed = 40;
+    this.speed = 40 + velocity;
 
     this.mesh.material.color = new THREE.Color(color);
   }
@@ -552,7 +552,7 @@ class Client {
     for (let i = 0; i < msg.bullets.length; i++) {
       let b = msg.bullets[i];
       let color = this.players[msg.bullets[i].playerId].color;
-      this.spawnBullet(b.id, b.playerId, b.position, b.rotation, color);
+      this.spawnBullet(b.id, b.playerId, b.position, b.rotation, color, this.players[b.playerId].speed);
     }
   }
 
@@ -588,7 +588,7 @@ class Client {
 
   onAddBullet(msg) {
     let color = this.players[msg.playerId].color;
-    this.spawnBullet(msg.id, msg.playerId, msg.position, msg.rotation, color);
+    this.spawnBullet(msg.id, msg.playerId, msg.position, msg.rotation, color, this.players[msg.playerId].speed);
   }
 
   onRemoveBullet(msg) {
@@ -652,8 +652,8 @@ class Client {
     delete this.players[id];
   }
 
-  spawnBullet(id, playerId, position, rotation, color) {
-    this.bullets[id] = new Bullet(this.scene, playerId, position, rotation, color);
+  spawnBullet(id, playerId, position, rotation, color, velocity) {
+    this.bullets[id] = new Bullet(this.scene, playerId, position, rotation, color, velocity);
     return this.bullets[id];
   }
 
