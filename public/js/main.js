@@ -44,19 +44,19 @@ class Player {
     this.speed = 0.1;
     this.maxSpeed = 40;
     this.minSpeed = 0.1;
-    this.acceleration = 0.1;
+    this.acceleration = 6;
     this.maxAcceleration = 10;
 
     this.rollSpeed = 0;
     this.maxRollSpeed = 2;
     this.minRollSpeed = 0;
-    this.rollAccel = 0.06;
+    this.rollAccel = 3.6;
     this.maxRollAccel = 1;
 
     this.yawSpeed = 0;
     this.maxYawSpeed = 0.8;
     this.minYawSpeed = 0;
-    this.yawAccel = 0.02;
+    this.yawAccel = 1.2;
     this.maxYawAccel = 1;
 
     this.pitchSpeed = 0.6;
@@ -191,49 +191,49 @@ class Player {
     this.rotationVector.z = -this.rollRight + this.rollLeft;
 
     if (this.forward) {
-      this.speed += this.acceleration;
+      this.speed += this.acceleration * input.pressTime;
       if (this.speed > this.maxSpeed) this.speed = this.maxSpeed;
     } else if (this.speed > this.minSpeed) {
-      this.speed -= this.acceleration;
+      this.speed -= this.acceleration * input.pressTime;
       if (this.speed < this.minSpeed) this.speed = this.minSpeed;
     }
 
     if (this.rollRight) {
-      this.rollSpeed += this.rollAccel;
+      this.rollSpeed += this.rollAccel * input.pressTime;
       if (this.rollSpeed > this.maxRollSpeed) this.rollSpeed = this.maxRollSpeed;
     }
 
     if (this.rollLeft) {
-      this.rollSpeed -= this.rollAccel;
+      this.rollSpeed -= this.rollAccel * input.pressTime;
       if (this.rollSpeed < -this.maxRollSpeed) this.rollSpeed = -this.maxRollSpeed;
     }
 
     if (!this.rollLeft && !this.rollRight) {
       if (this.rollSpeed > this.minRollSpeed) {
-        this.rollSpeed -= this.rollAccel;
+        this.rollSpeed -= this.rollAccel * input.pressTime;
         if (this.rollSpeed < this.minRollSpeed) this.rollSpeed = this.minRollSpeed;
       } else if (this.rollSpeed < -this.minRollSpeed) {
-        this.rollSpeed += this.rollAccel;
+        this.rollSpeed += this.rollAccel * input.pressTime;
         if (this.rollSpeed > -this.minRollSpeed) this.rollSpeed = -this.minRollSpeed;
       }
     }
 
     if (this.yawRight) {
-      this.yawSpeed += this.yawAccel;
+      this.yawSpeed += this.yawAccel * input.pressTime;
       if (this.yawSpeed > this.maxYawSpeed) this.yawSpeed = this.maxYawSpeed;
     }
 
     if (this.yawLeft) {
-      this.yawSpeed -= this.yawAccel;
+      this.yawSpeed -= this.yawAccel * input.pressTime;
       if (this.yawSpeed < -this.maxYawSpeed) this.yawSpeed = -this.maxYawSpeed;
     }
 
     if (!this.yawLeft && !this.yawRight) {
       if (this.yawSpeed > this.minYawSpeed) {
-        this.yawSpeed -= this.yawAccel;
+        this.yawSpeed -= this.yawAccel * input.pressTime;
         if (this.yawSpeed < this.minYawSpeed) this.yawSpeed = this.minYawSpeed;
       } else if (this.yawSpeed < -this.minYawSpeed) {
-        this.yawSpeed += this.yawAccel;
+        this.yawSpeed += this.yawAccel * input.pressTime;
         if (this.yawSpeed > -this.minYawSpeed) this.yawSpeed = -this.minYawSpeed;
       }
     }
@@ -650,11 +650,11 @@ class Client {
   }
 
   spawnPlayer(id, position, rotation, health, color, name) {
-    let numPlayers = Object.keys(this.players).length;
+    //let numPlayers = Object.keys(this.players).length;
     this.players[id] = new Player(this.scene, id, position, rotation, health, color, name, this.models[0].mesh.clone(), this.id == id);
-    const imageSrc = this.players[id].mesh.children[4].material.map.image.baseURI + this.textures[numPlayers % this.textures.length];
-    this.players[id].mesh.children[4].material.map.image.src = imageSrc;
-    this.players[id].mesh.children[4].material.needsUpdate = true;
+    //const imageSrc = this.players[id].mesh.children[4].material.map.image.baseURI + this.textures[numPlayers % this.textures.length];
+    //this.players[id].mesh.children[4].material.map.image.src = imageSrc;
+    //this.players[id].mesh.children[4].material.needsUpdate = true;
     return this.players[id];
   }
 
