@@ -350,7 +350,7 @@ class Client {
     this.models = [
       {ds: 'models/fighter1.3ds', texture: 'models/kaoskiwi.jpg', mesh: null},
       {ds: 'models/fighter1.3ds', texture: 'models/idolknight.jpg', mesh: null},
-      {ds: 'models/fighter1.3ds', texture: 'models/cinfa.jpg', mesh: null}
+      {ds: 'models/fighter1.3ds', texture: 'models/cinfa.jpg', mesh: null},
       {ds: 'models/fighter1.3ds', texture: 'models/thor.jpg', mesh: null},
       {ds: 'models/fighter1.3ds', texture: 'models/crono782.jpg', mesh: null},
       {ds: 'models/fighter1.3ds', texture: 'models/jodomatis.jpg', mesh: null},

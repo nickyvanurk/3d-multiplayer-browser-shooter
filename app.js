@@ -192,6 +192,17 @@ class Server {
     this.players = {};
     this.bullets = {};
 
+    this.colors = [
+    '#ff0000',
+    '#00ff00',
+    '#d10042',
+    '#c1acb3',
+    '#e0cb14',
+    '#ff443a',
+    '#3c64c1',
+    '#b83cc1'
+    ];
+
     this.lastProcessedInput = [];
 
     this.respawnTime = 1000; // milliseconds
@@ -448,7 +459,10 @@ class Server {
   }
 
   getRandomColor() {
-    return "#" + ("000000" + Math.floor(Math.random() * 16777216).toString(16)).substr(-6);
+    //return "#" + ("000000" + Math.floor(Math.random() * 16777216).toString(16)).substr(-6);
+    let color = this.colors.shift();
+    this.colors.push(color);
+    return color;
   }
 
   listen(port) {
