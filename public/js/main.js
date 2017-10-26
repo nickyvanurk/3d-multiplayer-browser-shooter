@@ -618,6 +618,9 @@ class Client {
         rotation: msg.states[i][2],
         lastProcessedInput: msg.states[i][3],
         health: msg.states[i][4],
+        speed: msg.states[i][5],
+        rollSpeed: msg.states[i][6],
+        yawSpeed: msg.states[i][7]
       };
 
       if (!this.players[state.id]) continue;
@@ -628,6 +631,9 @@ class Client {
 
       if (state.id == this.id) {
         // received the authoritative positon of this client's player
+        player.speed = state.speed;
+        player.rollSpeed = state.rollSpeed;
+        player.yawSpeed = state.yawSpeed;
         player.setOrientation(state.position, state.rotation);
 
         for (let j = 0; j < this.pendingInputs.length;) {
