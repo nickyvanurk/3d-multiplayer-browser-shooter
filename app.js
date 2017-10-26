@@ -161,7 +161,7 @@ class Bullet extends Entity {
     super(new THREE.Vector3(0.2, 0.2, 0.2));
     this.playerId = playerId;
 
-    this.speed = 40 + velocity;
+    this.speed = 120 + velocity;
     this.damage = 10;
 
     this.alive = true;
@@ -207,7 +207,7 @@ class Server {
 
     this.respawnTime = 1000; // milliseconds
 
-    this.setUpdateRate(30);
+    this.setUpdateRate(60);
   }
 
   onConnection(client) {
@@ -323,7 +323,7 @@ class Server {
             if (bullet.alive) {
               this.broadcast({type: 'removeBullet', id: bulletId});
             }
-          }, 4000);
+          }, 2000);
 
           setTimeout(() => {
             player.canShoot = true;

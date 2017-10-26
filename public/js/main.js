@@ -255,7 +255,7 @@ class Bullet extends Entity {
     this.scene = scene;
     this.playerId = playerId;
 
-    this.speed = 40 + velocity;
+    this.speed = 120 + velocity;
 
     this.mesh.material.color = new THREE.Color(color);
   }
@@ -312,7 +312,7 @@ class Camera {
 
 class Client {
   constructor() {
-    this.serverUpdateRate = 30;
+    this.serverUpdateRate = 60;
 
     this.id = null;
     this.color = null;
