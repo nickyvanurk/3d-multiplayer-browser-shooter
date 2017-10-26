@@ -381,7 +381,7 @@ class Server {
       let playerRot = {x: player.mesh.quaternion.x, y: player.mesh.quaternion.y, z: player.mesh.quaternion.z, w: player.mesh.quaternion.w};
 
       worldState.push([player.id, playerPos, playerRot, this.lastProcessedInput[id], player.health,
-        player.speed, player.rollSpeed, player.yawSpeed]);
+        player.speed, player.rollSpeed, player.yawSpeed, player.pitch]);
     }
 
     // console.log(getUTF8Size(JSON.stringify(worldState)));

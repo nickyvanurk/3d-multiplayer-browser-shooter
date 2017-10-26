@@ -411,13 +411,14 @@ class Client {
   }
 
   processEvents(event) {
-    if (event.keyCode == 87 || event.keyCode == 38) this.keys.forward = event.type == 'keydown';
-    if (event.keyCode == 65 || event.keyCode == 37) this.keys.left = event.type == 'keydown';
-    if (event.keyCode == 68 || event.keyCode == 39) this.keys.right = event.type == 'keydown';
-    if (event.keyCode == 81) this.keys.yawLeft = event.type == 'keydown';
-    if (event.keyCode == 69) this.keys.yawRight = event.type == 'keydown';
-
-    if (event.keyCode == 32) this.keys.shoot = event.type == 'keydown';
+    if (!this.chatInput.disabled) {
+      if (event.keyCode == 87 || event.keyCode == 38) this.keys.forward = event.type == 'keydown';
+      if (event.keyCode == 65 || event.keyCode == 37) this.keys.left = event.type == 'keydown';
+      if (event.keyCode == 68 || event.keyCode == 39) this.keys.right = event.type == 'keydown';
+      if (event.keyCode == 81) this.keys.yawLeft = event.type == 'keydown';
+      if (event.keyCode == 69) this.keys.yawRight = event.type == 'keydown';
+      if (event.keyCode == 32) this.keys.shoot = event.type == 'keydown';
+    }
 
     if (event.keyCode == 13 && event.type == 'keydown') {
       if (this.chatInput.disabled) {
@@ -472,7 +473,7 @@ class Client {
 
     this.camera.update();
 
-    if (this.players[this.id] && this.chatInput.disabled) {
+    if (this.players[this.id]) {
       this.processInputs(dt);
     }
 
@@ -620,7 +621,8 @@ class Client {
         health: msg.states[i][4],
         speed: msg.states[i][5],
         rollSpeed: msg.states[i][6],
-        yawSpeed: msg.states[i][7]
+        yawSpeed: msg.states[i][7],
+        pitch: msg.states[i][8],
       };
 
       if (!this.players[state.id]) continue;
@@ -634,6 +636,7 @@ class Client {
         player.speed = state.speed;
         player.rollSpeed = state.rollSpeed;
         player.yawSpeed = state.yawSpeed;
+        player.pitch = pitch;
         player.setOrientation(state.position, state.rotation);
 
         for (let j = 0; j < this.pendingInputs.length;) {
