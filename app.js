@@ -28,11 +28,11 @@ class Player extends Entity {
     this.shootInterval = 100; // milliseconds
     this.canShoot = true;
 
-    this.speed = 0;
-    this.maxSpeed = 1;
-    this.minSpeed = 0;
-    this.acceleration = 0.01;
-    this.maxAcceleration = 1;
+    this.speed = 0.1;
+    this.maxSpeed = 40;
+    this.minSpeed = 0.1;
+    this.acceleration = 0.1;
+    this.maxAcceleration = 10;
 
     this.rollSpeed = 0;
     this.maxRollSpeed = 2;
@@ -41,9 +41,9 @@ class Player extends Entity {
     this.maxRollAccel = 1;
 
     this.yawSpeed = 0;
-    this.maxYawSpeed = 1;
+    this.maxYawSpeed = 0.8;
     this.minYawSpeed = 0;
-    this.yawAccel = 0.04;
+    this.yawAccel = 0.02;
     this.maxYawAccel = 1;
 
     this.pitchSpeed = 0.6;
