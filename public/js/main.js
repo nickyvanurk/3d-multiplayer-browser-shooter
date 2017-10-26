@@ -348,7 +348,14 @@ class Client {
     this.createStarfield(6371);
 
     this.models = [
-      {ds: 'models/fighter1.3ds', texture: 'models/crono782.jpg', mesh: null}
+      {ds: 'models/fighter1.3ds', texture: 'models/kaoskiwi.jpg', mesh: null},
+      {ds: 'models/fighter1.3ds', texture: 'models/idolknight.jpg', mesh: null},
+      {ds: 'models/fighter1.3ds', texture: 'models/cinfa.jpg', mesh: null},
+      {ds: 'models/fighter1.3ds', texture: 'models/thor.jpg', mesh: null},
+      {ds: 'models/fighter1.3ds', texture: 'models/crono782.jpg', mesh: null},
+      {ds: 'models/fighter1.3ds', texture: 'models/jodomatis.jpg', mesh: null},
+      {ds: 'models/fighter1.3ds', texture: 'models/freelancer.jpg', mesh: null},
+      {ds: 'models/fighter1.3ds', texture: 'models/robin.jpg', mesh: null}
     ];
 
     this.loadingManager = new THREE.LoadingManager();
@@ -358,18 +365,18 @@ class Client {
       this.setEventHandlers();
     }.bind(this);
 
-    this.textures = [
-      'models/kaoskiwi.jpg',
-      'models/idolknight.jpg',
-      'models/cinfa.jpg',
-      'models/thor.jpg',
-      'models/crono782.jpg',
-      'models/jodomatis.jpg',
-      'models/freelancer.jpg',
-      'models/robin.jpg'
-    ];
+    // this.textures = [
+    //   'models/kaoskiwi.jpg',
+    //   'models/idolknight.jpg',
+    //   'models/cinfa.jpg',
+    //   'models/thor.jpg',
+    //   'models/crono782.jpg',
+    //   'models/jodomatis.jpg',
+    //   'models/freelancer.jpg',
+    //   'models/robin.jpg'
+    // ];
 
-    this.loadTextures(this.textures, this.loadingManager);
+    //this.loadTextures(this.textures, this.loadingManager);
     this.loadModels(this.models, this.loadingManager);
   }
 
@@ -650,8 +657,10 @@ class Client {
   }
 
   spawnPlayer(id, position, rotation, health, color, name) {
-    //let numPlayers = Object.keys(this.players).length;
-    this.players[id] = new Player(this.scene, id, position, rotation, health, color, name, this.models[0].mesh.clone(), this.id == id);
+    let numPlayers = Object.keys(this.players).length;
+    let numModels = Object.keys(this.models).length;
+    this.players[id] = new Player(this.scene, id, position, rotation, health, color, name,
+      this.models[numPlayers % numModels].mesh.clone(), this.id == id);
     //const imageSrc = this.players[id].mesh.children[4].material.map.image.baseURI + this.textures[numPlayers % this.textures.length];
     //this.players[id].mesh.children[4].material.map.image.src = imageSrc;
     //this.players[id].mesh.children[4].material.needsUpdate = true;
