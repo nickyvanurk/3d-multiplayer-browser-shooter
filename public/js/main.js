@@ -411,7 +411,7 @@ class Client {
   }
 
   processEvents(event) {
-    if (!this.chatInput.disabled) {
+    if (this.chatInput.disabled) {
       if (event.keyCode == 87 || event.keyCode == 38) this.keys.forward = event.type == 'keydown';
       if (event.keyCode == 65 || event.keyCode == 37) this.keys.left = event.type == 'keydown';
       if (event.keyCode == 68 || event.keyCode == 39) this.keys.right = event.type == 'keydown';
@@ -636,7 +636,7 @@ class Client {
         player.speed = state.speed;
         player.rollSpeed = state.rollSpeed;
         player.yawSpeed = state.yawSpeed;
-        player.pitch = pitch;
+        player.pitch = state.pitch;
         player.setOrientation(state.position, state.rotation);
 
         for (let j = 0; j < this.pendingInputs.length;) {
