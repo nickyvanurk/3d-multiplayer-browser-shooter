@@ -658,7 +658,7 @@ class Client {
     let model = null;
     for (let key in this.models) {
       model = this.models[key];
-      if (model.color == this.color) {
+      if (model.color == color) {
         break;
       }
     }

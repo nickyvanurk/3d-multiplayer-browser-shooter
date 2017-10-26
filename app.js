@@ -193,14 +193,14 @@ class Server {
     this.bullets = {};
 
     this.colors = [
-    '#ff0000',
-    '#00ff00',
-    '#d10042',
-    '#c1acb3',
-    '#e0cb14',
-    '#ff443a',
-    '#3c64c1',
-    '#b83cc1'
+      '#ff0000',
+      '#00ff00',
+      '#d10042',
+      '#c1acb3',
+      '#e0cb14',
+      '#ff443a',
+      '#3c64c1',
+      '#b83cc1'
     ];
 
     this.lastProcessedInput = [];
