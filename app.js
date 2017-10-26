@@ -18,7 +18,7 @@ class Entity {
 
 class Player extends Entity {
   constructor() {
-    super(new THREE.Vector3(1, 1, 1));
+    super(new THREE.Vector3(4, 1.5, 3));
 
     this.speed = 8; // units/s
     this.rotationSpeed = 2;
@@ -207,7 +207,7 @@ class Server {
 
     this.respawnTime = 1000; // milliseconds
 
-    this.setUpdateRate(60);
+    this.setUpdateRate(40);
   }
 
   onConnection(client) {
