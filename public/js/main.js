@@ -379,6 +379,13 @@ class Client {
     document.body.onkeydown = this.processEvents.bind(this);
     document.body.onkeyup = this.processEvents.bind(this);
     document.body.onmousemove = this.processEvents.bind(this);
+    window.addEventListener('resize', this.onResize.bind(this), false);
+  }
+
+  onResize() {
+    this.camera.body.aspect = window.innerWidth / window.innerHeight;
+    this.camera.body.updateProjectionMatrix();
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
   }
 
   onConnection() {
