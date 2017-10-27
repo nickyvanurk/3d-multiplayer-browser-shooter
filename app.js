@@ -270,7 +270,11 @@ class Server {
         player.spawn();
         this.players[player.id] = player;
 
-        client.name = msg.name;
+        let name = msg.name;
+        if (name.length > 15) {
+          name = name.substring(0, 15);
+        }
+        client.name = name;
         client.send(JSON.stringify({type: 'initClient', id: client.id, color: client.color}));
 
         this.broadcastPlayerSpawn(client);
