@@ -19,6 +19,7 @@ class Player {
     this.scene = scene;
     this.id = id;
     this.isClient = isClient;
+    this.kills = 0;
 
     this.scale = 0.1;
     this.mesh = mesh;
@@ -329,6 +330,8 @@ class Client {
     this.chatInput = document.getElementById('chat-input');
     this.chatStatus = document.getElementById('chat-status');
 
+    this.killbox = document.getElementById('killbox');
+
     this.setUpdateRate(60);
 
     this.renderer = new THREE.WebGLRenderer();
@@ -551,7 +554,7 @@ class Client {
   onInitWorld(msg) {
     for (let i = 0; i < msg.players.length; i++) {
       let p = msg.players[i];
-      this.spawnPlayer(p.id, p.position, p.rotation, p.health, p.color, p.name);
+      let player = this.spawnPlayer(p.id, p.position, p.rotation, p.health, p.color, p.name, p.kills);
     }
 
     for (let i = 0; i < msg.bullets.length; i++) {
@@ -573,7 +576,8 @@ class Client {
         msg.rotation,
         msg.health,
         msg.color,
-        msg.name
+        msg.name,
+        msg.kills
       );
 
       if (msg.id == this.id) {
@@ -582,6 +586,17 @@ class Client {
       } else {
         this.players[msg.id] = player;
       }
+
+      this.updateKillbox();
+    }
+  }
+
+  updateKillbox() {
+    this.killbox.innerHTML = "";
+    let players = this.sortPlayersOnKills();
+    players.length = 10;
+    for (let key in players) {
+      this.addPlayerToKillbox(players[key]);
     }
   }
 
@@ -589,6 +604,8 @@ class Client {
     if (this.players[msg.id]) {
       this.destroyPlayer(msg.id);
     }
+
+    this.updateKillbox();
   }
 
   onAddBullet(msg) {
@@ -612,6 +629,7 @@ class Client {
         rollSpeed: msg.states[i][6],
         yawSpeed: msg.states[i][7],
         pitch: msg.states[i][8],
+        kills: msg.states[i][9]
       };
 
       if (!this.players[state.id]) continue;
@@ -619,6 +637,11 @@ class Client {
       let player = this.players[state.id];
 
       player.health = state.health;
+
+      if (player.kills != state.kills) {
+        player.kills = state.kills;
+        this.updateKillbox();
+      }
 
       if (state.id == this.id) {
         // received the authoritative positon of this client's player
@@ -654,7 +677,7 @@ class Client {
     }
   }
 
-  spawnPlayer(id, position, rotation, health, color, name) {
+  spawnPlayer(id, position, rotation, health, color, name, kills) {
     let model = null;
     for (let key in this.models) {
       model = this.models[key];
@@ -665,7 +688,33 @@ class Client {
 
     this.players[id] = new Player(this.scene, id, position, rotation, health, color, name,
       model.mesh.clone(), this.id == id);
+    this.players[id].kills = kills;
     return this.players[id];
+  }
+
+  addPlayerToKillbox(player) {
+    let name = player.name;
+    if (name.length > 15) {
+      name = name.substring(0, 15);
+      name += '...';
+    }
+
+    let p = document.createElement('p');
+    p.className = 'player';
+    p.innerHTML = '<span style="color:' + player.color + '">' + name + '</span>' + player.kills;
+    this.killbox.appendChild(p);
+  }
+
+  sortPlayersOnKills() {
+    let sortedPlayersOnKills = [];
+    for (let key in this.players) {
+      let player = this.players[key];
+      sortedPlayersOnKills.push({name: player.name, kills: player.kills, color: player.color});
+    }
+    sortedPlayersOnKills.sort(function (a, b) {
+      return b.kills - a.kills;
+    });
+    return sortedPlayersOnKills;
   }
 
   destroyPlayer(id) {

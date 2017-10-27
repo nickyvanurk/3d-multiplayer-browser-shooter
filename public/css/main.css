@@ -59,3 +59,20 @@ body {
   color: white;
   padding: 0.25em;
 }
+
+#killbox {
+  position: absolute;
+  top: 1em;
+  right: 1em;
+  color: white;
+  width: 175px;
+  text-align: right;
+}
+
+.player {
+  margin: 0 0 0.2em 0;
+}
+
+.player span {
+  margin-right: 1em;
+}

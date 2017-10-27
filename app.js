@@ -24,6 +24,7 @@ class Player extends Entity {
     this.rotationSpeed = 2;
     this.health = 100;
     this.alive = true;
+    this.kills = 0;
 
     this.shootInterval = 100; // milliseconds
     this.canShoot = true;
@@ -235,7 +236,8 @@ class Server {
         rotation: playerRot,
         health: player.health,
         color: client.color,
-        name: client.name
+        name: client.name,
+        kills: player.kills
       });
     }
 
@@ -357,6 +359,8 @@ class Server {
 
           if (player.health == 0 && player.alive) {
             player.alive = false;
+            player.kills = 0;
+            this.players[bullet.playerId].kills++;
 
             setTimeout(() => {
               player.respawn();
@@ -381,7 +385,7 @@ class Server {
       let playerRot = {x: player.mesh.quaternion.x, y: player.mesh.quaternion.y, z: player.mesh.quaternion.z, w: player.mesh.quaternion.w};
 
       worldState.push([player.id, playerPos, playerRot, this.lastProcessedInput[id], player.health,
-        player.speed, player.rollSpeed, player.yawSpeed, player.pitch]);
+        player.speed, player.rollSpeed, player.yawSpeed, player.pitch, player.kills]);
     }
 
     // console.log(getUTF8Size(JSON.stringify(worldState)));
@@ -433,7 +437,8 @@ class Server {
           rotation: playerRot,
           health: player.health,
           color: client.color,
-          name: client.name
+          name: client.name,
+          kills: player.kills
         }));
       }
     }
