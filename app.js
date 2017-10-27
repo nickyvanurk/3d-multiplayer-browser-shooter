@@ -36,16 +36,16 @@ class Player extends Entity {
     this.maxAcceleration = 10 * 0.016;
 
     this.rollSpeed = 0;
-    this.maxRollSpeed = 2 * 0.016;
+    this.maxRollSpeed = 1 * 0.016;
     this.minRollSpeed = 0;
-    this.rollAccel = 0.04 * 0.016;
-    this.maxRollAccel = 1 * 0.016;
+    this.rollAccel = 0.02 * 0.016;
+    this.maxRollAccel = 0.5 * 0.016;
 
     this.yawSpeed = 0;
-    this.maxYawSpeed = 0.8 * 0.016;
+    this.maxYawSpeed = 0.4 * 0.016;
     this.minYawSpeed = 0;
-    this.yawAccel = 0.02 * 0.016;
-    this.maxYawAccel = 1 * 0.016;
+    this.yawAccel = 0.01 * 0.016;
+    this.maxYawAccel = 0.5 * 0.016;
 
     this.pitchSpeed = 0.6 * 0.016;
 
