@@ -2,6 +2,8 @@
 
 A 3D multiplayer space dogfight game made with three.js, express and socket.io. Complete with score and chat functionality.
 
+<img src="screenshots/screenshot.png" width="400">
+
 ## Getting Started
 
 These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
