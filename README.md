@@ -1,8 +1,8 @@
+<img src="screenshots/screenshot.png">
+
 # 3D Multiplayer Browser Shooter
 
 A 3D multiplayer space dogfight game made with three.js, express and socket.io. Complete with score and chat functionality.
-
-<img src="screenshots/screenshot.png" width="400">
 
 ## Getting Started
 
