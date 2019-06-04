@@ -38,7 +38,7 @@ npm start
 
 Surf to localhost:8080!
 
-### Deployment
+## Deployment
 
 To deploy the application you have to change 'localhost' on line 367 in public/js/main.js to the IP of the server. Then host the public folder to make it accessible for users. Make sure to open up port 8080 if there are any problems connecting to the server.
 
