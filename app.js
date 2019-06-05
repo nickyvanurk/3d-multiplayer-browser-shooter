@@ -207,6 +207,8 @@ class Server {
   }
 
   onConnection(client) {
+    client.on('error', e => {}); // silence ECONNRESET error on browser refresh
+
     client.id = this.getAvailableId(this.clients);
     client.color = this.getRandomColor();
     this.clients[client.id] = client;
@@ -475,7 +477,6 @@ const gameServer = new Server(app);
 const httpServer = http.createServer(app);
 const wss = new WebSocket.Server({server: httpServer});
 
-wss.on('error', e => console.log(e));
 wss.on('connection', gameServer.onConnection.bind(gameServer));
 
 httpServer.listen(8080, () => {
