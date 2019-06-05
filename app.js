@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
 const THREE = require('three');
+const port = 3000
 
 const app = express();
 
@@ -479,8 +480,8 @@ const wss = new WebSocket.Server({server: httpServer});
 
 wss.on('connection', gameServer.onConnection.bind(gameServer));
 
-httpServer.listen(8080, () => {
-  console.log('listening on %d', httpServer.address().port);
+httpServer.listen(port, () => {
+  console.log('listening on %d', port);
 });
 
 /* Helpers */
