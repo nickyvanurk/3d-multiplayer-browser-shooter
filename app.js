@@ -184,11 +184,6 @@ class Bullet extends Entity {
 
 class Server {
   constructor(app) {
-    this.httpServer = http.createServer(app);
-    this.wss = new WebSocket.Server({server: this.httpServer});
-
-    this.wss.on('connection', this.onConnection.bind(this));
-
     this.clients = {};
     this.players = {};
     this.bullets = {};
@@ -474,17 +469,18 @@ class Server {
     this.colors.push(color);
     return color;
   }
-
-  listen(port) {
-    this.httpServer.listen(port, () => {
-      console.log('listening on %d', this.httpServer.address().port);
-    });
-  }
 }
 
-const server = new Server(app);
-server.listen(8080);
+const gameServer = new Server(app);
+const httpServer = http.createServer(app);
+const wss = new WebSocket.Server({server: httpServer});
 
+wss.on('error', e => console.log(e));
+wss.on('connection', gameServer.onConnection.bind(gameServer));
+
+httpServer.listen(8080, () => {
+  console.log('listening on %d', httpServer.address().port);
+});
 
 /* Helpers */
 function getUTF8Size(str) {
