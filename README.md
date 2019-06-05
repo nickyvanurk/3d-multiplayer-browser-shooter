@@ -1,6 +1,6 @@
 # [3D Multiplayer Browser Shooter](https://urk-3d-multi-space-game.herokuapp.com)
 
-A 3D multiplayer space dogfight game made with three.js, express and socket.io. Complete with score and chat functionality.
+A 3D multiplayer space dogfight game made with three.js, express and ws. Complete with score and chat functionality.
 
 <img src="screenshots/screenshot.png">
 
