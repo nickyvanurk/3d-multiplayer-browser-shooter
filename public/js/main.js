@@ -364,7 +364,7 @@ class Client {
     this.loadingManager = new THREE.LoadingManager();
     this.loadingManager.onLoad = function () {
       this.resourcesLoaded = true;
-      this.ws = new WebSocket('ws://localhost:3000');
+      this.ws = new WebSocket(location.origin.replace(/^http/, 'ws'));
       this.setEventHandlers();
     }.bind(this);
 
