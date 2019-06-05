@@ -7,6 +7,12 @@ body {
   overflow: hidden;
 }
 
+.github-corner svg {
+  -webkit-transform: scaleX(-1) !important;
+  transform: scaleX(-1) !important;
+  left: 0 !important;
+}
+
 #chatbox-container {
   position: absolute;
   width: 400px;
