@@ -36,7 +36,7 @@ Start the game server
 npm start
 ```
 
-Surf to localhost:8080!
+Surf to localhost:3000!
 
 ## Deployment
 
