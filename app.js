@@ -1,25 +1,36 @@
 const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
-const THREE = require('three');
+const Quaternion = require('quaternion');
+
 const port = process.env.PORT || 3000;
 
 const app = express();
 
 app.use(express.static('public'));
 
+class Vector3 {
+  constructor(x, y, z) {
+    this.x = x;
+    this.y = y;
+    this.z = z;
+  }
+}
+
 class Entity {
   constructor(size) {
-    this.mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(size.x, size.y, size.z),
-      new THREE.MeshLambertMaterial({color: 0xff0000})
-    );
+    this.position = new Vector3(0, 0, 0);
+    this.rotation = new Quaternion();
+
+    this.size = size;
+
+    this.color = 0xFF0000;
   }
 }
 
 class Player extends Entity {
   constructor() {
-    super(new THREE.Vector3(4, 1.5, 3));
+    super(new Vector3(4, 1.5, 3));
 
     this.speed = 8; // units/s
     this.rotationSpeed = 2;
@@ -56,9 +67,6 @@ class Player extends Entity {
     this.yawLeft = 0;
     this.yawRight = 0;
     this.pitch = 0;
-
-    this.tmpQuaternion = new THREE.Quaternion();
-    this.rotationVector = new THREE.Vector3();
   }
 
   update(dt) {
@@ -72,11 +80,17 @@ class Player extends Entity {
     this.yawRight = ((input.keys & 32) == 32);
     this.pitch = input.pitch || 0;
 
-    this.mesh.translateZ(-this.speed);
+    const rm = this.rotation.toMatrix();
+    const uv = new Vector3(0, 0, 1);
 
-    this.rotationVector.x = -this.pitch;
-    this.rotationVector.y = -this.yawRight + this.yawLeft;
-    this.rotationVector.z = -this.rollRight + this.rollLeft;
+    let direction = new Vector3();
+    direction.x = rm[0]*uv.x + rm[1]*uv.y + rm[2]*uv.z;
+    direction.y = rm[3]*uv.x + rm[4]*uv.y + rm[5]*uv.z;
+    direction.z = rm[6]*uv.x + rm[7]*uv.y + rm[8]*uv.z;
+
+    this.position.x += direction.x * -this.speed;
+    this.position.y += direction.y * -this.speed;
+    this.position.z += direction.z * -this.speed;
 
     if (this.forward) {
       this.speed += this.acceleration;
@@ -126,24 +140,28 @@ class Player extends Entity {
       }
     }
 
-    this.tmpQuaternion.set(
-      this.rotationVector.x * this.pitchSpeed,
+    const tmpQuaternion = new Quaternion([
+      1,
+      -this.pitch * this.pitchSpeed,
       -this.yawSpeed,
-      -this.rollSpeed,
-      1
-    ).normalize();
-    this.mesh.quaternion.multiply(this.tmpQuaternion);
-    this.mesh.rotation.setFromQuaternion(this.mesh.quaternion, this.mesh.rotation.order);
+      -this.rollSpeed
+    ]).normalize();
+
+    this.rotation = this.rotation.mul(tmpQuaternion);
   }
 
   spawn() {
-    this.mesh.position.x = Math.floor(Math.random() * 41) - 20;
-    this.mesh.position.y = Math.floor(Math.random() * 41) - 20;
-    this.mesh.position.z = Math.floor(Math.random() * 41) - 20;
+    this.position = new Vector3(
+      Math.floor(Math.random() * 41) - 20,
+      Math.floor(Math.random() * 41) - 20,
+      Math.floor(Math.random() * 41) - 20
+    );
 
-    this.mesh.rotation.y = Math.random() * 361 * Math.PI / 180;
-    this.mesh.rotation.y = Math.random() * 361 * Math.PI / 180;
-    this.mesh.rotation.y = Math.random() * 361 * Math.PI / 180;
+    this.rotation = new Quaternion.fromEuler(
+      Math.random() * 361 * Math.PI / 180,
+      Math.random() * 361 * Math.PI / 180,
+      Math.random() * 361 * Math.PI / 180
+    );
   }
 
   reset() {
@@ -160,7 +178,7 @@ class Player extends Entity {
 
 class Bullet extends Entity {
   constructor(playerId, position, rotation, velocity) {
-    super(new THREE.Vector3(0.2, 0.2, 0.2));
+    super(new Vector3(0.2, 0.2, 0.2));
     this.playerId = playerId;
 
     this.speed = 120 + velocity;
@@ -168,18 +186,43 @@ class Bullet extends Entity {
 
     this.alive = true;
 
-    this.mesh.position.set(position.x, position.y, position.z);
-    this.mesh.rotation.set(rotation.x, rotation.y, rotation.z);
+    this.position.x = position.x;
+    this.position.y = position.y;
+    this.position.z = position.z;
+
+    this.rotation.w = rotation.w;
+    this.rotation.x = rotation.x;
+    this.rotation.y = rotation.y;
+    this.rotation.z = rotation.z;
   }
 
   update(dt) {
-    this.mesh.translateZ(-this.speed * dt);
+    const rm = this.rotation.toMatrix();
+    const uv = new Vector3(0, 0, 1);
+
+    let direction = new Vector3();
+    direction.x = rm[0]*uv.x + rm[1]*uv.y + rm[2]*uv.z;
+    direction.y = rm[3]*uv.x + rm[4]*uv.y + rm[5]*uv.z;
+    direction.z = rm[6]*uv.x + rm[7]*uv.y + rm[8]*uv.z;
+
+    this.position.x += direction.x * (-this.speed * dt);
+    this.position.y += direction.y * (-this.speed * dt);
+    this.position.z += direction.z * (-this.speed * dt);
   }
 
   isColliding(object) {
-    let a = new THREE.Box3().setFromObject(this.mesh);
-    let b = new THREE.Box3().setFromObject(object.mesh);
-    return a.intersectsBox(b);
+    const min_distance = 3;
+
+    const distance = Math.sqrt(
+      Math.pow(this.position.x - object.position.x, 2) +
+      Math.pow(this.position.y - object.position.y, 2) +
+      Math.pow(this.position.z - object.position.z, 2)
+    );
+    
+    return distance < min_distance;
+
+    // TODO: Due to removing Three.js code, collision detection is worse.
+    // Rework it with the Separating Axis Theorem for 3D.
   }
 }
 
@@ -225,8 +268,8 @@ class Server {
 
       if (!player) continue;
 
-      let playerPos = {x: player.mesh.position.x, y: player.mesh.position.y, z: player.mesh.position.z};
-      let playerRot = {x: player.mesh.quaternion.x, y: player.mesh.quaternion.y, z: player.mesh.quaternion.z, w: player.mesh.quaternion.w};
+      let playerPos = {x: player.position.x, y: player.position.y, z: player.position.z};
+      let playerRot = {x: player.rotation.x, y: player.rotation.y, z: player.rotation.z, w: player.rotation.w};
 
       players.push({
         id: player.id,
@@ -246,8 +289,8 @@ class Server {
 
       if (!bullet) continue;
 
-      let bulletPos = {x: bullet.mesh.position.x, y: bullet.mesh.position.y, z: bullet.mesh.position.z};
-      let bulletRot = {x: bullet.mesh.rotation.x, y: bullet.mesh.rotation.y, z: bullet.mesh.rotation.z};
+      let bulletPos = {x: bullet.position.x, y: bullet.position.y, z: bullet.position.z};
+      let bulletRot = {x: bullet.rotation.x, y: bullet.rotation.y, z: bullet.rotation.z};
 
       bullets.push({id: key, playerId: bullet.playerId, position: bulletPos, rotation: bulletRot});
     }
@@ -316,7 +359,7 @@ class Server {
         if (player.canShoot) {
           player.canShoot = false;
           let bulletId = this.getAvailableId(this.bullets);
-          let bullet = new Bullet(player.id, player.mesh.position, player.mesh.rotation, player.speed);
+          let bullet = new Bullet(player.id, player.position, player.rotation, player.speed);
 
           this.bullets[bulletId] = bullet;
           this.broadcastBulletSpawn(bullet, bulletId, input.id);
@@ -383,14 +426,12 @@ class Server {
     for (let id in this.players) {
       let player = this.players[id];
 
-      let playerPos = {x: player.mesh.position.x, y: player.mesh.position.y, z: player.mesh.position.z};
-      let playerRot = {x: player.mesh.quaternion.x, y: player.mesh.quaternion.y, z: player.mesh.quaternion.z, w: player.mesh.quaternion.w};
+      let playerPos = {x: player.position.x, y: player.position.y, z: player.position.z};
+      let playerRot = {x: player.rotation.x, y: player.rotation.y, z: player.rotation.z, w: player.rotation.w};
 
       worldState.push([player.id, playerPos, playerRot, this.lastProcessedInput[id], player.health,
         player.speed, player.rollSpeed, player.yawSpeed, player.pitch, player.kills]);
     }
-
-    // console.log(getUTF8Size(JSON.stringify(worldState)));
 
     this.broadcast({type: 'worldState', states: worldState});
   }
@@ -429,8 +470,8 @@ class Server {
       if (this.clients[key].readyState === WebSocket.OPEN) {
         let player = this.players[client.id];
 
-        let playerPos = {x: player.mesh.position.x, y: player.mesh.position.y, z: player.mesh.position.z};
-        let playerRot = {x: player.mesh.quaternion.x, y: player.mesh.quaternion.y, z: player.mesh.quaternion.z, w: player.mesh.quaternion.w};
+        let playerPos = {x: player.position.x, y: player.position.y, z: player.position.z};
+        let playerRot = {x: player.rotation.x, y: player.rotation.y, z: player.rotation.z, w: player.rotation.w};
 
         this.clients[key].send(JSON.stringify({
           type: 'addPlayer',
@@ -447,8 +488,8 @@ class Server {
   }
 
   broadcastBulletSpawn(bullet, bulletId, playerId) {
-    let bulletPos = {x: bullet.mesh.position.x, y: bullet.mesh.position.y, z: bullet.mesh.position.z};
-    let bulletRot = {x: bullet.mesh.rotation.x, y: bullet.mesh.rotation.y, z: bullet.mesh.rotation.z};
+    let bulletPos = {x: bullet.position.x, y: bullet.position.y, z: bullet.position.z};
+    let bulletRot = {x: bullet.rotation.x, y: bullet.rotation.y, z: bullet.rotation.z, w: bullet.rotation.w};
     this.broadcast({type: 'addBullet', id: bulletId, playerId: playerId, position: bulletPos, rotation: bulletRot});
   }
 
@@ -483,17 +524,3 @@ wss.on('connection', gameServer.onConnection.bind(gameServer));
 httpServer.listen(port, () => {
   console.log('listening on %d', port);
 });
-
-/* Helpers */
-function getUTF8Size(str) {
-  var sizeInBytes = str.split('')
-    .map(function (ch) {
-      return ch.charCodeAt(0);
-    }).map(function( uchar ) {
-      return uchar < 128 ? 1 : 2;
-    }).reduce(function (curr, next) {
-      return curr + next;
-    });
-
-  return sizeInBytes;
-};

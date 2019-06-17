@@ -10,7 +10,7 @@ class Entity {
 
   setOrientation(position, rotation) {
     this.mesh.position.set(position.x, position.y, position.z);
-    this.mesh.quaternion.setFromEuler(new THREE.Euler(rotation.x, rotation.y, rotation.z));
+    this.mesh.quaternion.set(rotation.x, rotation.y, rotation.z, rotation.w);
   }
 }
 
