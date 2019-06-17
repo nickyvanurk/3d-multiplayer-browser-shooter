@@ -53,19 +53,13 @@ class Player extends Entity {
     this.rollAccel = 0.02 * 0.016;
     this.maxRollAccel = 0.5 * 0.016;
 
-    this.yawSpeed = 0;
-    this.maxYawSpeed = 0.4 * 0.016;
-    this.minYawSpeed = 0;
-    this.yawAccel = 0.01 * 0.016;
-    this.maxYawAccel = 0.5 * 0.016;
-
+    this.yawSpeed = 0.6 * 0.016;
     this.pitchSpeed = 0.6 * 0.016;
 
     this.forward = 0;
     this.rollLeft = 0;
     this.rollRight = 0;
-    this.yawLeft = 0;
-    this.yawRight = 0;
+    this.yaw = 0;
     this.pitch = 0;
   }
 
@@ -76,8 +70,7 @@ class Player extends Entity {
     this.forward = ((input.keys & 1) == 1);
     this.rollLeft = ((input.keys & 2) == 2);
     this.rollRight = ((input.keys & 4) == 4);
-    this.yawLeft = ((input.keys & 16) == 16);
-    this.yawRight = ((input.keys & 32) == 32);
+    this.yaw = input.yaw || 0;
     this.pitch = input.pitch || 0;
 
     const rm = this.rotation.toMatrix();
@@ -120,30 +113,10 @@ class Player extends Entity {
       }
     }
 
-    if (this.yawRight) {
-      this.yawSpeed += this.yawAccel;
-      if (this.yawSpeed > this.maxYawSpeed) this.yawSpeed = this.maxYawSpeed;
-    }
-
-    if (this.yawLeft) {
-      this.yawSpeed -= this.yawAccel;
-      if (this.yawSpeed < -this.maxYawSpeed) this.yawSpeed = -this.maxYawSpeed;
-    }
-
-    if (!this.yawLeft && !this.yawRight) {
-      if (this.yawSpeed > this.minYawSpeed) {
-        this.yawSpeed -= this.yawAccel;
-        if (this.yawSpeed < this.minYawSpeed) this.yawSpeed = this.minYawSpeed;
-      } else if (this.yawSpeed < -this.minYawSpeed) {
-        this.yawSpeed += this.yawAccel;
-        if (this.yawSpeed > -this.minYawSpeed) this.yawSpeed = -this.minYawSpeed;
-      }
-    }
-
     const tmpQuaternion = new Quaternion([
       1,
       -this.pitch * this.pitchSpeed,
-      -this.yawSpeed,
+      -this.yaw * this.yawSpeed,
       -this.rollSpeed
     ]).normalize();
 
@@ -345,7 +318,8 @@ class Server {
       pressTime: msg[1],
       inputSequenceNumber: msg[2],
       keys: msg[3],
-      pitch: msg[4]
+      yaw: msg[4],
+      pitch: msg[5]
     };
 
     if (this.validateInput(input, client.id)) {
@@ -430,7 +404,7 @@ class Server {
       let playerRot = {x: player.rotation.x, y: player.rotation.y, z: player.rotation.z, w: player.rotation.w};
 
       worldState.push([player.id, playerPos, playerRot, this.lastProcessedInput[id], player.health,
-        player.speed, player.rollSpeed, player.yawSpeed, player.pitch, player.kills]);
+        player.speed, player.rollSpeed, player.yaw, player.pitch, player.kills]);
     }
 
     this.broadcast({type: 'worldState', states: worldState});

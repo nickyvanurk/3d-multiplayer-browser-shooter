@@ -54,19 +54,13 @@ class Player {
     this.rollAccel = 0.02 * 0.016;
     this.maxRollAccel = 0.5 * 0.016;
 
-    this.yawSpeed = 0;
-    this.maxYawSpeed = 0.4 * 0.016;
-    this.minYawSpeed = 0;
-    this.yawAccel = 0.01 * 0.016;
-    this.maxYawAccel = 0.5 * 0.016;
-
+    this.yawSpeed = 0.6 * 0.016;
     this.pitchSpeed = 0.6 * 0.016;
 
     this.forward = 0;
     this.rollLeft = 0;
     this.rollRight = 0;
-    this.yawLeft = 0;
-    this.yawRight = 0;
+    this.yaw = 0;
     this.pitch = 0;
 
     this.tmpQuaternion = new THREE.Quaternion();
@@ -181,15 +175,10 @@ class Player {
     this.forward = ((input.keys & 1) == 1);
     this.rollLeft = ((input.keys & 2) == 2);
     this.rollRight = ((input.keys & 4) == 4);
-    this.yawLeft = ((input.keys & 16) == 16);
-    this.yawRight = ((input.keys & 32) == 32);
+    this.yaw = input.yaw || 0;
     this.pitch = input.pitch || 0;
 
     this.mesh.translateZ(-this.speed);
-
-    this.rotationVector.x = -this.pitch;
-    this.rotationVector.y = -this.yawRight + this.yawLeft;
-    this.rotationVector.z = -this.rollRight + this.rollLeft;
 
     if (this.forward) {
       this.speed += this.acceleration;
@@ -219,29 +208,9 @@ class Player {
       }
     }
 
-    if (this.yawRight) {
-      this.yawSpeed += this.yawAccel;
-      if (this.yawSpeed > this.maxYawSpeed) this.yawSpeed = this.maxYawSpeed;
-    }
-
-    if (this.yawLeft) {
-      this.yawSpeed -= this.yawAccel;
-      if (this.yawSpeed < -this.maxYawSpeed) this.yawSpeed = -this.maxYawSpeed;
-    }
-
-    if (!this.yawLeft && !this.yawRight) {
-      if (this.yawSpeed > this.minYawSpeed) {
-        this.yawSpeed -= this.yawAccel;
-        if (this.yawSpeed < this.minYawSpeed) this.yawSpeed = this.minYawSpeed;
-      } else if (this.yawSpeed < -this.minYawSpeed) {
-        this.yawSpeed += this.yawAccel;
-        if (this.yawSpeed > -this.minYawSpeed) this.yawSpeed = -this.minYawSpeed;
-      }
-    }
-
     this.tmpQuaternion.set(
-      this.rotationVector.x * this.pitchSpeed,
-      -this.yawSpeed,
+      -this.pitch * this.pitchSpeed,
+      -this.yaw * this.yawSpeed,
       -this.rollSpeed,
       1
     ).normalize();
@@ -414,8 +383,6 @@ class Client {
       if (event.keyCode == 87 || event.keyCode == 38) this.keys.forward = event.type == 'keydown';
       if (event.keyCode == 65 || event.keyCode == 37) this.keys.left = event.type == 'keydown';
       if (event.keyCode == 68 || event.keyCode == 39) this.keys.right = event.type == 'keydown';
-      if (event.keyCode == 81) this.keys.yawLeft = event.type == 'keydown';
-      if (event.keyCode == 69) this.keys.yawRight = event.type == 'keydown';
       if (event.keyCode == 32) this.keys.shoot = event.type == 'keydown';
     }
 
@@ -445,6 +412,9 @@ class Client {
 
     if (event.type === 'mousemove') {
       const halfHeight = window.innerHeight / 2;
+      const halfWidth = window.innerWidth / 2;
+
+      this.keys.yaw = (event.pageX - halfWidth) / halfWidth;
       this.keys.pitch = (event.pageY - halfHeight) / halfHeight;
     }
   }
@@ -496,8 +466,7 @@ class Client {
     if (this.keys.left) input.keys += 2;
     if (this.keys.right) input.keys += 4;
     if (this.keys.shoot) input.keys += 8;
-    if (this.keys.yawLeft) input.keys += 16;
-    if (this.keys.yawRight) input.keys += 32;
+    if (this.keys.yaw) input.yaw = this.keys.yaw;
     if (this.keys.pitch) input.pitch = this.keys.pitch;
 
     this.ws.send(JSON.stringify([
@@ -505,6 +474,7 @@ class Client {
       input.pressTime,
       input.inputSequenceNumber,
       input.keys,
+      input.yaw,
       input.pitch
     ]));
 
@@ -634,7 +604,7 @@ class Client {
         health: msg.states[i][4],
         speed: msg.states[i][5],
         rollSpeed: msg.states[i][6],
-        yawSpeed: msg.states[i][7],
+        yaw: msg.states[i][7],
         pitch: msg.states[i][8],
         kills: msg.states[i][9]
       };
@@ -654,7 +624,7 @@ class Client {
         // received the authoritative positon of this client's player
         player.speed = state.speed;
         player.rollSpeed = state.rollSpeed;
-        player.yawSpeed = state.yawSpeed;
+        player.yaw = state.yaw;
         player.pitch = state.pitch;
         player.setOrientation(state.position, state.rotation);
 
