@@ -69,7 +69,7 @@ class Player {
     this.positionBuffer = [];
 
     this.healthBar = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 0.1, 0),
+      new THREE.BoxGeometry(1, 0.1, 0.01),
       new THREE.MeshBasicMaterial({color: 0x00ff00})
     );
     this.healthBar.renderOrder = 999;
@@ -329,6 +329,18 @@ class Client {
       {ds: 'models/fighter1.3ds', texture: 'models/freelancer.jpg', mesh: null, color: '#3c64c1'},
       {ds: 'models/fighter1.3ds', texture: 'models/robin.jpg', mesh: null, color: '#b83cc1'}
     ];
+
+    const mtLoader = new THREE.MTLLoader();
+    mtLoader.load('models/moon/moon.mtl', (materials) => {
+      materials.preload();
+
+      const objLoader = new THREE.OBJLoader();
+      objLoader.setMaterials(materials);
+      objLoader.load('models/moon/moon.obj', (object) => {
+        object.position.set(200, 100, -400);
+        this.scene.add(object);
+      });
+    });
 
     this.loadingManager = new THREE.LoadingManager();
     this.loadingManager.onLoad = function () {
@@ -790,9 +802,13 @@ class Client {
             mesh.traverse(function (node) {
               if (node instanceof THREE.Mesh) {
                 if (node.name === "ship") {
+                  // TODO: fix, no longer works after three.js upgrade
+                  node.material.map.image = new Image();
                   const imageSrc = node.material.map.image.baseURI + model.texture;
                   node.material.map.image.src = imageSrc;
                 }
+
+                console.log(node);
 
                 node.castShadow = 'castShadow' in model ? model.castShadow : true;
                 node.castShadow = 'receiveShadow' in model ? model.receiveShadow : true;
