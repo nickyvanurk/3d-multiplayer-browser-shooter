@@ -121,13 +121,9 @@ class Client {
             if (this.name === null) {
                 this.name = msg;
                 
-                this.networkManager.send({type: 'setName', name: msg});
+                this.networkManager.sendName(this.name);
             } else {
-                this.networkManager.send({
-                    type: 'msg',
-                    content: this.chatInput.value,
-                    time: +new Date()
-                });
+                this.networkManager.sendChatMessage(this.chatInput.value);
             }
 
             this.chatInput.value = '';
@@ -192,7 +188,7 @@ class Client {
         if (this.keys.yaw) input.yaw = this.keys.yaw;
         if (this.keys.pitch) input.pitch = this.keys.pitch;
 
-        this.networkManager.send([
+        this.networkManager.sendInputState([
             input.id,
             input.pressTime,
             input.inputSequenceNumber,

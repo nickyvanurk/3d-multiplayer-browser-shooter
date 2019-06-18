@@ -276,27 +276,29 @@ class Server {
     }));
 
     client.on('message', function (message) {
-      let msg = JSON.parse(message);
+      if (typeof message === 'string') {
+        let msg = JSON.parse(message);
 
-      if (msg.type === 'setName' && !client.name) {
-        let player = new Player();
-        player.id = client.id;
-        player.spawn();
-        this.players[player.id] = player;
+        if (msg.type === 'setName' && !client.name) {
+          let player = new Player();
+          player.id = client.id;
+          player.spawn();
+          this.players[player.id] = player;
 
-        let name = msg.name;
-        if (name.length > 15) {
-          name = name.substring(0, 15);
+          let name = msg.name;
+          if (name.length > 15) {
+            name = name.substring(0, 15);
+          }
+          client.name = name;
+          client.send(JSON.stringify({type: 'initClient', id: client.id, color: client.color}));
+
+          this.broadcastPlayerSpawn(client);
+          this.broadcastMessage('System', 'orange', `${client.name} joined the game!`, +new Date());
+        } else if (msg.type === 'msg') {
+          this.broadcastMessage(client.name, client.color, msg.content, msg.time);
         }
-        client.name = name;
-        client.send(JSON.stringify({type: 'initClient', id: client.id, color: client.color}));
-
-        this.broadcastPlayerSpawn(client);
-        this.broadcastMessage('System', 'orange', `${client.name} joined the game!`, +new Date());
-      } else if (msg.type === 'msg') {
-        this.broadcastMessage(client.name, client.color, msg.content, msg.time);
       } else {
-        this.processInputs(msg, client);
+        this.processInputs(message, client);
       }
     }.bind(this));
 
@@ -312,14 +314,21 @@ class Server {
     });
   }
 
-  processInputs(msg, client) {
+  processInputs(message, client) {
+    const arrayBuffer = message.buffer.slice(
+      message.byteOffset,
+      message.byteOffset + message.byteLength
+    );
+
+    var array = new Float32Array(arrayBuffer);
+
     let input = {
-      id: msg[0],
-      pressTime: msg[1],
-      inputSequenceNumber: msg[2],
-      keys: msg[3],
-      yaw: msg[4],
-      pitch: msg[5]
+      id: array[1],
+      pressTime: array[2],
+      inputSequenceNumber: array[3],
+      keys: array[4],
+      yaw: array[5],
+      pitch: array[6]
     };
 
     if (this.validateInput(input, client.id)) {
@@ -482,7 +491,6 @@ class Server {
   }
 
   getRandomColor() {
-    //return "#" + ("000000" + Math.floor(Math.random() * 16777216).toString(16)).substr(-6);
     let color = this.colors.shift();
     this.colors.push(color);
     return color;
