@@ -1,9 +1,12 @@
 import Player from './player.js';
 import Bullet from './bullet.js';
 import Camera from './camera.js';
+import NetworkManager from './network-manager.js';
 
 class Client {
     constructor() {
+        this.networkManager = new NetworkManager(this);
+
         this.serverUpdateRate = 40;
 
         this.id = null;
@@ -67,18 +70,14 @@ class Client {
         this.loadingManager = new THREE.LoadingManager();
         this.loadingManager.onLoad = function () {
             this.resourcesLoaded = true;
-            this.ws = new WebSocket(location.origin.replace(/^http/, 'ws'));
+            this.networkManager.init(location.origin.replace(/^http/, 'ws'));
             this.setEventHandlers();
         }.bind(this);
 
-        //this.loadTextures(this.textures, this.loadingManager);
         this.loadModels(this.models, this.loadingManager);
     }
 
     setEventHandlers() {
-        this.ws.onopen = this.onConnection.bind(this);
-        this.ws.onmessage = this.processServerMessages.bind(this);
-
         document.body.onkeydown = this.processEvents.bind(this);
         document.body.onkeyup = this.processEvents.bind(this);
         document.body.onmousemove = this.processEvents.bind(this);
@@ -95,21 +94,6 @@ class Client {
         this.chatStatus.textContent = 'Choose name:';
         this.chatInput.removeAttribute('disabled');
         this.chatInput.focus();
-    }
-
-    processServerMessages(event) {
-        let msg = JSON.parse(event.data);
-
-        switch(msg.type) {
-            case 'initClient': this.onInitClient(msg); break;
-            case 'initWorld': this.onInitWorld(msg); break;
-            case 'message': this.onMessage(msg); break;
-            case 'addPlayer': this.onAddPlayer(msg); break;
-            case 'removePlayer': this.onRemovePlayer(msg); break;
-            case 'addBullet': this.onAddBullet(msg); break;
-            case 'removeBullet': this.onRemoveBullet(msg); break;
-            case 'worldState': this.onWorldState(msg); break;
-        }
     }
 
     processEvents(event) {
@@ -136,9 +120,14 @@ class Client {
 
             if (this.name === null) {
                 this.name = msg;
-                this.ws.send(JSON.stringify({type: 'setName', name: msg}));
+                
+                this.networkManager.send({type: 'setName', name: msg});
             } else {
-                this.ws.send(JSON.stringify({type: 'msg', content: this.chatInput.value, time: +new Date()}));
+                this.networkManager.send({
+                    type: 'msg',
+                    content: this.chatInput.value,
+                    time: +new Date()
+                });
             }
 
             this.chatInput.value = '';
@@ -203,14 +192,14 @@ class Client {
         if (this.keys.yaw) input.yaw = this.keys.yaw;
         if (this.keys.pitch) input.pitch = this.keys.pitch;
 
-        this.ws.send(JSON.stringify([
+        this.networkManager.send([
             input.id,
             input.pressTime,
             input.inputSequenceNumber,
             input.keys,
             input.yaw,
             input.pitch
-        ]));
+        ]);
 
         // do client-side prediction
         if (this.players[this.id].alive) {
