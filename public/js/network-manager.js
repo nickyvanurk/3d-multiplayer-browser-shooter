@@ -24,17 +24,20 @@ class NetworkManager {
     }
 
     processServerMessages(event) {
-        let msg = JSON.parse(event.data);
+        if (typeof event.data === 'string') {
+            let msg = JSON.parse(event.data);
 
-        switch (msg.type) {
-            case 'initClient': this.client.onInitClient(msg); break;
-            case 'initWorld': this.client.onInitWorld(msg); break;
-            case 'message': this.client.onMessage(msg); break;
-            case 'addPlayer': this.client.onAddPlayer(msg); break;
-            case 'removePlayer': this.client.onRemovePlayer(msg); break;
-            case 'addBullet': this.client.onAddBullet(msg); break;
-            case 'removeBullet': this.client.onRemoveBullet(msg); break;
-            case 'worldState': this.client.onWorldState(msg); break;
+            switch (msg.type) {
+                case 'initClient': this.client.onInitClient(msg); break;
+                case 'initWorld': this.client.onInitWorld(msg); break;
+                case 'message': this.client.onMessage(msg); break;
+                case 'addPlayer': this.client.onAddPlayer(msg); break;
+                case 'removePlayer': this.client.onRemovePlayer(msg); break;
+                case 'addBullet': this.client.onAddBullet(msg); break;
+                case 'removeBullet': this.client.onRemoveBullet(msg); break;
+            }
+        } else {
+            this.client.onWorldState(event.data);
         }
     }
 

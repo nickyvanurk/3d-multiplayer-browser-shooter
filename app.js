@@ -9,6 +9,12 @@ const app = express();
 
 app.use(express.static('public'));
 
+const command = {
+  initClient: 0,
+  initWorld: 1,
+  worldState: 2
+};
+
 class Vector3 {
   constructor(x, y, z) {
     this.x = x;
@@ -406,17 +412,51 @@ class Server {
 
   sendWorldState() {
     let worldState = [];
+
     for (let id in this.players) {
       let player = this.players[id];
 
-      let playerPos = {x: player.position.x, y: player.position.y, z: player.position.z};
-      let playerRot = {x: player.rotation.x, y: player.rotation.y, z: player.rotation.z, w: player.rotation.w};
-
-      worldState.push([player.id, playerPos, playerRot, this.lastProcessedInput[id], player.health,
-        player.speed, player.rollSpeed, player.yaw, player.pitch, player.kills]);
+      worldState.push([
+        player.id,
+        player.position.x,
+        player.position.y,
+        player.position.z,
+        player.rotation.x,
+        player.rotation.y,
+        player.rotation.z,
+        player.rotation.w,
+        this.lastProcessedInput[id],
+        player.health,
+        player.speed,
+        player.rollSpeed,
+        player.yaw,
+        player.pitch,
+        player.kills
+      ]);
     }
 
-    this.broadcast({type: 'worldState', states: worldState});
+    const worldStateFields = 15;
+
+    const num_elements = 1 + worldState.length * worldStateFields;
+
+    const buffer = new ArrayBuffer(num_elements * 4);
+    const array = new Float32Array(buffer);
+
+    array[0] = command.worldState;
+
+    for (let i = 0; i < worldState.length; i++) {
+      for (let j = 0; j < worldState[i].length; j++) {
+        array[1+i*worldStateFields+j] = worldState[i][j];
+      }
+    }
+
+    for (const key in this.clients) {
+      if (this.clients[key].readyState === WebSocket.OPEN) {
+        this.clients[key].send(array);
+      }
+    }
+
+    // this.broadcast({type: 'worldState', states: worldState});  240*2 bytes per player
   }
 
   setUpdateRate(hz) {

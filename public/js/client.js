@@ -313,19 +313,32 @@ class Client {
         this.destroyBullet(msg.id);
     }
 
-    onWorldState(msg) {
-        for (let i = 0; i < msg.states.length; i++) {
+    onWorldState(message) {
+        var array = new Float32Array(message);
+
+        const worldStateFields = 15;
+
+        for (let i = 0; i < (array.length-1)/worldStateFields; i++) {
             let state = {
-                id: msg.states[i][0],
-                position: msg.states[i][1],
-                rotation: msg.states[i][2],
-                lastProcessedInput: msg.states[i][3],
-                health: msg.states[i][4],
-                speed: msg.states[i][5],
-                rollSpeed: msg.states[i][6],
-                yaw: msg.states[i][7],
-                pitch: msg.states[i][8],
-                kills: msg.states[i][9]
+                id: array[1+i*worldStateFields],
+                position: {
+                    x: array[1+i*worldStateFields + 1],
+                    y: array[1+i*worldStateFields + 2],
+                    z: array[1+i*worldStateFields + 3]
+                },
+                rotation: {
+                    x: array[1+i*worldStateFields + 4],
+                    y: array[1+i*worldStateFields + 5],
+                    z: array[1+i*worldStateFields + 6],
+                    w: array[1+i*worldStateFields + 7],
+                },
+                lastProcessedInput: array[1+i*worldStateFields + 8],
+                health: array[1+i*worldStateFields + 9],
+                speed: array[1+i*worldStateFields + 10],
+                rollSpeed: array[1+i*worldStateFields + 11],
+                yaw: array[1+i*worldStateFields + 12],
+                pitch: array[1+i*worldStateFields + 13],
+                kills: array[1+i*worldStateFields + 14]
             };
 
             if (!this.players[state.id]) continue;
