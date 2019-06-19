@@ -44,4 +44,4 @@ To deploy the application you have to change 'localhost' on line 367 in public/j
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
+This project is licensed under the [MIT License](./LICENSE).
