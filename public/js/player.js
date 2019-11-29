@@ -5,18 +5,19 @@ class Player {
         this.isClient = isClient;
         this.kills = 0;
 
-        this.scale = 0.1;
+        this.scale = 0.007;
         this.mesh = mesh;
         this.setOrientation(position, rotation);
         for (let i = 0, len = this.mesh.children.length; i < len; i++) {
-            this.mesh.children[i].rotateX(-Math.PI / 2);
-            this.mesh.children[i].rotateZ(-Math.PI / 2);
+            this.mesh.children[i].rotateX(Math.PI);
+            this.mesh.children[i].rotateZ(Math.PI);
             this.mesh.children[i].scale.set(this.scale, this.scale, this.scale);
         }
-        this.mesh.children[4].geometry.computeBoundingBox();
-        this.boundingBox = this.mesh.children[4].geometry.boundingBox;
-        this.mesh.receiveShadow = true;
-        this.mesh.castShadow = true;
+        // this.mesh.scale.set(this.scale, this.scale, this.scale);
+        console.log(this.mesh);
+        const helper = new THREE.BoxHelper(this.mesh);
+        helper.geometry.computeBoundingBox();
+        this.boundingBox = helper.geometry.boundingBox;
         this.scene.add(this.mesh);
 
         this.speed = 8; // units/s
@@ -64,7 +65,7 @@ class Player {
         this.healthBarPivot = new THREE.Object3D();
         this.healthBarPivot.add(this.healthBar);
 
-        let height = (this.boundingBox.max.z - this.boundingBox.min.z) * this.scale;
+        let height = (this.boundingBox.max.z - this.boundingBox.min.z) * 0.3;
         if (this.isClient) {
             this.healthBar.position.y = height;
             this.mesh.add(this.healthBarPivot);

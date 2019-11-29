@@ -45,14 +45,7 @@ class Client {
         this.createStarfield(6371);
 
         this.models = [
-            {ds: 'models/fighter1.3ds', texture: 'models/kaoskiwi.jpg', mesh: null, color: '#ff0000'},
-            {ds: 'models/fighter1.3ds', texture: 'models/idolknight.jpg', mesh: null, color: '#00ff00'},
-            {ds: 'models/fighter1.3ds', texture: 'models/cinfa.jpg', mesh: null, color: '#d10042'},
-            {ds: 'models/fighter1.3ds', texture: 'models/thor.jpg', mesh: null, color: '#c1acb3'},
-            {ds: 'models/fighter1.3ds', texture: 'models/crono782.jpg', mesh: null, color: '#e0cb14'},
-            {ds: 'models/fighter1.3ds', texture: 'models/jodomatis.jpg', mesh: null, color: '#ff443a'},
-            {ds: 'models/fighter1.3ds', texture: 'models/freelancer.jpg', mesh: null, color: '#3c64c1'},
-            {ds: 'models/fighter1.3ds', texture: 'models/robin.jpg', mesh: null, color: '#b83cc1'}
+            {gltf: 'models/spaceships/2.gltf', mesh: null, color: '#ff0000'},
         ];
 
         const mtLoader = new THREE.MTLLoader();
@@ -73,6 +66,41 @@ class Client {
             this.networkManager.init(location.origin.replace(/^http/, 'ws'));
             this.setEventHandlers();
         }.bind(this);
+
+
+        var loader = new THREE.GLTFLoader(this.loadingManager);
+
+        loader.load(
+            'models/spaceships/2.gltf',
+            (gltf) => {
+                gltf.scene.scale.set(0.007, 0.007, 0.007);
+
+                // gltf.scene.traverse((node) => {
+                //     if (node instanceof THREE.Mesh) {
+                //         // node.castShadow = true;
+                //         // node.receiveShadow = true;
+                //     }
+                // } );
+
+                this.scene.add(gltf.scene);
+
+                // gltf.animations; // Array<THREE.AnimationClip>
+                // gltf.scene; // THREE.Scene
+                // gltf.scenes; // Array<THREE.Scene>
+                // gltf.cameras; // Array<THREE.Camera>
+                // gltf.asset; // Object
+
+            },
+
+            (xhr) => {
+                console.log((xhr.loaded / xhr.total*100) + '% loaded');
+            },
+
+            (error) => {
+                console.log('An error happened', error);
+            }
+        );
+
 
         this.loadModels(this.models, this.loadingManager);
     }
@@ -515,24 +543,11 @@ class Client {
     loadModels(models, loadingManager) {
         for (var _key in models) {
             (function (key) {
-                var loader = new THREE.TDSLoader(loadingManager);
+                var loader = new THREE.GLTFLoader(loadingManager);
                 for (let p in models) {
                     let model = models[p];
-                    loader.load(model.ds, function (mesh) {
-                        mesh.traverse(function (node) {
-                            if (node instanceof THREE.Mesh) {
-                                if (node.name === "ship") {
-                                    // TODO: fix, no longer works after three.js upgrade
-                                    node.material.map.image = new Image();
-                                    const imageSrc = node.material.map.image.baseURI + model.texture;
-                                    node.material.map.image.src = imageSrc;
-                                }
-
-                                node.castShadow = 'castShadow' in model ? model.castShadow : true;
-                                node.castShadow = 'receiveShadow' in model ? model.receiveShadow : true;
-                            }
-                        });
-                        model.mesh = mesh;
+                    loader.load(model.gltf, function (gltf) {
+                        model.mesh = gltf.scene;
                     });
                 }
             })(_key);
