@@ -48,18 +48,6 @@ class Client {
             {gltf: 'models/spaceships/2.gltf', mesh: null, color: '#ff0000'},
         ];
 
-        const mtLoader = new THREE.MTLLoader();
-        mtLoader.load('models/moon/moon.mtl', (materials) => {
-            materials.preload();
-
-            const objLoader = new THREE.OBJLoader();
-            objLoader.setMaterials(materials);
-            objLoader.load('models/moon/moon.obj', (object) => {
-                object.position.set(200, 100, -400);
-                this.scene.add(object);
-            });
-        });
-
         this.loadingManager = new THREE.LoadingManager();
         this.loadingManager.onLoad = function () {
             this.resourcesLoaded = true;
