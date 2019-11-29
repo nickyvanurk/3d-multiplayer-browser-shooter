@@ -148,7 +148,7 @@ class Player {
     }
 
     updateHealthBarOrientation(camera) {
-        this.healthBarPivot.lookAt(camera.getWorldPosition());
+        this.healthBarPivot.lookAt(camera.getWorldPosition(new THREE.Vector3()));
         this.healthBarPivot.position.copy(this.mesh.position);
     }
 
