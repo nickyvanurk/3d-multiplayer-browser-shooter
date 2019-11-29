@@ -13,8 +13,6 @@ class Player {
             this.mesh.children[i].rotateZ(Math.PI);
             this.mesh.children[i].scale.set(this.scale, this.scale, this.scale);
         }
-        // this.mesh.scale.set(this.scale, this.scale, this.scale);
-        console.log(this.mesh);
         const helper = new THREE.BoxHelper(this.mesh);
         helper.geometry.computeBoundingBox();
         this.boundingBox = helper.geometry.boundingBox;

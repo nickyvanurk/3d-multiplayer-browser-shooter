@@ -67,41 +67,6 @@ class Client {
             this.setEventHandlers();
         }.bind(this);
 
-
-        var loader = new THREE.GLTFLoader(this.loadingManager);
-
-        loader.load(
-            'models/spaceships/2.gltf',
-            (gltf) => {
-                gltf.scene.scale.set(0.007, 0.007, 0.007);
-
-                // gltf.scene.traverse((node) => {
-                //     if (node instanceof THREE.Mesh) {
-                //         // node.castShadow = true;
-                //         // node.receiveShadow = true;
-                //     }
-                // } );
-
-                this.scene.add(gltf.scene);
-
-                // gltf.animations; // Array<THREE.AnimationClip>
-                // gltf.scene; // THREE.Scene
-                // gltf.scenes; // Array<THREE.Scene>
-                // gltf.cameras; // Array<THREE.Camera>
-                // gltf.asset; // Object
-
-            },
-
-            (xhr) => {
-                console.log((xhr.loaded / xhr.total*100) + '% loaded');
-            },
-
-            (error) => {
-                console.log('An error happened', error);
-            }
-        );
-
-
         this.loadModels(this.models, this.loadingManager);
     }
 
@@ -551,13 +516,6 @@ class Client {
                     });
                 }
             })(_key);
-        }
-    }
-
-    loadTextures(textures, loadingManager) {
-        var loader = new THREE.TextureLoader(loadingManager);
-        for (let i = 0; i < textures.length; i++) {
-            loader.load(textures[i]);
         }
     }
 }
