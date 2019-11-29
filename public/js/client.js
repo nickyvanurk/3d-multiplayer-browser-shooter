@@ -120,7 +120,7 @@ class Client {
 
             if (this.name === null) {
                 this.name = msg;
-                
+
                 this.networkManager.sendName(this.name);
             } else {
                 this.networkManager.sendChatMessage(this.chatInput.value);
@@ -173,7 +173,7 @@ class Client {
         this.renderer.render(this.scene, this.camera.body);
     }
 
-    processInputs(dt) {    
+    processInputs(dt) {
         let input = {
             id: this.id,
             pressTime: dt,
