@@ -4,13 +4,24 @@
   "description": "3D multiplayer space shooter game.",
   "main": "app.js",
   "scripts": {
-    "start": "node app.js"
+    "start": "npx node dist/app.js",
+    "dev": "npx nodemon server/app.js --ext js --exec babel-node",
+    "build": "npx babel server --out-dir dist --copy-files"
   },
   "author": "N. van Urk",
   "license": "MIT",
   "dependencies": {
+    "@babel/polyfill": "^7.8.3",
+    "core-js": "^3.6.4",
     "express": "^4.16.2",
     "quaternion": "^1.1.0",
     "ws": "^3.2.0"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.8.4",
+    "@babel/core": "^7.8.4",
+    "@babel/node": "^7.8.4",
+    "@babel/preset-env": "^7.8.4",
+    "nodemon": "^2.0.2"
   }
 }

@@ -7,7 +7,7 @@ const port = process.env.PORT || 3000;
 
 const app = express();
 
-app.use(express.static('public'));
+app.use(express.static('client'));
 
 const command = {
   initClient: 0,
@@ -197,7 +197,7 @@ class Bullet extends Entity {
       Math.pow(this.position.y - object.position.y, 2) +
       Math.pow(this.position.z - object.position.z, 2)
     );
-    
+
     return distance < min_distance;
 
     // TODO: Due to removing Three.js code, collision detection is worse.
