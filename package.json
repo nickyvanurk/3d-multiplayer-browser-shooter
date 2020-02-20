@@ -4,9 +4,9 @@
   "description": "3D multiplayer space shooter game.",
   "main": "app.js",
   "scripts": {
-    "start": "npx node dist/app.js",
-    "dev": "npx nodemon server/app.js --ext js --exec babel-node",
-    "build": "npx babel server --out-dir dist --copy-files"
+    "start": "npx node dist/server/app.js",
+    "dev": "npx nodemon src/server/app.js --ext js --exec babel-node",
+    "build": "npx babel src --out-dir dist --copy-files"
   },
   "author": "N. van Urk",
   "license": "MIT",
