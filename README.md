@@ -33,6 +33,7 @@ npm install
 Start the game server
 
 ```
+npm run build
 npm start
 ```
 
