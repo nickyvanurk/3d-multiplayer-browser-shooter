@@ -1,3 +1,4 @@
+const path = require('path');
 const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
@@ -7,7 +8,7 @@ const port = process.env.PORT || 3000;
 
 const app = express();
 
-app.use(express.static('client'));
+app.use(express.static(path.join(__dirname, '../client')));
 
 const command = {
   initClient: 0,
