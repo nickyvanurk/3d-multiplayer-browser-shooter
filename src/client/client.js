@@ -45,6 +45,7 @@ class Client {
         this.scene.add(new THREE.HemisphereLight());
 
         this.createStarfield(6371);
+        this.createSkybox(this.scene);
 
         this.models = [
             {gltf: 'models/spaceships/2.gltf', mesh: null, color: '#ff0000'},
@@ -507,6 +508,21 @@ class Client {
                 }
             })(_key);
         }
+    }
+
+    createSkybox(scene) {
+        const cubeMaterials = [
+            new THREE.MeshBasicMaterial({ map: new THREE.TextureLoader().load('../images/skybox/right.png'), side: THREE.BackSide }),
+            new THREE.MeshBasicMaterial({ map: new THREE.TextureLoader().load('../images/skybox/left.png'), side: THREE.BackSide }),
+            new THREE.MeshBasicMaterial({ map: new THREE.TextureLoader().load('../images/skybox/top.png'), side: THREE.BackSide }),
+            new THREE.MeshBasicMaterial({ map: new THREE.TextureLoader().load('../images/skybox/bottom.png'), side: THREE.BackSide }),
+            new THREE.MeshBasicMaterial({ map: new THREE.TextureLoader().load('../images/skybox/front.png'), side: THREE.BackSide }),
+            new THREE.MeshBasicMaterial({ map: new THREE.TextureLoader().load('../images/skybox/back.png'), side: THREE.BackSide }),
+        ];
+        const geometry = new THREE.BoxGeometry(100000, 100000, 100000);
+        const cube = new THREE.Mesh(geometry, cubeMaterials);
+
+        scene.add(cube);
     }
 }
 

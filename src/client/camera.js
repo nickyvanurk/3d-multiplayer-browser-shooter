@@ -2,7 +2,7 @@ import * as THREE from 'three';
 
 class Camera {
     constructor() {
-        this.body = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1e7);
+        this.body = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 1e7);
         this.body.position.y = 2;
         this.offset = new THREE.Vector3(0, 2, 15);
         this.smoothSpeed = 0.125;
