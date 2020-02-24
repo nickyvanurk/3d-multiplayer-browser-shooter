@@ -1,3 +1,5 @@
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import Player from './player.js';
 import Bullet from './bullet.js';
 import Camera from './camera.js';
@@ -496,7 +498,7 @@ class Client {
     loadModels(models, loadingManager) {
         for (var _key in models) {
             (function (key) {
-                var loader = new THREE.GLTFLoader(loadingManager);
+                var loader = new GLTFLoader(loadingManager);
                 for (let p in models) {
                     let model = models[p];
                     loader.load(model.gltf, function (gltf) {

@@ -1,3 +1,5 @@
+import * as THREE from 'three';
+
 class Camera {
     constructor() {
         this.body = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1e7);

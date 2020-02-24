@@ -1,3 +1,5 @@
+import * as THREE from 'three';
+
 class Player {
     constructor(scene, id, position, rotation, health, color, name, mesh, isClient = false) {
         this.scene = scene;

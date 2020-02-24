@@ -1,3 +1,5 @@
+import * as THREE from 'three';
+
 class Entity {
     constructor(scene, size, position, rotation) {
         this.mesh = new THREE.Mesh(
@@ -9,7 +11,7 @@ class Entity {
 
         scene.add(this.mesh);
     }
-  
+
     setOrientation(position, rotation) {
         this.mesh.position.set(position.x, position.y, position.z);
         this.mesh.quaternion.set(rotation.x, rotation.y, rotation.z, rotation.w);

@@ -33,8 +33,7 @@ npm install
 Start the game server
 
 ```
-npm run build
-npm start
+npm run dev
 ```
 
 Surf to localhost:3000!
