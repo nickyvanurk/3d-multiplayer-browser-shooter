@@ -7,7 +7,7 @@
     "start": "npx node dist/server/app.js",
     "dev": "npx nodemon src/server/app.js --ext js --exec babel-node",
     "build-client": "webpack",
-    "build-server": "npx babel src/server --out-dir dist/server --copy-files"
+    "build": "npx babel src/server --out-dir dist/server --copy-files"
   },
   "author": "N. van Urk",
   "license": "MIT",
