@@ -2,7 +2,7 @@
 
 A 3D multiplayer space dogfight game made with three.js, express and ws. Complete with score and chat functionality.
 
-<img src="screenshots/screenshot.png">
+<img src="docs/screenshot.png">
 
 ## Getting Started
 
