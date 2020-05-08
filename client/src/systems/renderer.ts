@@ -19,7 +19,7 @@ export default class Renderer extends System {
   private ctx: CanvasRenderingContext2D;
 
   init() {
-    this.shapeSize = 50;
+    this.shapeSize = 20;
     this.shapeHalfSize = this.shapeSize / 2;
 
     let canvas = document.querySelector('canvas');
@@ -35,8 +35,8 @@ export default class Renderer extends System {
 
   // This method will get called on every frame by default
   execute(delta: number, time: number, nextFrameDelta: number) {
-
-    this.ctx.fillStyle = '#d4d4d4';
+    this.ctx.globalAlpha = 1;
+    this.ctx.fillStyle = "#ffffff";
     this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
 
     // Iterate through all the entities on the query
@@ -46,8 +46,8 @@ export default class Renderer extends System {
       var velocity = entity.getComponent(Velocity);
 
       var extrapolatedPosition = {...position};
-      extrapolatedPosition.x = Math.floor(position.x + velocity.x*nextFrameDelta);
-      extrapolatedPosition.y = Math.floor(position.y + velocity.y*nextFrameDelta);
+      extrapolatedPosition.x = Math.floor(extrapolatedPosition.x + velocity.x*nextFrameDelta);
+      extrapolatedPosition.y = Math.floor(extrapolatedPosition.y + velocity.y*nextFrameDelta);
 
       if (shape.primitive === 'box') {
         this.drawBox(extrapolatedPosition);
@@ -58,14 +58,12 @@ export default class Renderer extends System {
   }
 
   drawCircle(position: Position) {
+    this.ctx.fillStyle = "#888";
     this.ctx.beginPath();
-    this.ctx.arc(position.x,
-                 position.y,
-                 this.shapeHalfSize, 0, 2 * Math.PI, false);
-    this.ctx.fillStyle= '#39c495';
+    this.ctx.arc(position.x, position.y, this.shapeHalfSize, 0, 2 * Math.PI, false);
     this.ctx.fill();
-    this.ctx.lineWidth = 2;
-    this.ctx.strokeStyle = '#0b845b';
+    this.ctx.lineWidth = 1;
+    this.ctx.strokeStyle = "#222";
     this.ctx.stroke();
   }
 
@@ -74,10 +72,10 @@ export default class Renderer extends System {
     this.ctx.rect(position.x - this.shapeHalfSize,
                   position.y - this.shapeHalfSize,
                   this.shapeSize, this.shapeSize);
-    this.ctx.fillStyle= '#e2736e';
+    this.ctx.fillStyle= '#f28d89';
     this.ctx.fill();
-    this.ctx.lineWidth = 2;
-    this.ctx.strokeStyle = '#b74843';
+    this.ctx.lineWidth = 1;
+    this.ctx.strokeStyle = '#800904';
     this.ctx.stroke();
   }
 }

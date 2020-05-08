@@ -17,7 +17,7 @@ export default class Moveable extends System {
   private canvasHeight: number;
 
   init() {
-    const shapeSize = 50;
+    const shapeSize = 20;
     this.shapeHalfSize = shapeSize / 2;
 
     let canvas = document.querySelector('canvas');
@@ -31,14 +31,14 @@ export default class Moveable extends System {
   }
 
   // This method will get called on every frame by default
-  execute(delta: number, time: number) {
+  execute() {
     // Iterate through all the entities on the query
     this.queries.moving.results.forEach((entity: any) => {
       var velocity = entity.getComponent(Velocity);
       var position = entity.getMutableComponent(Position);
 
-      position.x += velocity.x * delta;
-      position.y += velocity.y * delta;
+      position.x += velocity.x * (1000/60);
+      position.y += velocity.y * (1000/60);
 
       if (position.x > this.canvasWidth + this.shapeHalfSize) position.x = - this.shapeHalfSize;
       if (position.x < - this.shapeHalfSize) position.x = this.canvasWidth + this.shapeHalfSize;

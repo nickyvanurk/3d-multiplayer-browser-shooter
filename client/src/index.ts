@@ -1,6 +1,6 @@
 import './style.css';
 
-import {World, System} from 'ecsy';
+import {World} from 'ecsy';
 
 import Velocity from './components/velocity';
 import Position from './components/position';
@@ -10,8 +10,8 @@ import Renderable from './components/renderable';
 import Moveable from './systems/moveable';
 import Renderer from './systems/renderer';
 
-const NUM_ELEMENTS = 50;
-const SPEED_MULTIPLIER = 0.3;
+const NUM_ELEMENTS = 1000;
+const SPEED_MULTIPLIER = 0.1;
 const MS_PER_UPDATE = 1000 / 60;
 
 // Initialize canvas
@@ -72,7 +72,7 @@ function run() {
 
   while (lag >= MS_PER_UPDATE) {
     // Run all the systems
-    world.execute(delta, time);
+    world.execute();
     lag -= MS_PER_UPDATE;
   }
 
