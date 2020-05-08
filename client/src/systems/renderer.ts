@@ -2,11 +2,12 @@ import {System} from 'ecsy';
 import Position from '../components/position';
 import Renderable from '../components/renderable';
 import Shape from '../components/shape';
+import Velocity from '../components/velocity';
 
 export default class Renderer extends System {
   // Define a query of entities that have 'Renderable' and 'Shape' components
   static queries = {
-    renderables: { components: [Renderable, Shape, Position] }
+    renderables: { components: [Renderable, Shape, Position, Velocity] }
   };
 
   public queries: any;
@@ -33,7 +34,7 @@ export default class Renderer extends System {
   }
 
   // This method will get called on every frame by default
-  execute(delta: number, time: number) {
+  execute(delta: number, time: number, nextFrameDelta: number) {
 
     this.ctx.fillStyle = '#d4d4d4';
     this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
@@ -42,17 +43,25 @@ export default class Renderer extends System {
     this.queries.renderables.results.forEach((entity: any) => {
       var shape = entity.getComponent(Shape);
       var position = entity.getComponent(Position);
+      var velocity = entity.getComponent(Velocity);
+
+      var extrapolatedPosition = {...position};
+      extrapolatedPosition.x = Math.floor(position.x + velocity.x*nextFrameDelta);
+      extrapolatedPosition.y = Math.floor(position.y + velocity.y*nextFrameDelta);
+
       if (shape.primitive === 'box') {
-        this.drawBox(position);
+        this.drawBox(extrapolatedPosition);
       } else {
-        this.drawCircle(position);
+        this.drawCircle(extrapolatedPosition);
       }
     });
   }
 
   drawCircle(position: Position) {
     this.ctx.beginPath();
-    this.ctx.arc(position.x, position.y, this.shapeHalfSize, 0, 2 * Math.PI, false);
+    this.ctx.arc(position.x,
+                 position.y,
+                 this.shapeHalfSize, 0, 2 * Math.PI, false);
     this.ctx.fillStyle= '#39c495';
     this.ctx.fill();
     this.ctx.lineWidth = 2;
@@ -62,7 +71,9 @@ export default class Renderer extends System {
 
   drawBox(position: Position) {
     this.ctx.beginPath();
-    this.ctx.rect(position.x - this.shapeHalfSize, position.y - this.shapeHalfSize, this.shapeSize, this.shapeSize);
+    this.ctx.rect(position.x - this.shapeHalfSize,
+                  position.y - this.shapeHalfSize,
+                  this.shapeSize, this.shapeSize);
     this.ctx.fillStyle= '#e2736e';
     this.ctx.fill();
     this.ctx.lineWidth = 2;

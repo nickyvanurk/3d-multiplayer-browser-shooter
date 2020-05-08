@@ -10,8 +10,9 @@ import Renderable from './components/renderable';
 import Moveable from './systems/moveable';
 import Renderer from './systems/renderer';
 
-const NUM_ELEMENTS = 100;
+const NUM_ELEMENTS = 50;
 const SPEED_MULTIPLIER = 0.3;
+const MS_PER_UPDATE = 1000 / 60;
 
 // Initialize canvas
 let canvas = document.querySelector('canvas');
@@ -28,6 +29,7 @@ var world = new World();
 world
   .registerSystem(Moveable)
   .registerSystem(Renderer);
+world.getSystem(Renderer).stop();
 
 // Some helper functions when creating the components
 function getRandomVelocity() {
@@ -59,14 +61,22 @@ for (let i = 0; i < NUM_ELEMENTS; i++) {
     .addComponent(Renderable)
 }
 
+let lag = 0;
+
 // Run!
 function run() {
   // Compute delta and elapsed time
   var time = performance.now();
   var delta = time - lastTime;
+  lag += delta;
 
-  // Run all the systems
-  world.execute(delta, time);
+  while (lag >= MS_PER_UPDATE) {
+    // Run all the systems
+    world.execute(delta, time);
+    lag -= MS_PER_UPDATE;
+  }
+
+  world.getSystem(Renderer).execute(delta, time, lag / MS_PER_UPDATE);
 
   lastTime = time;
   requestAnimationFrame(run);
