@@ -11,6 +11,7 @@
   "author": "Nicky van Urk",
   "license": "MIT",
   "devDependencies": {
+    "@types/html-webpack-plugin": "^3.2.2",
     "clean-webpack-plugin": "^3.0.0",
     "css-loader": "^3.5.3",
     "html-webpack-plugin": "^4.3.0",
@@ -23,6 +24,7 @@
     "webpack-merge": "^4.2.2"
   },
   "dependencies": {
-    "@types/html-webpack-plugin": "^3.2.2"
+    "ecsy": "^0.2.3",
+    "three": "^0.116.1"
   }
 }
