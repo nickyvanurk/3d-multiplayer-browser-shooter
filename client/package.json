@@ -24,6 +24,7 @@
     "webpack-merge": "^4.2.2"
   },
   "dependencies": {
+    "@geckos.io/client": "^1.4.1",
     "ecsy": "^0.2.3",
     "three": "^0.116.1"
   }

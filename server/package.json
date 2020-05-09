@@ -17,5 +17,8 @@
     "rimraf": "^3.0.2",
     "ts-node": "^8.10.1",
     "typescript": "^3.8.3"
+  },
+  "dependencies": {
+    "@geckos.io/server": "^1.4.1"
   }
 }
