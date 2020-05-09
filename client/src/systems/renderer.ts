@@ -34,7 +34,7 @@ export default class Renderer extends System {
   }
 
   // This method will get called on every frame by default
-  execute(delta: number, time: number, nextFrameDelta: number) {
+  execute(delta: number, time: number/*, nextFrameDelta: number*/) {
     this.ctx.globalAlpha = 1;
     this.ctx.fillStyle = "#ffffff";
     this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
@@ -46,8 +46,8 @@ export default class Renderer extends System {
       var velocity = entity.getComponent(Velocity);
 
       var extrapolatedPosition = {...position};
-      extrapolatedPosition.x = Math.floor(extrapolatedPosition.x + velocity.x*nextFrameDelta);
-      extrapolatedPosition.y = Math.floor(extrapolatedPosition.y + velocity.y*nextFrameDelta);
+      // extrapolatedPosition.x = Math.floor(extrapolatedPosition.x + velocity.x*nextFrameDelta);
+      // extrapolatedPosition.y = Math.floor(extrapolatedPosition.y + velocity.y*nextFrameDelta);
 
       if (shape.primitive === 'box') {
         this.drawBox(extrapolatedPosition);
