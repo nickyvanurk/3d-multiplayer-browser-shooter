@@ -1,5 +1,9 @@
 import {System} from 'ecsy';
 import * as THREE from 'three';
+import {EffectComposer} from 'three/examples/jsm/postprocessing/EffectComposer';
+import {RenderPass} from 'three/examples/jsm/postprocessing/RenderPass';
+import {UnrealBloomPass} from 'three/examples/jsm/postprocessing/UnrealBloomPass';
+
 import {Object3d} from '../components/object3d';
 import {Position} from '../components/position';
 import {Rotation} from '../components/rotation';
@@ -19,6 +23,7 @@ export class Render extends System {
   private scene: THREE.Scene;
   private camera: any;
   private renderer: THREE.WebGLRenderer;
+  private composer: any
 
   init() {
     const canvas = document.querySelector('canvas');
@@ -54,6 +59,10 @@ export class Render extends System {
 
     var light: any = new THREE.AmbientLight( 0x222222 );
     this.scene.add(light);
+
+    this.composer = new EffectComposer(this.renderer);
+    this.composer.addPass(new RenderPass(this.scene, this.camera));
+    this.composer.addPass(new UnrealBloomPass(undefined, 1.6, 1, 0));
   }
 
   execute(delta: number, time: number/*, nextFrameDelta: number*/) {
@@ -81,6 +90,6 @@ export class Render extends System {
       }
     });
 
-    this.renderer.render(this.scene, this.camera);
+    this.composer.render();
   }
 }
