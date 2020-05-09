@@ -19,13 +19,21 @@ world
 world.getSystem(Render).stop();
 
 var geometry = new THREE.BoxGeometry();
-var material = new THREE.MeshBasicMaterial({color: 0x00ff00});
-const mesh = new THREE.Mesh(geometry, material);
+var material = new THREE.MeshPhongMaterial({color: 0x00ff00, flatShading: true});
 
-world.createEntity()
-  .addComponent(Object3d, {value: mesh})
-  .addComponent(Position)
-  .addComponent(Rotation);
+for (let i = 0; i < 1000; ++i) {
+  const mesh = new THREE.Mesh(geometry, material);
+
+  world.createEntity()
+    .addComponent(Object3d, {value: mesh})
+    .addComponent(Position, {
+      x: (Math.random() - 0.5) * 80,
+      y: (Math.random() - 0.5) * 80,
+      z: (Math.random() - 0.5) * 80
+    })
+    .addComponent(Rotation);
+}
+
 
 let lastTime = performance.now();
 let lag = 0;

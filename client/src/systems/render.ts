@@ -34,7 +34,7 @@ export class Render extends System {
     }, false);
 
     this.scene = new THREE.Scene();
-    this.scene.fog = new THREE.Fog(0x020207, 100, 700);
+    this.scene.fog = new THREE.FogExp2(0x020207, 0.02);
     this.camera = new THREE.PerspectiveCamera(
       75,
       window.innerWidth / window.innerHeight,
@@ -42,7 +42,18 @@ export class Render extends System {
       1000
     );
 
-    this.camera.position.z = 5;
+    this.camera.position.z = 60;
+
+    var light: any = new THREE.DirectionalLight( 0xffffff );
+    light.position.set(1, 1, 1);
+    this.scene.add(light);
+
+    var light: any = new THREE.DirectionalLight( 0x002288 );
+    light.position.set(-1, -1, -1);
+    this.scene.add(light);
+
+    var light: any = new THREE.AmbientLight( 0x222222 );
+    this.scene.add(light);
   }
 
   execute(delta: number, time: number/*, nextFrameDelta: number*/) {
