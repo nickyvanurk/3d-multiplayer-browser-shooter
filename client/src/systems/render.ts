@@ -1,12 +1,17 @@
 import {System} from 'ecsy';
 import * as THREE from 'three';
-import Position from '../components/position';
-import Renderable from '../components/renderable';
-import Shape from '../components/shape';
+import {Object3d} from '../components/object3d';
+import {Position} from '../components/position';
+import {Rotation} from '../components/rotation';
 
 export class Render extends System {
-  static queries = {
-    renderables: { components: [Renderable, Shape, Position] }
+  static queries: any = {
+    object3d: {
+      components: [Object3d],
+      listen: {
+        added: true
+      }
+    }
   };
 
   public queries: any;
@@ -14,7 +19,6 @@ export class Render extends System {
   private scene: THREE.Scene;
   private camera: any;
   private renderer: THREE.WebGLRenderer;
-  private cube: THREE.Mesh;
 
   init() {
     const canvas = document.querySelector('canvas');
@@ -39,16 +43,32 @@ export class Render extends System {
     );
 
     this.camera.position.z = 5;
-
-    var geometry = new THREE.BoxGeometry();
-    var material = new THREE.MeshBasicMaterial({color: 0x00ff00});
-    this.cube = new THREE.Mesh(geometry, material);
-    this.scene.add(this.cube);
   }
 
   execute(delta: number, time: number/*, nextFrameDelta: number*/) {
-    this.cube.rotation.x += 0.01;
-    this.cube.rotation.y += 0.01;
+    this.queries.object3d.added.forEach((entity: any) => {
+      this.scene.add(entity.getComponent(Object3d).value);
+    });
+
+    this.queries.object3d.results.forEach((entity: any) => {
+      const mesh = entity.getMutableComponent(Object3d).value;
+
+      if (entity.hasComponent(Position)) {
+        const position = entity.getComponent(Position);
+
+        mesh.position.x = position.x;
+        mesh.position.y = position.y;
+        mesh.position.z = position.z;
+      }
+
+      if (entity.hasComponent(Rotation)) {
+        const rotation = entity.getComponent(Rotation);
+
+        mesh.rotation.x = rotation.x;
+        mesh.rotation.y = rotation.y;
+        mesh.rotation.z = rotation.z;
+      }
+    });
 
     this.renderer.render(this.scene, this.camera);
   }
