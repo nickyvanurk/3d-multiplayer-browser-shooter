@@ -3,7 +3,7 @@
     "outDir": "./dist/",
     "noImplicitAny": true,
     "module": "es6",
-    "target": "es6",
+    "target": "es2020",
     "allowJs": true,
     "sourceMap": true,
     "moduleResolution": "node"

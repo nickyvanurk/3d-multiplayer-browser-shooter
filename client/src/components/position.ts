@@ -5,12 +5,9 @@ export class Position extends Component {
   y: number;
   z: number;
 
-  constructor(x: number = 0, y: number = 0, z: number = 0) {
+  constructor() {
     super();
-
-    this.x = x;
-    this.y = y;
-    this.z = z;
+    this.reset();
   }
 
   copy(src: Position) {
