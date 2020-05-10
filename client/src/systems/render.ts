@@ -47,7 +47,7 @@ export class Render extends System {
       1000
     );
 
-    this.camera.position.z = 60;
+    this.camera.position.z = 30;
 
     var light: any = new THREE.DirectionalLight( 0xffffff );
     light.position.set(1, 1, 1);

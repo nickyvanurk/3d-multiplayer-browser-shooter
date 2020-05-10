@@ -19,18 +19,20 @@ module.exports = {
           'style-loader',
           'css-loader',
         ],
-      },
+      }
     ]
   },
   plugins: [
-    new CleanWebpackPlugin(),
+    new CleanWebpackPlugin({
+      cleanOnceBeforeBuildPatterns: ['**/*', '!models', '!models/*.*']
+    }),
     new HtmlWebpackPlugin({
       title: 'Void',
       template: 'src/index.html'
     })
   ],
   resolve: {
-    extensions: [ '.tsx', '.ts', '.js' ],
+    extensions: ['.tsx', '.ts', '.js'],
   },
   output: {
     filename: '[name].bundle.js',

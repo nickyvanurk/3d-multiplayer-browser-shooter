@@ -3,37 +3,48 @@ import './style.css';
 import {World} from 'ecsy';
 import * as THREE from 'three';
 
-import {Object3d} from './components/object3d';
 import {Position} from './components/position';
 import {Rotation} from './components/rotation';
+import {Object3d} from './components/object3d';
 
+import {GltfLoading} from './systems/gltf-loading';
 import {Rotate} from './systems/rotate';
 import {Render} from './systems/render';
+
+import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader';
 
 const MS_PER_UPDATE = 1000 / 60;
 
 const world = new World();
 world
+  .registerSystem(GltfLoading)
   .registerSystem(Rotate)
   .registerSystem(Render);
 world.getSystem(Render).stop();
 
-var geometry = new THREE.BoxGeometry();
-var material = new THREE.MeshPhongMaterial({color: 0x00ff00, flatShading: true});
+const loader = new GLTFLoader();
 
-for (let i = 0; i < 1000; ++i) {
-  const mesh = new THREE.Mesh(geometry, material);
+loader.load('models/spaceship.gltf', (gltf: any) => {
+  gltf.scene.traverse((child: any) => {
+    if (child.isMesh) {
+      child.receiveShadow = true;
+      child.castShadow = true;
+    }
+  });
 
-  world.createEntity()
-    .addComponent(Object3d, {value: mesh})
-    .addComponent(Position, {
-      x: (Math.random() - 0.5) * 80,
-      y: (Math.random() - 0.5) * 80,
-      z: (Math.random() - 0.5) * 80
-    })
-    .addComponent(Rotation);
-}
+  gltf.scene.scale.set(0.005, 0.005, 0.005);
 
+  for (let i = 0; i < 1000; ++i) {
+    world.createEntity()
+      .addComponent(Object3d, {value: gltf.scene.clone()})
+      .addComponent(Position, {
+        x: (Math.random() - 0.5) * 60,
+        y: (Math.random() - 0.5) * 60,
+        z: (Math.random() - 0.5) * 60
+      })
+      .addComponent(Rotation);
+  }
+});
 
 let lastTime = performance.now();
 let lag = 0;
