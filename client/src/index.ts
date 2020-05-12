@@ -38,9 +38,9 @@ world
 world.getSystem(Render).stop();
 
 function spawnModels(amount: number) {
-  for (let i = 0; i < amount; ++i) {
-    const model = assetManager.getModel('spaceship');
+  const model = assetManager.getModel('spaceship');
 
+  for (let i = 0; i < amount - 1; ++i) {
     world.createEntity()
       .addComponent(Object3d, {value: model.scene.clone()})
       .addComponent(Position, {
@@ -50,6 +50,11 @@ function spawnModels(amount: number) {
       })
       .addComponent(Rotation);
   }
+
+  world.createEntity()
+      .addComponent(Object3d, {value: model.scene.clone()})
+      .addComponent(Position)
+      .addComponent(Rotation);
 }
 
 const MS_PER_UPDATE = 1000 / 60;

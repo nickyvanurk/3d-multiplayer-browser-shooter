@@ -1,5 +1,6 @@
 import {System} from 'ecsy';
 import * as THREE from 'three';
+import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls'
 import {EffectComposer} from 'three/examples/jsm/postprocessing/EffectComposer';
 import {RenderPass} from 'three/examples/jsm/postprocessing/RenderPass';
 import {UnrealBloomPass} from 'three/examples/jsm/postprocessing/UnrealBloomPass';
@@ -22,6 +23,7 @@ export class Render extends System {
 
   private scene: THREE.Scene;
   private camera: any;
+  private controls: any;
   private renderer: THREE.WebGLRenderer;
   private composer: any
 
@@ -46,8 +48,13 @@ export class Render extends System {
       0.1,
       1000
     );
+    this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+    this.controls.maxDistance = 15;
+    this.controls.enablePan = false;
+    this.controls.mouseButtons = {RIGHT: THREE.MOUSE.ROTATE};
 
-    this.camera.position.z = 30;
+    this.camera.position.z = 5;
+    this.controls.update();
 
     var light: any = new THREE.DirectionalLight( 0xffffff );
     light.position.set(1, 1, 1);
@@ -66,6 +73,8 @@ export class Render extends System {
   }
 
   execute(delta: number, time: number/*, nextFrameDelta: number*/) {
+    this.controls.update();
+
     this.queries.object3d.added.forEach((entity: any) => {
       this.scene.add(entity.getComponent(Object3d).value);
     });
