@@ -1,0 +1,7 @@
+{
+  "name": "shared",
+  "author": "Nicky van Urk",
+  "dependencies": {
+    "winston": "^3.2.1"
+  }
+}
