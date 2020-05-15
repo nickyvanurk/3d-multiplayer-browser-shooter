@@ -6,26 +6,10 @@ export class AssetManager {
   private loader: GLTFLoader;
   private models: Map<string, any>;
 
-  constructor() {
-    this.loadingManager = new LoadingManager();
+  constructor(loadingManager: LoadingManager) {
+    this.loadingManager = loadingManager;
     this.loader = new GLTFLoader(this.loadingManager);
     this.models = new Map<string, any>();
-  }
-
-  onStart(callback: (url: string, itemsLoaded: number, itemsTotal: number) => void) {
-    this.loadingManager.onStart = callback;
-  }
-
-  onLoad(callback: () => void) {
-    this.loadingManager.onLoad = callback;
-  }
-
-  onProgress(callback: (url: string, itemsLoaded: number, itemsTotal: number) => void) {
-    this.loadingManager.onProgress = callback;
-  }
-
-  onError(callback: (url: string) => void) {
-    this.loadingManager.onError = callback;
   }
 
   loadModel(params: any) {

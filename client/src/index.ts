@@ -1,4 +1,7 @@
+import {LoadingManager} from 'three';
+
 import './style.css';
+import './loader.css';
 
 import {World} from 'ecsy';
 import {AssetManager} from './asset-manager';
@@ -10,24 +13,30 @@ import {Object3d} from './components/object3d';
 import {Rotate} from './systems/rotate';
 import {Render} from './systems/render';
 
-const assetManager = new AssetManager();
+const loadingManager = new LoadingManager(() => {
+  console.log('done');
 
-assetManager.onStart((url: string, itemsLoaded: number, itemsTotal: number) => {
-  console.log(`Started loading file: ${url}.\nLoaded ${itemsLoaded} of ${itemsTotal} files.`);
-});
+  const loadingScreen: any = document.querySelector('.loading-screen');
+  loadingScreen.classList.add('fade-out');
+  loadingScreen.addEventListener('transitionend', () => {
+    loadingScreen.style.zIndex = -1;
+  });
 
-assetManager.onProgress((url: string, itemsLoaded: number, itemsTotal: number) => {
-  console.log(`Loading file: ${url}.\nLoaded ${itemsLoaded} of ${itemsTotal} files.`);
-});
+  const loadingBar: any = document.querySelector('.loading-screen hr');
+  loadingBar.addEventListener('transitionend', (event: TransitionEvent) => {
+    event.stopPropagation();
+  });
 
-assetManager.onLoad(() => {
-  console.log('Loading complete!');
   spawnModels(1000);
+}, (url, itemsLoaded, itemsTotal) => {
+  const progressText: any = document.querySelector('.loading-screen h1');
+  progressText.innerText = `${Math.floor(itemsLoaded / itemsTotal * 100)}%`;
+
+  const progressBar: any = document.querySelector('.loading-screen hr');
+  progressBar.style.width = `${(itemsLoaded / itemsTotal * 100)}%`;
 });
 
-assetManager.onError((url: string) => {
-  console.log(`There was an error loading ${url}`);
-});
+const assetManager = new AssetManager(loadingManager);
 
 assetManager.loadModel({name: 'spaceship', url: 'models/spaceship.gltf'});
 
