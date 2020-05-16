@@ -8,6 +8,7 @@ import {UnrealBloomPass} from 'three/examples/jsm/postprocessing/UnrealBloomPass
 import {Object3d} from '../components/object3d';
 import {Position} from '../components/position';
 import {Rotation} from '../components/rotation';
+import {NextFrameNormal} from '../components/next-frame-normal';
 
 export class Render extends System {
   static queries: any = {
@@ -16,6 +17,9 @@ export class Render extends System {
       listen: {
         added: true
       }
+    },
+    nextFrameNormal: {
+      components: [NextFrameNormal]
     }
   };
 
@@ -72,7 +76,7 @@ export class Render extends System {
     this.composer.addPass(new UnrealBloomPass(undefined, 1.6, 1, 0));
   }
 
-  execute(delta: number, time: number/*, nextFrameDelta: number*/) {
+  execute(delta: number) {
     this.controls.update();
 
     this.queries.object3d.added.forEach((entity: any) => {
@@ -97,6 +101,11 @@ export class Render extends System {
         mesh.rotation.y = rotation.y;
         mesh.rotation.z = rotation.z;
       }
+    });
+
+    this.queries.nextFrameNormal.results.forEach((entity: any) => {
+      const nextFrameNormal = entity.getMutableComponent(NextFrameNormal)
+      nextFrameNormal.value = 0;
     });
 
     this.composer.render();

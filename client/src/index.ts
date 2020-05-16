@@ -9,13 +9,12 @@ import {AssetManager} from './asset-manager';
 import {Position} from './components/position';
 import {Rotation} from './components/rotation';
 import {Object3d} from './components/object3d';
+import {NextFrameNormal} from './components/next-frame-normal';
 
 import {Rotate} from './systems/rotate';
 import {Render} from './systems/render';
 
 const loadingManager = new LoadingManager(() => {
-  console.log('done');
-
   const loadingScreen: any = document.querySelector('.loading-screen');
   loadingScreen.classList.add('fade-out');
   loadingScreen.addEventListener('transitionend', () => {
@@ -44,7 +43,6 @@ const world = new World();
 world
   .registerSystem(Rotate)
   .registerSystem(Render);
-world.getSystem(Render).stop();
 
 function spawnModels(amount: number) {
   const model = assetManager.getModel('spaceship');
@@ -66,22 +64,15 @@ function spawnModels(amount: number) {
       .addComponent(Rotation);
 }
 
-const MS_PER_UPDATE = 1000 / 60;
+world.createEntity().addComponent(NextFrameNormal);
 
 let lastTime = performance.now();
-let lag = 0;
 
 function run() {
   let time = performance.now();
   let delta = time - lastTime;
-  lag += delta;
 
-  while (lag >= MS_PER_UPDATE) {
-    world.execute(MS_PER_UPDATE, time);
-    lag -= MS_PER_UPDATE;
-  }
-
-  world.getSystem(Render).execute(delta, time);
+  world.execute(delta, time);
 
   lastTime = time;
   requestAnimationFrame(run);
