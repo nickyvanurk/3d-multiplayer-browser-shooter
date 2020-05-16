@@ -38,12 +38,6 @@ export class Render extends System {
     this.renderer.setClearColor(new THREE.Color('#020207'));
     document.body.appendChild(this.renderer.domElement);
 
-    window.addEventListener('resize', () => {
-      this.camera.aspect = window.innerWidth / window.innerHeight;
-      this.camera.updateProjectionMatrix();
-      this.renderer.setSize(window.innerWidth, window.innerHeight);
-    }, false);
-
     this.scene = new THREE.Scene();
     this.scene.fog = new THREE.FogExp2(0x020207, 0.02);
     this.camera = new THREE.PerspectiveCamera(
@@ -74,6 +68,13 @@ export class Render extends System {
     this.composer = new EffectComposer(this.renderer);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
     this.composer.addPass(new UnrealBloomPass(undefined, 1.6, 1, 0));
+
+    window.addEventListener('resize', () => {
+      this.camera.aspect = window.innerWidth / window.innerHeight;
+      this.camera.updateProjectionMatrix();
+      this.composer.setSize(window.innerWidth, window.innerHeight);
+      this.renderer.setSize(window.innerWidth, window.innerHeight);
+    }, false);
   }
 
   execute(delta: number) {
