@@ -64,8 +64,6 @@ function spawnModels(amount: number) {
       .addComponent(Rotation);
 }
 
-world.createEntity().addComponent(NextFrameNormal);
-
 let lastTime = performance.now();
 
 function run() {

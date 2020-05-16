@@ -18,7 +18,11 @@ export class Rotate extends System {
   private fixedUpdate: Function;
 
   init() {
-    this.fixedUpdate = createFixedTimestep(1000/60, this.handleFixedUpdate.bind(this));
+    const timestep = 1000/60;
+
+    this.fixedUpdate = createFixedTimestep(timestep, this.handleFixedUpdate.bind(this));
+
+    this.world.createEntity().addComponent(NextFrameNormal, {timestep});
   }
 
   execute(delta: number) {
@@ -26,7 +30,7 @@ export class Rotate extends System {
 
     this.queries.nextFrameNormal.results.forEach((entity: any) => {
       const _nextFrameNormal = entity.getMutableComponent(NextFrameNormal);
-      _nextFrameNormal.value += nextFrameNormal;
+      _nextFrameNormal.value = nextFrameNormal;
     });
   }
 

@@ -103,11 +103,6 @@ export class Render extends System {
       }
     });
 
-    this.queries.nextFrameNormal.results.forEach((entity: any) => {
-      const nextFrameNormal = entity.getMutableComponent(NextFrameNormal)
-      nextFrameNormal.value = 0;
-    });
-
     this.composer.render();
   }
 }
