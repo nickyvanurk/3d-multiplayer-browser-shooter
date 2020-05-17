@@ -9,10 +9,12 @@ import {AssetManager} from './asset-manager';
 import {Position} from './components/position';
 import {Rotation} from './components/rotation';
 import {Object3d} from './components/object3d';
-import {NextFrameNormal} from './components/next-frame-normal';
+import {PlayerController} from './components/player-controller';
 
 import {Rotate} from './systems/rotate';
 import {Render} from './systems/render';
+import {Input} from './systems/input';
+import {PlayerInput} from './systems/player-input';
 
 const loadingManager = new LoadingManager(() => {
   const loadingScreen: any = document.querySelector('.loading-screen');
@@ -41,6 +43,8 @@ assetManager.loadModel({name: 'spaceship', url: 'models/spaceship.gltf'});
 
 const world = new World();
 world
+  .registerSystem(Input)
+  .registerSystem(PlayerInput)
   .registerSystem(Rotate)
   .registerSystem(Render);
 
@@ -61,7 +65,16 @@ function spawnModels(amount: number) {
   world.createEntity()
       .addComponent(Object3d, {value: model.scene.clone()})
       .addComponent(Position)
-      .addComponent(Rotation);
+      .addComponent(PlayerController, {
+        rollLeft: 'KeyQ',
+        rollRight: 'KeyE',
+        forward: 'KeyW',
+        backward: 'KeyS',
+        strafeLeft: 'KeyA',
+        strafeRight: 'KeyD',
+        strafeUp: 'Space',
+        strafeDown: 'ControlLeft',
+      });
 }
 
 let lastTime = performance.now();
