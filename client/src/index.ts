@@ -10,6 +10,7 @@ import {Position} from './components/position';
 import {Rotation} from './components/rotation';
 import {Object3d} from './components/object3d';
 import {PlayerController} from './components/player-controller';
+import {CameraGoal} from './components/camera-goal';
 
 import {Rotate} from './systems/rotate';
 import {Render} from './systems/render';
@@ -76,7 +77,8 @@ function spawnModels(amount: number) {
         strafeRight: 'KeyD',
         strafeUp: 'Space',
         strafeDown: 'ControlLeft',
-      });
+      })
+      .addComponent(CameraGoal, {x: 0, y: 250, z: -1000});
 }
 
 let lastTime = performance.now();

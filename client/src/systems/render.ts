@@ -9,6 +9,8 @@ import {Object3d} from '../components/object3d';
 import {Position} from '../components/position';
 import {Rotation} from '../components/rotation';
 import {NextFrameNormal} from '../components/next-frame-normal';
+import {PlayerController} from '../components/player-controller';
+import {CameraGoal} from '../components/camera-goal';
 
 export class Render extends System {
   static queries: any = {
@@ -20,6 +22,9 @@ export class Render extends System {
     },
     nextFrameNormal: {
       components: [NextFrameNormal]
+    },
+    players: {
+      components: [PlayerController, Position]
     }
   };
 
@@ -27,6 +32,7 @@ export class Render extends System {
 
   private scene: THREE.Scene;
   private camera: any;
+  private cameraGoal: any;
   private controls: any;
   private renderer: THREE.WebGLRenderer;
   private composer: any
@@ -47,13 +53,11 @@ export class Render extends System {
       1000
     );
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-    this.controls.maxDistance = 15;
     this.controls.enablePan = false;
     this.controls.mouseButtons = {RIGHT: THREE.MOUSE.ROTATE};
 
     this.camera.position.z = -5;
-    this.camera.position.y = 2;
-    this.camera.lookAt(0, 0, 0);
+    this.camera.position.y = 1;
     this.controls.update();
 
     var light: any = new THREE.DirectionalLight( 0xffffff );
@@ -83,7 +87,17 @@ export class Render extends System {
     this.controls.update();
 
     this.queries.object3d.added.forEach((entity: any) => {
-      this.scene.add(entity.getComponent(Object3d).value);
+      const mesh = entity.getComponent(Object3d).value;
+
+      if (entity.hasComponent(CameraGoal)) {
+        const cameraGoal = entity.getComponent(CameraGoal);
+        const goal = new THREE.Object3D;
+        goal.position.set(cameraGoal.x, cameraGoal.y, cameraGoal.z);
+        mesh.add(goal);
+        this.cameraGoal = goal;
+      }
+
+      this.scene.add(mesh);
     });
 
     this.queries.object3d.results.forEach((entity: any) => {
@@ -106,6 +120,22 @@ export class Render extends System {
       }
     });
 
+    this.cameraFollowPlayer();
+
+
     this.composer.render();
+  }
+
+  cameraFollowPlayer() {
+    const playerEntity = this.queries.players.results[0];
+
+    if (this.cameraGoal && playerEntity) {
+      const temp = new THREE.Vector3;
+      temp.setFromMatrixPosition(this.cameraGoal.matrixWorld);
+      this.camera.position.lerp(temp, 0.3);
+
+      const position = playerEntity.getComponent(Position);
+      this.camera.lookAt(position.x, position.y, position.z);
+    }
   }
 }
