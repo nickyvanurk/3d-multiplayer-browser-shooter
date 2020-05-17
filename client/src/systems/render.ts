@@ -51,7 +51,9 @@ export class Render extends System {
     this.controls.enablePan = false;
     this.controls.mouseButtons = {RIGHT: THREE.MOUSE.ROTATE};
 
-    this.camera.position.z = 5;
+    this.camera.position.z = -5;
+    this.camera.position.y = 2;
+    this.camera.lookAt(0, 0, 0);
     this.controls.update();
 
     var light: any = new THREE.DirectionalLight( 0xffffff );

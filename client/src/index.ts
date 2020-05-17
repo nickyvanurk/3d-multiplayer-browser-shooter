@@ -15,6 +15,7 @@ import {Rotate} from './systems/rotate';
 import {Render} from './systems/render';
 import {Input} from './systems/input';
 import {PlayerInput} from './systems/player-input';
+import {PlayerMovement} from './systems/player-movement';
 
 const loadingManager = new LoadingManager(() => {
   const loadingScreen: any = document.querySelector('.loading-screen');
@@ -46,6 +47,7 @@ world
   .registerSystem(Input)
   .registerSystem(PlayerInput)
   .registerSystem(Rotate)
+  .registerSystem(PlayerMovement)
   .registerSystem(Render);
 
 function spawnModels(amount: number) {
