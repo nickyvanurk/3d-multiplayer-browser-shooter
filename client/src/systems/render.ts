@@ -1,6 +1,5 @@
 import {System} from 'ecsy';
 import * as THREE from 'three';
-import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls'
 import {EffectComposer} from 'three/examples/jsm/postprocessing/EffectComposer';
 import {RenderPass} from 'three/examples/jsm/postprocessing/RenderPass';
 import {UnrealBloomPass} from 'three/examples/jsm/postprocessing/UnrealBloomPass';
@@ -36,9 +35,8 @@ export class Render extends System {
   private scene: THREE.Scene;
   private camera: any;
   private cameraGoal: any;
-  private controls: any;
   private renderer: THREE.WebGLRenderer;
-  private composer: any
+  private composer: any;
 
   init() {
     const canvas = document.querySelector('canvas');
@@ -55,13 +53,9 @@ export class Render extends System {
       0.1,
       1000
     );
-    this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-    this.controls.enablePan = false;
-    this.controls.mouseButtons = {RIGHT: THREE.MOUSE.ROTATE};
 
     this.camera.position.z = -5;
     this.camera.position.y = 1;
-    this.controls.update();
 
     var light: any = new THREE.DirectionalLight( 0xffffff );
     light.position.set(1, 1, 1);
@@ -87,8 +81,6 @@ export class Render extends System {
   }
 
   execute(delta: number) {
-    this.controls.update();
-
     this.queries.object3d.added.forEach((entity: any) => {
       const mesh = entity.getComponent(Object3d).value;
 
@@ -122,6 +114,10 @@ export class Render extends System {
           mesh.position.x += physics.velocity.x*(1000/60)*nextFrameNormal;
           mesh.position.y += physics.velocity.y*(1000/60)*nextFrameNormal;
           mesh.position.z += physics.velocity.z*(1000/60)*nextFrameNormal;
+
+          const dest = new THREE.Vector3(mesh.position.x, mesh.position.y + 1, mesh.position.z - 3);
+          this.camera.position.lerp(dest, 1 - Math.exp(-15 * (delta/1000)));
+          this.camera.lookAt(mesh.position.x, mesh.position.y, mesh.position.z + 100);
         }
 
         mesh.rotation.x = transform.rotation.x;
@@ -130,21 +126,6 @@ export class Render extends System {
       }
     });
 
-    this.cameraFollowPlayer();
-
     this.composer.render();
-  }
-
-  cameraFollowPlayer() {
-    const playerEntity = this.queries.players.results[0];
-
-    if (this.cameraGoal && playerEntity) {
-      const temp = new THREE.Vector3;
-      temp.setFromMatrixPosition(this.cameraGoal.matrixWorld);
-      this.camera.position.lerp(temp, 0.3);
-
-      const position = playerEntity.getComponent(Transform).position;
-      this.camera.lookAt(position.x, position.y, position.z);
-    }
   }
 }
