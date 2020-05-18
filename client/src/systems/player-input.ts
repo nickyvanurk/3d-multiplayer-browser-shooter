@@ -47,5 +47,8 @@ export class PlayerInput extends System {
 
     playerInputState.movementZ = inputState.keysDown.includes(playerController.forward) ? 1 :
                                  inputState.keysDown.includes(playerController.backward) ? -1 : 0;
+
+    playerInputState.yaw = inputState.mousePosition.x/window.innerWidth*2 - 1;
+    playerInputState.pitch = inputState.mousePosition.y/window.innerHeight*2 - 1;
   }
 }

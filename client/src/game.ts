@@ -10,7 +10,6 @@ import {Transform} from './components/transform';
 import {Rotating} from './components/rotating';
 import {Object3d} from './components/object3d';
 import {PlayerController} from './components/player-controller';
-import {CameraGoal} from './components/camera-goal';
 import {Physics} from './components/physics';
 
 import {Rotate} from './systems/rotate';
@@ -90,7 +89,7 @@ export default class Game {
   spawnModels(amount: number) {
     const model = this.assetManager.getModel('spaceship');
 
-    for (let i = 0; i < amount - 1; ++i) {
+    for (let i = 0; i < amount; ++i) {
       this.world.createEntity()
         .addComponent(Object3d, {value: model.scene.clone()})
         .addComponent(Transform, {
@@ -121,7 +120,6 @@ export default class Game {
         strafeUp: 'Space',
         strafeDown: 'ControlLeft',
       })
-      .addComponent(CameraGoal, {x: 0, y: 250, z: -1000})
       .addComponent(Physics);
   }
 }

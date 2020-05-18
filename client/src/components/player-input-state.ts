@@ -5,6 +5,8 @@ export class PlayerInputState extends Component {
   movementY: number;
   movementZ: number;
   roll: number;
+  yaw: number;
+  pitch: number;
 
   constructor() {
     super();
@@ -16,5 +18,7 @@ export class PlayerInputState extends Component {
     this.movementY = null;
     this.movementZ = null;
     this.roll = null;
+    this.yaw = null;
+    this.pitch = null;
   }
 }

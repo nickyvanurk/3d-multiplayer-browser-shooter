@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import {System} from 'ecsy';
 import {PlayerInputState} from '../components/player-input-state';
 import {Transform} from '../components/transform';
@@ -42,13 +43,20 @@ export class PhysicsSystem extends System {
       physics.velocity.y += physics.acceleration*delta * input.movementY;
       physics.velocity.z += physics.acceleration*delta * input.movementZ;
 
-      transform.position.x += physics.velocity.x*delta;
-      transform.position.y += physics.velocity.y*delta;
-      transform.position.z += physics.velocity.z*delta;
+      transform.translation.x = physics.velocity.x*delta;
+      transform.translation.y = physics.velocity.y*delta;
+      transform.translation.z = physics.velocity.z*delta;
 
       physics.velocity.x *= Math.pow(physics.damping, delta/1000);
       physics.velocity.y *= Math.pow(physics.damping, delta/1000);
       physics.velocity.z *= Math.pow(physics.damping, delta/1000);
+
+      transform.rotation.x = 0.002*delta * -input.pitch;
+      transform.rotation.y = 0.002*delta * input.yaw;
+      // transform.rotation.z = 0.003*delta * input.roll;
+
+      // transform.rotation.x *= Math.pow(physics.damping, delta/1000);
+      // transform.rotation.y *= Math.pow(physics.damping, delta/1000);
     });
   }
 }
