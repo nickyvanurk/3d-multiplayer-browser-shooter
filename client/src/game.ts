@@ -11,6 +11,7 @@ import {Rotating} from './components/rotating';
 import {Object3d} from './components/object3d';
 import {PlayerController} from './components/player-controller';
 import {CameraGoal} from './components/camera-goal';
+import {Physics} from './components/physics';
 
 import {Rotate} from './systems/rotate';
 import {Render} from './systems/render';
@@ -61,6 +62,7 @@ export default class Game {
     this.world.execute(delta, time);
 
     this.lastTime = time;
+
     requestAnimationFrame(this.run.bind(this));
   }
 
@@ -119,6 +121,7 @@ export default class Game {
         strafeUp: 'Space',
         strafeDown: 'ControlLeft',
       })
-      .addComponent(CameraGoal, {x: 0, y: 250, z: -1000});
+      .addComponent(CameraGoal, {x: 0, y: 250, z: -1000})
+      .addComponent(Physics);
   }
 }

@@ -10,6 +10,7 @@ import {Transform} from '../components/transform';
 import {NextFrameNormal} from '../components/next-frame-normal';
 import {PlayerController} from '../components/player-controller';
 import {CameraGoal} from '../components/camera-goal';
+import {Physics} from '../components/physics';
 
 export class Render extends System {
   static queries: any = {
@@ -24,6 +25,9 @@ export class Render extends System {
     },
     players: {
       components: [PlayerController, Transform]
+    },
+    object3dMoveable: {
+      components: [Object3d, Transform, Physics]
     }
   };
 
@@ -99,6 +103,9 @@ export class Render extends System {
       this.scene.add(mesh);
     });
 
+    const nextFrameNormalEntity = this.queries.nextFrameNormal.results[0];
+    const nextFrameNormal = nextFrameNormalEntity.getComponent(NextFrameNormal).value;
+
     this.queries.object3d.results.forEach((entity: any) => {
       const mesh = entity.getMutableComponent(Object3d).value;
 
@@ -109,6 +116,14 @@ export class Render extends System {
         mesh.position.y = transform.position.y;
         mesh.position.z = transform.position.z;
 
+        if (entity.hasComponent(Physics)) {
+          const physics = entity.getComponent(Physics);
+
+          mesh.position.x += physics.velocity.x*(1000/60)*nextFrameNormal;
+          mesh.position.y += physics.velocity.y*(1000/60)*nextFrameNormal;
+          mesh.position.z += physics.velocity.z*(1000/60)*nextFrameNormal;
+        }
+
         mesh.rotation.x = transform.rotation.x;
         mesh.rotation.y = transform.rotation.y;
         mesh.rotation.z = transform.rotation.z;
@@ -116,7 +131,6 @@ export class Render extends System {
     });
 
     this.cameraFollowPlayer();
-
 
     this.composer.render();
   }
