@@ -35,24 +35,11 @@ export default class Game {
   }
 
   handleProgress(url: string, itemsLoaded: number, itemsTotal: number) {
-    const progressText: any = document.querySelector('.loading-screen h1');
-    progressText.innerText = `${Math.floor(itemsLoaded / itemsTotal * 100)}%`;
-
-    const progressBar: any = document.querySelector('.loading-screen hr');
-    progressBar.style.width = `${(itemsLoaded / itemsTotal * 100)}%`;
+    this.updateLoadingScreen(Math.floor(itemsLoaded / itemsTotal * 100));
   }
 
   init() {
-    const loadingScreen: any = document.querySelector('.loading-screen');
-    loadingScreen.classList.add('fade-out');
-    loadingScreen.addEventListener('transitionend', () => {
-      loadingScreen.style.zIndex = -1;
-    });
-
-    const loadingBar: any = document.querySelector('.loading-screen hr');
-    loadingBar.addEventListener('transitionend', (event: TransitionEvent) => {
-      event.stopPropagation();
-    });
+    this.hideLoadingScreen();
 
     this.world
       .registerSystem(Input)
@@ -73,6 +60,27 @@ export default class Game {
 
     this.lastTime = time;
     requestAnimationFrame(this.run.bind(this));
+  }
+
+  updateLoadingScreen(percentage: number) {
+    const progressText: any = document.querySelector('.loading-screen h1');
+    progressText.innerText = `${percentage}%`;
+
+    const progressBar: any = document.querySelector('.loading-screen hr');
+    progressBar.style.width = `${percentage}%`;
+  }
+
+  hideLoadingScreen() {
+    const loadingScreen: any = document.querySelector('.loading-screen');
+    loadingScreen.classList.add('fade-out');
+    loadingScreen.addEventListener('transitionend', () => {
+      loadingScreen.style.zIndex = -1;
+    });
+
+    const loadingBar: any = document.querySelector('.loading-screen hr');
+    loadingBar.addEventListener('transitionend', (event: TransitionEvent) => {
+      event.stopPropagation();
+    });
   }
 
   spawnModels(amount: number) {
