@@ -1,11 +1,11 @@
 import {System} from 'ecsy';
 import {PlayerInputState} from '../components/player-input-state';
-import {Position} from '../components/position';
+import {Transform} from '../components/transform';
 
 export class PlayerMovement extends System {
   static queries: any = {
     players: {
-      components: [PlayerInputState, Position]
+      components: [PlayerInputState, Transform]
     }
   };
 
@@ -16,7 +16,7 @@ export class PlayerMovement extends System {
   execute(delta: number) {
     this.queries.players.results.forEach((entity: any) => {
       const input = entity.getMutableComponent(PlayerInputState);
-      const position = entity.getMutableComponent(Position);
+      const position = entity.getMutableComponent(Transform).position;
 
       position.x += input.movementX;
       position.y += input.movementY;

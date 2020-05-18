@@ -6,8 +6,7 @@ import {RenderPass} from 'three/examples/jsm/postprocessing/RenderPass';
 import {UnrealBloomPass} from 'three/examples/jsm/postprocessing/UnrealBloomPass';
 
 import {Object3d} from '../components/object3d';
-import {Position} from '../components/position';
-import {Rotation} from '../components/rotation';
+import {Transform} from '../components/transform';
 import {NextFrameNormal} from '../components/next-frame-normal';
 import {PlayerController} from '../components/player-controller';
 import {CameraGoal} from '../components/camera-goal';
@@ -15,7 +14,7 @@ import {CameraGoal} from '../components/camera-goal';
 export class Render extends System {
   static queries: any = {
     object3d: {
-      components: [Object3d],
+      components: [Object3d, Transform],
       listen: {
         added: true
       }
@@ -24,7 +23,7 @@ export class Render extends System {
       components: [NextFrameNormal]
     },
     players: {
-      components: [PlayerController, Position]
+      components: [PlayerController, Transform]
     }
   };
 
@@ -103,20 +102,16 @@ export class Render extends System {
     this.queries.object3d.results.forEach((entity: any) => {
       const mesh = entity.getMutableComponent(Object3d).value;
 
-      if (entity.hasComponent(Position)) {
-        const position = entity.getComponent(Position);
+      if (entity.hasComponent(Transform)) {
+        const transform = entity.getComponent(Transform);
 
-        mesh.position.x = position.x;
-        mesh.position.y = position.y;
-        mesh.position.z = position.z;
-      }
+        mesh.position.x = transform.position.x;
+        mesh.position.y = transform.position.y;
+        mesh.position.z = transform.position.z;
 
-      if (entity.hasComponent(Rotation)) {
-        const rotation = entity.getComponent(Rotation);
-
-        mesh.rotation.x = rotation.x;
-        mesh.rotation.y = rotation.y;
-        mesh.rotation.z = rotation.z;
+        mesh.rotation.x = transform.rotation.x;
+        mesh.rotation.y = transform.rotation.y;
+        mesh.rotation.z = transform.rotation.z;
       }
     });
 
@@ -134,7 +129,7 @@ export class Render extends System {
       temp.setFromMatrixPosition(this.cameraGoal.matrixWorld);
       this.camera.position.lerp(temp, 0.3);
 
-      const position = playerEntity.getComponent(Position);
+      const position = playerEntity.getComponent(Transform).position;
       this.camera.lookAt(position.x, position.y, position.z);
     }
   }

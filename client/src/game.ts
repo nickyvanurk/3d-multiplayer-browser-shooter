@@ -4,8 +4,10 @@ import {LoadingManager} from 'three';
 import {AssetManager} from './asset-manager';
 import {World} from 'ecsy';
 
-import {Position} from './components/position';
-import {Rotation} from './components/rotation';
+import {Vector3} from 'three';
+
+import {Transform} from './components/transform';
+import {Rotating} from './components/rotating';
 import {Object3d} from './components/object3d';
 import {PlayerController} from './components/player-controller';
 import {CameraGoal} from './components/camera-goal';
@@ -89,12 +91,15 @@ export default class Game {
     for (let i = 0; i < amount - 1; ++i) {
       this.world.createEntity()
         .addComponent(Object3d, {value: model.scene.clone()})
-        .addComponent(Position, {
-          x: (Math.random() - 0.5) * 60,
-          y: (Math.random() - 0.5) * 60,
-          z: (Math.random() - 0.5) * 60
+        .addComponent(Transform, {
+          position: new Vector3(
+            (Math.random() - 0.5) * 60,
+            (Math.random() - 0.5) * 60,
+            (Math.random() - 0.5) * 60
+          ),
+          rotation: new Vector3()
         })
-        .addComponent(Rotation);
+        .addComponent(Rotating);
     }
   }
 
@@ -103,7 +108,7 @@ export default class Game {
 
     this.world.createEntity()
       .addComponent(Object3d, {value: model.scene.clone()})
-      .addComponent(Position)
+      .addComponent(Transform)
       .addComponent(PlayerController, {
         rollLeft: 'KeyQ',
         rollRight: 'KeyE',

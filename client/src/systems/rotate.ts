@@ -1,5 +1,6 @@
 import {System} from 'ecsy';
-import {Rotation} from '../components/rotation';
+import {Transform} from '../components/transform';
+import {Rotating} from '../components/rotating';
 import {NextFrameNormal} from '../components/next-frame-normal';
 
 import createFixedTimestep from 'shared/src/utils/create-fixed-timestep';
@@ -7,7 +8,7 @@ import createFixedTimestep from 'shared/src/utils/create-fixed-timestep';
 export class Rotate extends System {
   static queries: any = {
     rotating: {
-      components: [Rotation]
+      components: [Transform, Rotating]
     },
     nextFrameNormal: {
       components: [NextFrameNormal]
@@ -36,7 +37,7 @@ export class Rotate extends System {
 
   handleFixedUpdate(delta: number) {
     this.queries.rotating.results.forEach((entity: any) => {
-      const rotation = entity.getMutableComponent(Rotation);
+      const rotation = entity.getMutableComponent(Transform).rotation;
 
       rotation.x += 0.001*delta;
       rotation.y += 0.001*delta;
