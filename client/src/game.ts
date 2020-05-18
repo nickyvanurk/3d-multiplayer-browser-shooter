@@ -17,7 +17,7 @@ import {Rotate} from './systems/rotate';
 import {Render} from './systems/render';
 import {Input} from './systems/input';
 import {PlayerInput} from './systems/player-input';
-import {PlayerMovement} from './systems/player-movement';
+import {PhysicsSystem} from './systems/physics-system';
 
 export default class Game {
   private lastTime: number;
@@ -48,7 +48,7 @@ export default class Game {
       .registerSystem(Input)
       .registerSystem(PlayerInput)
       .registerSystem(Rotate)
-      .registerSystem(PlayerMovement)
+      .registerSystem(PhysicsSystem)
       .registerSystem(Render);
 
     this.spawnModels(1000);

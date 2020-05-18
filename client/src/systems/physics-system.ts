@@ -6,7 +6,7 @@ import {NextFrameNormal} from '../components/next-frame-normal';
 
 import createFixedTimestep from 'shared/src/utils/create-fixed-timestep';
 
-export class PlayerMovement extends System {
+export class PhysicsSystem extends System {
   static queries: any = {
     players: {
       components: [PlayerInputState, Transform, Physics]
