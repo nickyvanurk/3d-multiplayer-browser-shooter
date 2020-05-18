@@ -16,13 +16,10 @@ import {Input} from './systems/input';
 import {PlayerInput} from './systems/player-input';
 import {PlayerMovement} from './systems/player-movement';
 
-import geckos, { ClientChannel } from '@geckos.io/client';
-
 export default class Game {
   private lastTime: number;
   private world: World;
   private assetManager: AssetManager;
-  private connection: ClientChannel;
 
   constructor() {
     this.lastTime = performance.now();
@@ -35,11 +32,6 @@ export default class Game {
     this.assetManager.loadModel({name: 'spaceship', url: 'models/spaceship.gltf'});
 
     this.world = new World();
-
-    this.connection = geckos({port: parseInt(process.env.PORT || '3000')});
-    this.connection.onConnect((error: any) => this.handleConnect(error));
-    this.connection.onDisconnect(this.handleDisconnect.bind(this));
-    this.connection.on('chat message', this.handleMessage.bind(this));
   }
 
   handleProgress(url: string, itemsLoaded: number, itemsTotal: number) {
@@ -115,22 +107,5 @@ export default class Game {
         strafeDown: 'ControlLeft',
       })
       .addComponent(CameraGoal, {x: 0, y: 250, z: -1000});
-  }
-
-  handleConnect(error: any) {
-    if (error) {
-      console.error(error.message);
-      return;
-    }
-
-    this.connection.emit('chat message', 'a short message sent to the server');
-  }
-
-  handleDisconnect() {
-    console.log('Disconnected from server');
-  }
-
-  handleMessage(data: any) {
-    console.log(`received: ${data}`);
   }
 }
