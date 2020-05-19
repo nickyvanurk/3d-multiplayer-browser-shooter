@@ -94,21 +94,20 @@ export class Render extends System {
       if (entity.hasComponent(Transform)) {
         const transform = entity.getComponent(Transform);
 
+        mesh.position.x = transform.position.x;
+        mesh.position.y = transform.position.y;
+        mesh.position.z = transform.position.z;
+
+        mesh.rotation.x = transform.rotation.x;
+        mesh.rotation.y = transform.rotation.y;
+        mesh.rotation.z = transform.rotation.z;
+
         if (entity.hasComponent(PlayerController)) {
           const physics = entity.getComponent(Physics);
 
-          mesh.translateX(transform.translation.x + physics.velocity.x*(1000/60)*nextFrameNormal);
-          mesh.translateY(transform.translation.y + physics.velocity.y*(1000/60)*nextFrameNormal);
-          mesh.translateZ(transform.translation.z + physics.velocity.z*(1000/60)*nextFrameNormal);
-
-          const q = new THREE.Quaternion(
-            -transform.rotation.x,
-            -transform.rotation.y,
-            -transform.rotation.z,
-            1
-          ).normalize();
-          mesh.quaternion.multiply(q);
-          mesh.rotation.setFromQuaternion(mesh.quaternion, mesh.rotation.order);
+          mesh.position.x += physics.velocity.x*(1000/60)*nextFrameNormal;
+          mesh.position.y += physics.velocity.y*(1000/60)*nextFrameNormal;
+          mesh.position.z += physics.velocity.z*(1000/60)*nextFrameNormal;
 
           const obj = new THREE.Object3D();
           obj.position.copy(mesh.position);
@@ -118,14 +117,6 @@ export class Render extends System {
           this.camera.position.lerp(obj.position, 1 - Math.exp(-20 * (delta/1000)));
           obj.quaternion.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI, 0, 'XYZ')));
           this.camera.quaternion.slerp(obj.quaternion,  1 - Math.exp(-20 * (delta/1000)));
-        } else {
-          mesh.position.x = transform.position.x;
-          mesh.position.y = transform.position.y;
-          mesh.position.z = transform.position.z;
-
-          mesh.rotation.x = transform.rotation.x;
-          mesh.rotation.y = transform.rotation.y;
-          mesh.rotation.z = transform.rotation.z;
         }
       }
     });

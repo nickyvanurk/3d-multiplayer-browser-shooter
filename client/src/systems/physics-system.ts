@@ -39,6 +39,10 @@ export class PhysicsSystem extends System {
       const transform = entity.getMutableComponent(Transform);
       const physics = entity.getMutableComponent(Physics);
 
+      const temp = new THREE.Object3D();
+      temp.rotation.setFromVector3(transform.rotation);
+      temp.position.copy(transform.position);
+
       physics.velocity.x += physics.acceleration*delta * input.movementX;
       physics.velocity.y += physics.acceleration*delta * input.movementY;
       physics.velocity.z += physics.acceleration*delta * input.movementZ;
@@ -51,12 +55,20 @@ export class PhysicsSystem extends System {
       physics.velocity.y *= Math.pow(physics.damping, delta/1000);
       physics.velocity.z *= Math.pow(physics.damping, delta/1000);
 
-      transform.rotation.x = 0.002*delta * -input.pitch;
-      transform.rotation.y = 0.002*delta * input.yaw;
-      // transform.rotation.z = 0.003*delta * input.roll;
+      temp.translateX(transform.translation.x);
+      temp.translateY(transform.translation.y);
+      temp.translateZ(transform.translation.z);
+      transform.position.copy(temp.position);
 
-      // transform.rotation.x *= Math.pow(physics.damping, delta/1000);
-      // transform.rotation.y *= Math.pow(physics.damping, delta/1000);
+      const q = new THREE.Quaternion(
+        0.001*delta * input.pitch,
+        0.001*delta * -input.yaw,
+        0, //0.001*delta * input.roll,
+        1
+      ).normalize();
+      temp.quaternion.multiply(q);
+      temp.rotation.setFromQuaternion(temp.quaternion, temp.rotation.order);
+      transform.rotation = temp.rotation.toVector3();
     });
   }
 }
