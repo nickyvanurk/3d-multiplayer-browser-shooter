@@ -9,6 +9,9 @@ import {Transform} from '../components/transform';
 import {NextFrameNormal} from '../components/next-frame-normal';
 import {PlayerController} from '../components/player-controller';
 import {Physics} from '../components/physics';
+import {Camera} from '../components/camera';
+import {PlayerInputState} from '../components/player-input-state';
+import { Vector3 } from 'three';
 
 export class Render extends System {
   static queries: any = {
@@ -26,6 +29,9 @@ export class Render extends System {
     },
     object3dMoveable: {
       components: [Object3d, Transform, Physics]
+    },
+    camera: {
+      components: [Object3d, Camera]
     }
   };
 
@@ -77,6 +83,10 @@ export class Render extends System {
       this.composer.setSize(window.innerWidth, window.innerHeight);
       this.renderer.setSize(window.innerWidth, window.innerHeight);
     }, false);
+
+    this.world.createEntity()
+      .addComponent(Object3d, {value: new THREE.Object3D()})
+      .addComponent(Camera);
   }
 
 
@@ -105,18 +115,25 @@ export class Render extends System {
         if (entity.hasComponent(PlayerController)) {
           const physics = entity.getComponent(Physics);
 
-          mesh.position.x += physics.velocity.x*(1000/60)*nextFrameNormal;
-          mesh.position.y += physics.velocity.y*(1000/60)*nextFrameNormal;
-          mesh.position.z += physics.velocity.z*(1000/60)*nextFrameNormal;
+          mesh.position.x += physics.velocity.x*nextFrameNormal;
+          mesh.position.y += physics.velocity.y*nextFrameNormal;
+          mesh.position.z += physics.velocity.z*nextFrameNormal;
 
-          const obj = new THREE.Object3D();
-          obj.position.copy(mesh.position);
-          obj.quaternion.copy(mesh.quaternion);
-          obj.translateY(1);
-          obj.translateZ(-4);
-          this.camera.position.lerp(obj.position, 1 - Math.exp(-20 * (delta/1000)));
-          obj.quaternion.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI, 0, 'XYZ')));
-          this.camera.quaternion.slerp(obj.quaternion,  1 - Math.exp(-20 * (delta/1000)));
+          this.queries.camera.results.forEach((entity: any) => {
+            const mesh = entity.getComponent(Object3d).value;
+
+            const position = new THREE.Vector3().copy(mesh.position);
+
+            position.x += physics.velocity.x*nextFrameNormal;
+            position.y += physics.velocity.y*nextFrameNormal;
+            position.z += physics.velocity.z*nextFrameNormal;
+
+            this.camera.position.copy(position);
+            this.camera.quaternion.copy(mesh.quaternion);
+          })
+        } else {
+          mesh.rotation.x += 0.001*(1000/60)*nextFrameNormal;
+          mesh.rotation.y += 0.001*(1000/60)*nextFrameNormal;
         }
       }
     });

@@ -12,7 +12,6 @@ import {Object3d} from './components/object3d';
 import {PlayerController} from './components/player-controller';
 import {Physics} from './components/physics';
 
-import {Rotate} from './systems/rotate';
 import {Render} from './systems/render';
 import {Input} from './systems/input';
 import {PlayerInput} from './systems/player-input';
@@ -46,7 +45,6 @@ export default class Game {
     this.world
       .registerSystem(Input)
       .registerSystem(PlayerInput)
-      .registerSystem(Rotate)
       .registerSystem(PhysicsSystem)
       .registerSystem(Render);
 
