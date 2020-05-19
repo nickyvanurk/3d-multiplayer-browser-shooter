@@ -57,14 +57,11 @@ export class PhysicsSystem extends System {
       physics.velocity.x += physics.acceleration*delta * input.movementX;
       physics.velocity.y += physics.acceleration*delta * input.movementY;
       physics.velocity.z += physics.acceleration*delta * input.movementZ;
+      physics.angularVelocity.z += physics.angularAcceleration*delta * input.roll;
 
       transform.translation.x = physics.velocity.x*delta;
       transform.translation.y = physics.velocity.y*delta;
       transform.translation.z = physics.velocity.z*delta;
-
-      physics.velocity.x *= Math.pow(physics.damping, delta/1000);
-      physics.velocity.y *= Math.pow(physics.damping, delta/1000);
-      physics.velocity.z *= Math.pow(physics.damping, delta/1000);
 
       temp.translateX(transform.translation.x);
       temp.translateY(transform.translation.y);
@@ -74,12 +71,19 @@ export class PhysicsSystem extends System {
       const q = new THREE.Quaternion(
         0.001*delta * input.pitch,
         0.001*delta * -input.yaw,
-        0, //0.001*delta * input.roll,
+        0,
         1
       ).normalize();
       temp.quaternion.multiply(q);
       temp.rotation.setFromQuaternion(temp.quaternion, temp.rotation.order);
       transform.rotation = temp.rotation.toVector3();
+
+      transform.rotation.z += physics.angularVelocity.z*delta;
+
+      physics.velocity.x *= Math.pow(physics.damping, delta/1000);
+      physics.velocity.y *= Math.pow(physics.damping, delta/1000);
+      physics.velocity.z *= Math.pow(physics.damping, delta/1000);
+      physics.angularVelocity.z *= Math.pow(physics.angularDamping, delta/1000);
 
       this.queries.camera.results.forEach((entity: any) => {
         const mesh = entity.getMutableComponent(Object3d).value;

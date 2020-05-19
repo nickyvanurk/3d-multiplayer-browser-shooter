@@ -118,18 +118,21 @@ export class Render extends System {
           mesh.position.x += physics.velocity.x*nextFrameNormal;
           mesh.position.y += physics.velocity.y*nextFrameNormal;
           mesh.position.z += physics.velocity.z*nextFrameNormal;
+          mesh.rotation.z += physics.angularVelocity.z*nextFrameNormal;
 
           this.queries.camera.results.forEach((entity: any) => {
             const mesh = entity.getComponent(Object3d).value;
 
             const position = new THREE.Vector3().copy(mesh.position);
+            const rotation = new THREE.Euler().copy(mesh.rotation);
 
             position.x += physics.velocity.x*nextFrameNormal;
             position.y += physics.velocity.y*nextFrameNormal;
             position.z += physics.velocity.z*nextFrameNormal;
+            rotation.z += physics.angularVelocity.z*nextFrameNormal;
 
             this.camera.position.copy(position);
-            this.camera.quaternion.copy(mesh.quaternion);
+            this.camera.rotation.copy(rotation);
           })
         } else {
           mesh.rotation.x += 0.001*(1000/60)*nextFrameNormal;
