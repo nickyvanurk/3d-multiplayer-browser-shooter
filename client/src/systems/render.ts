@@ -36,13 +36,15 @@ export class Render extends System {
     document.body.appendChild(this.renderer.domElement);
 
     this.scene = new THREE.Scene();
-    this.scene.fog = new THREE.FogExp2(0x020207, 0.02);
+    this.scene.fog = new THREE.Fog(0x020207, 0.04);
     this.camera = new THREE.PerspectiveCamera(
-      75,
+      70,
       window.innerWidth / window.innerHeight,
       0.1,
-      1000
+      10000
     );
+
+    this.renderStars();
 
     this.camera.position.z = -4;
     this.camera.position.y = 1;
@@ -102,5 +104,27 @@ export class Render extends System {
     });
 
     this.composer.render();
+  }
+
+  renderStars(amount: number = 2000) {
+    const positions = []
+    for (let i = 0; i < amount; i++) {
+      const r = 4000
+      const theta = 2 * Math.PI * Math.random()
+      const phi = Math.acos(2 * Math.random() - 1)
+      const x = r * Math.cos(theta) * Math.sin(phi) + (-2000 + Math.random() * 4000)
+      const y = r * Math.sin(theta) * Math.sin(phi) + (-2000 + Math.random() * 4000)
+      const z = r * Math.cos(phi) + (-1000 + Math.random() * 2000)
+      positions.push(x)
+      positions.push(y)
+      positions.push(z)
+    }
+
+    var geometry = new THREE.BufferGeometry();
+    var vertices = new Float32Array(positions);
+    geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+    var material = new THREE.PointsMaterial({color: 0xffffff, size: 12.5, fog: false});
+    var mesh = new THREE.Points(geometry, material);
+    this.scene.add(mesh);
   }
 }
