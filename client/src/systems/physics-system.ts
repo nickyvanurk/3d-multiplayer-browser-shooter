@@ -95,7 +95,7 @@ export class PhysicsSystem extends System {
         obj.quaternion.copy(temp.quaternion);
         obj.translateY(1);
         obj.translateZ(-4);
-        obj.quaternion.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI, 0, 'XYZ')));
+        obj.quaternion.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI, 0, 'XYZ')).normalize());
 
         const transform = entity.getMutableComponent(Transform);
         transform.position.lerp(obj.position, 1 - Math.exp(-20 * (delta/1000)));
