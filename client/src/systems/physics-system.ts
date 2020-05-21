@@ -98,8 +98,8 @@ export class PhysicsSystem extends System {
         obj.quaternion.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI, 0, 'XYZ')).normalize());
 
         const transform = entity.getMutableComponent(Transform);
-        transform.position.lerp(obj.position, 1 - Math.exp(-20 * (delta/1000)));
-        transform.rotation.slerp(obj.quaternion,  1 - Math.exp(-20 * (delta/1000)));
+        transform.position.lerp(obj.position, 1 - Math.exp(-10 * (delta/1000)));
+        transform.rotation.slerp(obj.quaternion,  1 - Math.exp(-10 * (delta/1000)));
       });
     });
 

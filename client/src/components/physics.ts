@@ -14,7 +14,7 @@ export class Physics extends Component {
     this.velocity = new Vector3();
     this.angularVelocity = new Vector3();
     this.acceleration = 0.00001;
-    this.angularAcceleration = 0.000005;
+    this.angularAcceleration = 0.000003;
     this.damping = 0.3;
     this.angularDamping = 0.1;
   }
