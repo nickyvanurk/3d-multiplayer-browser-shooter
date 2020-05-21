@@ -19,7 +19,10 @@ export class PhysicsSystem extends System {
       components: [Transform, Rotating]
     },
     players: {
-      components: [PlayerInputState, Transform, Physics]
+      components: [PlayerInputState, Transform, Physics],
+      listen: {
+        added: true
+      }
     },
     others: {
       components: [Transform, Physics, Not(PlayerInputState)]
@@ -50,6 +53,16 @@ export class PhysicsSystem extends System {
                                                       .multiplyScalar(1 - nextFrameRatio));
       transform.renderRotation = new THREE.Quaternion().copy(transform.previousRotation)
                                                        .slerp(transform.rotation, nextFrameRatio);
+    });
+
+    this.queries.players.added.forEach((entity: any) => {
+      const transform = entity.getMutableComponent(Transform);
+
+      this.queries.camera.results.forEach((entity: any) => {
+        const cameraTransform = entity.getMutableComponent(Transform);
+        cameraTransform.rotation.copy(transform.rotation);
+        cameraTransform.rotation.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI, 0, 'XYZ')).normalize());
+      });
     });
   }
 
