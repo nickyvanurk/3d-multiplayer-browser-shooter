@@ -14,13 +14,13 @@ export class Transform extends Component {
   constructor() {
     super();
 
-    this.previousPosition = new Vector3();
+    this.previousPosition = new Vector3(0, 0, 0);
     this.previousRotation = new Quaternion();
 
-    this.position = new Vector3();
+    this.position = new Vector3(0, 0, 0);
     this.rotation = new Quaternion();
 
-    this.renderPosition = new Vector3();
+    this.renderPosition = new Vector3(0, 0, 0);
     this.renderRotation = new Quaternion();
   }
 

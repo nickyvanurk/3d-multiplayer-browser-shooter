@@ -11,6 +11,7 @@ import {Rotating} from './components/rotating';
 import {Object3d} from './components/object3d';
 import {PlayerController} from './components/player-controller';
 import {Physics} from './components/physics';
+import {SphereCollider} from './components/sphere-collider';
 
 import {Render} from './systems/render';
 import {Input} from './systems/input';
@@ -48,7 +49,7 @@ export default class Game {
       .registerSystem(PhysicsSystem)
       .registerSystem(Render);
 
-    this.spawnModels(1000);
+    this.spawnModels(100);
     this.spawnPlayer();
   }
 
@@ -92,13 +93,15 @@ export default class Game {
         .addComponent(Object3d, {value: model.scene.clone()})
         .addComponent(Transform, {
           position: new Vector3(
-            (Math.random() - 0.5) * 120,
-            (Math.random() - 0.5) * 120,
-            (Math.random() - 0.5) * 120
+            (Math.random() - 0.5) * 60,
+            (Math.random() - 0.5) * 60,
+            (Math.random() - 0.5) * 60
           ),
           rotation: new Vector3()
         })
-        .addComponent(Rotating);
+        .addComponent(Physics)
+        .addComponent(Rotating)
+        .addComponent(SphereCollider, {radius: 1});
     }
   }
 
@@ -118,6 +121,7 @@ export default class Game {
         strafeUp: 'Space',
         strafeDown: 'ControlLeft',
       })
-      .addComponent(Physics);
+      .addComponent(Physics)
+      .addComponent(SphereCollider, {radius: 1});
   }
 }
