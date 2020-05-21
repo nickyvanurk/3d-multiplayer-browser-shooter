@@ -175,13 +175,13 @@ export class PhysicsSystem extends System {
           const midpointY = (transform1.position.y + transform2.position.y) / 2;
           const midpointZ = (transform1.position.z + transform2.position.z) / 2;
 
-          transform1.position.x = midpointX - distance/2 * nx;
-          transform1.position.y = midpointY - distance/2 * ny;
-          transform1.position.z = midpointZ - distance/2 * nz;
+          transform1.position.x = midpointX - sphereCollider1.radius * nx;
+          transform1.position.y = midpointY - sphereCollider1.radius * ny;
+          transform1.position.z = midpointZ - sphereCollider1.radius * nz;
 
-          transform2.position.x = midpointX + distance/2 * nx;
-          transform2.position.y = midpointY + distance/2 * ny;
-          transform2.position.z = midpointZ + distance/2 * nz;
+          transform2.position.x = midpointX + sphereCollider2.radius * nx;
+          transform2.position.y = midpointY + sphereCollider2.radius * ny;
+          transform2.position.z = midpointZ + sphereCollider2.radius * nz;
         }
       }
     }
