@@ -22,7 +22,6 @@ export class Input extends System {
       document.addEventListener('keydown', (event: any) => {
         if (state.keysDown.indexOf(event.code) === -1) {
           state.keysDown.push(event.code);
-          console.log(event.code);
         }
       });
 

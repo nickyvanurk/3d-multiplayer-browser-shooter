@@ -10,6 +10,8 @@ import {SphereCollider} from '../components/sphere-collider';
 
 import createFixedTimestep from 'shared/src/utils/create-fixed-timestep';
 
+import {BoundingBox, Octree} from '../utils/octree';
+
 export class PhysicsSystem extends System {
   static queries: any = {
     transforms: {
@@ -31,13 +33,17 @@ export class PhysicsSystem extends System {
       components: [Object3d, Camera]
     },
     sphereColliders: {
-      components: [Object3d, Transform, SphereCollider]
+      components: [Object3d, Transform, SphereCollider],
+      listen: {
+        added: true
+      }
     }
   };
 
   private fixedUpdate: Function;
 
   init() {
+
     this.fixedUpdate = createFixedTimestep(1000/60, this.handleFixedUpdate.bind(this));
   }
 
@@ -141,31 +147,42 @@ export class PhysicsSystem extends System {
       rotation.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), 0.001*delta));
     });
 
+    const octree = new Octree(new BoundingBox(
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(1000, 1000, 1000)
+    ), 1);
+
     const sphereColliders = this.queries.sphereColliders.results;
-    for (let i = 0; i < sphereColliders.length; ++i) {
-      for (let j = i; j < sphereColliders.length; ++j) {
-        if (i === j) {
-          continue;
+
+    sphereColliders.forEach((entity: any) => {
+      octree.insert(entity);
+    });
+
+    sphereColliders.forEach((entity: any) => {
+      const transform = entity.getMutableComponent(Transform);
+      const sphereCollider = entity.getComponent(SphereCollider);
+      const nearbyEntities = octree.query(transform.position, sphereCollider.radius * 2);
+
+      nearbyEntities.forEach((other: any) => {
+        if (entity === other) {
+          return;
         }
 
-        const entity1 = sphereColliders[i];
-        const entity2 = sphereColliders[j]
-
-        const transform1 = entity1.getMutableComponent(Transform);
-        const transform2 = entity2.getMutableComponent(Transform);
+        const transform1 = entity.getMutableComponent(Transform);
+        const transform2 = other.getMutableComponent(Transform);
 
         const sphere1 = new THREE.Sphere().translate(transform1.position);
         const sphere2 = new THREE.Sphere().translate(transform2.position);
 
-        const sphereCollider1 = entity1.getComponent(SphereCollider);
-        const sphereCollider2 = entity2.getComponent(SphereCollider);
+        const sphereCollider1 = entity.getComponent(SphereCollider);
+        const sphereCollider2 = other.getComponent(SphereCollider);
 
         sphere1.radius = sphereCollider1.radius;
         sphere2.radius = sphereCollider2.radius;
 
         if (sphere1.intersectsSphere(sphere2)) {
-          const physics1 = entity1.getMutableComponent(Physics);
-          const physics2 = entity2.getMutableComponent(Physics);
+          const physics1 = entity.getMutableComponent(Physics);
+          const physics2 = other.getMutableComponent(Physics);
 
           const distance = transform1.position.distanceTo(transform2.position);
 
@@ -196,7 +213,7 @@ export class PhysicsSystem extends System {
           transform2.position.y = midpointY + sphereCollider2.radius * ny;
           transform2.position.z = midpointZ + sphereCollider2.radius * nz;
         }
-      }
-    }
+      });
+    });
   }
 }

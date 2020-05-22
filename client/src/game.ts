@@ -49,7 +49,7 @@ export default class Game {
       .registerSystem(PhysicsSystem)
       .registerSystem(Render);
 
-    this.spawnModels(100);
+    this.spawnModels(1000);
     this.spawnPlayer();
   }
 
@@ -93,9 +93,9 @@ export default class Game {
         .addComponent(Object3d, {value: model.scene.clone()})
         .addComponent(Transform, {
           position: new Vector3(
-            (Math.random() - 0.5) * 60,
-            (Math.random() - 0.5) * 60,
-            (Math.random() - 0.5) * 60
+            (Math.random() - 0.5) * 120,
+            (Math.random() - 0.5) * 120,
+            (Math.random() - 0.5) * 120
           ),
           rotation: new Vector3()
         })
