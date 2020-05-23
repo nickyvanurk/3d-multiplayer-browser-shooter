@@ -7,6 +7,10 @@ import {UnrealBloomPass} from 'three/examples/jsm/postprocessing/UnrealBloomPass
 import {Object3d} from '../components/object3d';
 import {Transform} from '../components/transform';
 import {Camera} from '../components/camera';
+import {InputState} from '../components/input-state';
+
+import {ArrowHelper} from 'three/src/helpers/ArrowHelper';
+import {PlayerController} from '../components/player-controller';
 
 export class Render extends System {
   static queries: any = {
@@ -18,11 +22,18 @@ export class Render extends System {
     },
     camera: {
       components: [Object3d, Camera]
+    },
+    inputStates: {
+      components: [InputState]
+    },
+    player: {
+      components: [PlayerController]
     }
   };
 
   public queries: any;
-
+  private raycaster: THREE.Raycaster
+  private raycasterLine: any;
   private scene: THREE.Scene;
   private camera: any;
   private renderer: THREE.WebGLRenderer;
@@ -76,6 +87,14 @@ export class Render extends System {
       .addComponent(Object3d, {value: new THREE.Object3D()})
       .addComponent(Transform)
       .addComponent(Camera);
+
+    this.raycaster = new THREE.Raycaster();
+    this.raycasterLine = new THREE.ArrowHelper(
+      this.raycaster.ray.direction,
+      this.raycaster.ray.origin, 200, 0xff0000
+    );
+
+    this.scene.add(this.raycasterLine);
   }
 
   execute(delta: number) {
@@ -101,6 +120,22 @@ export class Render extends System {
       const transform = entity.getComponent(Transform);
       this.camera.position.copy(transform.renderPosition);
       this.camera.quaternion.copy(transform.renderRotation);
+
+      const inputStateEntity = this.queries.inputStates.results[0];
+      const inputState = inputStateEntity.getMutableComponent(InputState);
+      this.raycaster.setFromCamera(inputState.mousePosition, this.camera);
+    });
+
+    this.queries.player.results.forEach((entity: any) => {
+      const transform = entity.getComponent(Transform);
+
+      const targetPosition = new THREE.Vector3();
+      this.raycaster.ray.at(200, targetPosition);
+
+      const targetDirection = new THREE.Vector3();
+      targetDirection.subVectors(targetPosition, transform.position).normalize();
+      this.raycasterLine.position.copy(transform.renderPosition);
+      this.raycasterLine.setDirection(targetDirection);
     });
 
     this.composer.render();
