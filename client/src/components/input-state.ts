@@ -13,6 +13,6 @@ export class InputState extends Component {
   reset() {
     this.keysDown = [];
     this.mouseButtonsDown = [];
-    this.mousePosition = {x: window.innerWidth/2, y: window.innerHeight/2};
+    this.mousePosition = {x: 0, y: 0};
   }
 }
