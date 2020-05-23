@@ -46,8 +46,8 @@ export class Input extends System {
 
       document.addEventListener('mousemove', (event: any) => {
         state.mousePosition = {
-          x: event.clientX,
-          y: event.clientY
+          x: (event.clientX/window.innerWidth)*2 - 1,
+          y: -(event.clientY/window.innerHeight)*2 + 1
         };
       });
     });

@@ -43,7 +43,6 @@ export class PhysicsSystem extends System {
   private fixedUpdate: Function;
 
   init() {
-
     this.fixedUpdate = createFixedTimestep(1000/60, this.handleFixedUpdate.bind(this));
   }
 
@@ -85,7 +84,7 @@ export class PhysicsSystem extends System {
       const physics = entity.getMutableComponent(Physics);
 
       physics.angularVelocity.x = 0.0000625*delta * input.pitch;
-      physics.angularVelocity.y = 0.0000625*delta * -input.yaw;
+      physics.angularVelocity.y = 0.0000625*delta * input.yaw;
       physics.angularVelocity.z += physics.angularAcceleration*delta * input.roll;
 
       physics.angularVelocity.z *= Math.pow(physics.angularDamping, delta/1000);
