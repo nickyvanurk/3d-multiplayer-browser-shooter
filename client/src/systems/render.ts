@@ -1,4 +1,4 @@
-import {System} from 'ecsy';
+import {System, Not} from 'ecsy';
 import * as THREE from 'three';
 import {EffectComposer} from 'three/examples/jsm/postprocessing/EffectComposer';
 import {RenderPass} from 'three/examples/jsm/postprocessing/RenderPass';
@@ -8,8 +8,8 @@ import {Object3d} from '../components/object3d';
 import {Transform} from '../components/transform';
 import {Camera} from '../components/camera';
 import {InputState} from '../components/input-state';
+import {Physics} from '../components/physics';
 
-import {ArrowHelper} from 'three/src/helpers/ArrowHelper';
 import {PlayerController} from '../components/player-controller';
 
 export class Render extends System {
@@ -28,11 +28,15 @@ export class Render extends System {
     },
     player: {
       components: [PlayerController]
+    },
+    others: {
+      components: [Object3d, Physics, Not(PlayerController)]
     }
   };
 
   public queries: any;
   private raycaster: THREE.Raycaster
+  private playerRaycaster: THREE.Raycaster;
   private raycasterLine: any;
   private scene: THREE.Scene;
   private camera: any;
@@ -89,6 +93,9 @@ export class Render extends System {
       .addComponent(Camera);
 
     this.raycaster = new THREE.Raycaster();
+    this.playerRaycaster = new THREE.Raycaster();
+    this.playerRaycaster.far = 200;
+
     this.raycasterLine = new THREE.ArrowHelper(
       this.raycaster.ray.direction,
       this.raycaster.ray.origin, 200, 0xff0000
@@ -134,8 +141,46 @@ export class Render extends System {
 
       const targetDirection = new THREE.Vector3();
       targetDirection.subVectors(targetPosition, transform.position).normalize();
-      this.raycasterLine.position.copy(transform.renderPosition);
-      this.raycasterLine.setDirection(targetDirection);
+
+      this.playerRaycaster.set(transform.renderPosition, targetDirection);
+
+      this.raycasterLine.position.copy(this.playerRaycaster.ray.origin);
+      this.raycasterLine.setDirection(this.playerRaycaster.ray.direction);
+      this.raycasterLine.setLength(200);
+    });
+
+    this.queries.others.results.forEach((entity: any) => {
+      const model = entity.getMutableComponent(Object3d).value;
+
+      const meshes: any = [];
+      model.traverse((child: any) => {
+        if (child.isMesh) {
+          meshes.push(child);
+        }
+      });
+
+      const intersects = this.raycaster.intersectObjects(meshes, false);
+      if (intersects.length) {
+        let closestMesh = intersects[0];
+
+        for (let i = 1; i < intersects.length; ++i) {
+          if (intersects[i].distance < closestMesh.distance) {
+            closestMesh = intersects[i];
+          }
+        }
+
+        const targetPosition = new THREE.Vector3();
+        this.raycaster.ray.at(closestMesh.distance, targetPosition);
+
+        const targetDirection = new THREE.Vector3();
+        targetDirection.subVectors(targetPosition, this.playerRaycaster.ray.origin).normalize();
+
+        this.playerRaycaster.set(this.playerRaycaster.ray.origin, targetDirection);
+
+        this.raycasterLine.position.copy(this.playerRaycaster.ray.origin);
+        this.raycasterLine.setDirection(this.playerRaycaster.ray.direction);
+        this.raycasterLine.setLength(this.playerRaycaster.ray.origin.distanceTo(targetPosition));
+      }
     });
 
     this.composer.render();
