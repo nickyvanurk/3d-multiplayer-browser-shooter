@@ -49,7 +49,7 @@ export default class Game {
       .registerSystem(PhysicsSystem)
       .registerSystem(Render);
 
-    this.spawnModels(10);
+    this.spawnModels(1000);
     this.spawnPlayer();
   }
 

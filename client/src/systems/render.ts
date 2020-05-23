@@ -35,8 +35,7 @@ export class Render extends System {
   };
 
   public queries: any;
-  private raycaster: THREE.Raycaster
-  private playerRaycaster: THREE.Raycaster;
+  private raycaster: THREE.Raycaster;
   private raycasterLine: any;
   private scene: THREE.Scene;
   private camera: any;
@@ -93,8 +92,7 @@ export class Render extends System {
       .addComponent(Camera);
 
     this.raycaster = new THREE.Raycaster();
-    this.playerRaycaster = new THREE.Raycaster();
-    this.playerRaycaster.far = 200;
+    this.raycaster.far = 200;
 
     this.raycasterLine = new THREE.ArrowHelper(
       this.raycaster.ray.direction,
@@ -142,10 +140,8 @@ export class Render extends System {
       const targetDirection = new THREE.Vector3();
       targetDirection.subVectors(targetPosition, transform.position).normalize();
 
-      this.playerRaycaster.set(transform.renderPosition, targetDirection);
-
-      this.raycasterLine.position.copy(this.playerRaycaster.ray.origin);
-      this.raycasterLine.setDirection(this.playerRaycaster.ray.direction);
+      this.raycasterLine.position.copy(transform.position);
+      this.raycasterLine.setDirection(targetDirection);
       this.raycasterLine.setLength(200);
     });
 
@@ -173,13 +169,10 @@ export class Render extends System {
         this.raycaster.ray.at(closestMesh.distance, targetPosition);
 
         const targetDirection = new THREE.Vector3();
-        targetDirection.subVectors(targetPosition, this.playerRaycaster.ray.origin).normalize();
+        targetDirection.subVectors(targetPosition, this.raycasterLine.position).normalize();
 
-        this.playerRaycaster.set(this.playerRaycaster.ray.origin, targetDirection);
-
-        this.raycasterLine.position.copy(this.playerRaycaster.ray.origin);
-        this.raycasterLine.setDirection(this.playerRaycaster.ray.direction);
-        this.raycasterLine.setLength(this.playerRaycaster.ray.origin.distanceTo(targetPosition));
+        this.raycasterLine.setDirection(targetDirection);
+        this.raycasterLine.setLength(this.raycasterLine.position.distanceTo(targetPosition));
       }
     });
 
