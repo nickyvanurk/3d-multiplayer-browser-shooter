@@ -36,7 +36,8 @@ export class Render extends System {
 
   public queries: any;
   private raycaster: THREE.Raycaster;
-  private raycasterLine: any;
+  private gunLine1: any;
+  private gunLine2: any;
   private scene: THREE.Scene;
   private camera: any;
   private renderer: THREE.WebGLRenderer;
@@ -94,12 +95,18 @@ export class Render extends System {
     this.raycaster = new THREE.Raycaster();
     this.raycaster.far = 200;
 
-    this.raycasterLine = new THREE.ArrowHelper(
+    this.gunLine1 = new THREE.ArrowHelper(
       this.raycaster.ray.direction,
       this.raycaster.ray.origin, 200, 0xff0000
     );
 
-    this.scene.add(this.raycasterLine);
+    this.gunLine2 = new THREE.ArrowHelper(
+      this.raycaster.ray.direction,
+      this.raycaster.ray.origin, 200, 0xff0000
+    );
+
+    this.scene.add(this.gunLine1);
+    this.scene.add(this.gunLine2);
   }
 
   execute(delta: number) {
@@ -140,9 +147,22 @@ export class Render extends System {
       const targetDirection = new THREE.Vector3();
       targetDirection.subVectors(targetPosition, transform.position).normalize();
 
-      this.raycasterLine.position.copy(transform.position);
-      this.raycasterLine.setDirection(targetDirection);
-      this.raycasterLine.setLength(200);
+
+      const gunLine1Position = new THREE.Vector3(-0.6, 0, 0);
+      gunLine1Position.applyQuaternion(transform.renderRotation);
+      gunLine1Position.add(transform.renderPosition);
+
+      this.gunLine1.position.copy(gunLine1Position);
+      this.gunLine1.setDirection(targetDirection);
+      this.gunLine1.setLength(200);
+
+      const gunLine2Position = new THREE.Vector3(0.6, 0, 0);
+      gunLine2Position.applyQuaternion(transform.renderRotation);
+      gunLine2Position.add(transform.renderPosition);
+
+      this.gunLine2.position.copy(gunLine2Position);
+      this.gunLine2.setDirection(targetDirection);
+      this.gunLine2.setLength(200);
     });
 
     this.queries.others.results.forEach((entity: any) => {
@@ -168,11 +188,17 @@ export class Render extends System {
         const targetPosition = new THREE.Vector3();
         this.raycaster.ray.at(closestMesh.distance, targetPosition);
 
-        const targetDirection = new THREE.Vector3();
-        targetDirection.subVectors(targetPosition, this.raycasterLine.position).normalize();
+        const targetDirectionGun1 = new THREE.Vector3();
+        targetDirectionGun1.subVectors(targetPosition, this.gunLine1.position).normalize();
 
-        this.raycasterLine.setDirection(targetDirection);
-        this.raycasterLine.setLength(this.raycasterLine.position.distanceTo(targetPosition));
+        this.gunLine1.setDirection(targetDirectionGun1);
+        this.gunLine1.setLength(this.gunLine1.position.distanceTo(targetPosition));
+
+        const targetDirectionGun2 = new THREE.Vector3();
+        targetDirectionGun2.subVectors(targetPosition, this.gunLine2.position).normalize();
+
+        this.gunLine2.setDirection(targetDirectionGun2);
+        this.gunLine2.setLength(this.gunLine2.position.distanceTo(targetPosition));
       }
     });
 
