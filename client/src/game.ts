@@ -1,11 +1,19 @@
 import './loader.css';
 
-import {LoadingManager, Scene as Scene$1} from 'three';
+import {
+  LoadingManager,
+  Scene as Scene$1,
+  Vector3,
+  AmbientLight,
+  DirectionalLight,
+  Fog,
+  BufferGeometry,
+  BufferAttribute,
+  PointsMaterial,
+  Points
+} from 'three';
 import {AssetManager} from './asset-manager';
 import {World} from 'ecsy';
-
-import * as THREE from 'three';
-import {Vector3, Color} from 'three';
 
 import {Transform} from './components/transform';
 import {Rotating} from './components/rotating';
@@ -18,7 +26,6 @@ import {Scene} from './components/scene';
 import {WebGlRenderer} from './components/webgl-renderer';
 import {RenderPass} from './components/render-pass';
 
-import {Render} from './systems/render';
 import {WebGlRendererSystem} from './systems/webgl-renderer-system';
 import {Input} from './systems/input';
 import {PlayerInput} from './systems/player-input';
@@ -51,23 +58,18 @@ export default class Game {
   init() {
     this.hideLoadingScreen();
 
-    // this.world
-    //   .registerSystem(CameraSystem)
-    //   .registerSystem(Input)
-    //   .registerSystem(PlayerInput)
-    //   .registerSystem(PhysicsSystem)
-    //   .registerSystem(WebGlRendererSystem);
-
-
     this.world
       .registerSystem(CameraSystem)
+      .registerSystem(Input)
+      .registerSystem(PlayerInput)
+      .registerSystem(PhysicsSystem)
       .registerSystem(TransformSystem)
       .registerSystem(WebGlRendererSystem);
 
     this.world.createEntity().addComponent(WebGlRenderer);
 
-    const scene = this.world.createEntity()
-      .addComponent(Scene, {value: new Scene$1()});
+    const scene = new Scene$1();
+    this.world.createEntity().addComponent(Scene, {value: scene});
 
     const camera = this.world.createEntity()
       .addComponent(Camera, {
@@ -84,6 +86,38 @@ export default class Game {
     let transform = camera.getMutableComponent(Transform);
     transform.position.y = 1;
     transform.position.z = -4;
+
+    scene.add(new AmbientLight(0x222222));
+
+    let light = new DirectionalLight(0xffffff);
+    light.position.set(1, 1, 1);
+    scene.add(light);
+
+    light = new DirectionalLight(0x002288);
+    light.position.set(-1, -1, -1);
+    scene.add(light);
+
+    scene.fog = new Fog(0x020207, 0.04);
+
+    const positions = []
+    for (let i = 0; i < 2000; i++) {
+      const r = 4000
+      const theta = 2 * Math.PI * Math.random()
+      const phi = Math.acos(2 * Math.random() - 1)
+      const x = r * Math.cos(theta) * Math.sin(phi) + (-2000 + Math.random() * 4000)
+      const y = r * Math.sin(theta) * Math.sin(phi) + (-2000 + Math.random() * 4000)
+      const z = r * Math.cos(phi) + (-1000 + Math.random() * 2000)
+      positions.push(x)
+      positions.push(y)
+      positions.push(z)
+    }
+
+    var geometry = new BufferGeometry();
+    var vertices = new Float32Array(positions);
+    geometry.setAttribute('position', new BufferAttribute(vertices, 3));
+    var material = new PointsMaterial({color: 0xffffff, size: 12.5, fog: false});
+    var mesh = new Points(geometry, material);
+    scene.add(mesh);
 
     this.spawnModels(100);
     this.spawnPlayer();

@@ -1,7 +1,8 @@
 import {Component, Entity} from 'ecsy';
+import {Scene as Scene$1} from 'three';
 
 export class RenderPass extends Component {
-  public scene: Entity;
+  public scene: Scene$1;
   public camera: Entity;
 
   constructor() {

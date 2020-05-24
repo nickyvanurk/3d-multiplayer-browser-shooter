@@ -68,12 +68,11 @@ export class WebGlRendererSystem extends System {
 
       this.queries.renderPasses.results.forEach((renderPassEntity: Entity) => {
         const renderPass = renderPassEntity.getComponent(RenderPass);
-        const scene = renderPass.scene.getComponent(Scene).value;
 
         this.queries.cameras.results.forEach((cameraEntity: Entity) => {
           const camera3d = cameraEntity.getComponent(Object3d).value;
 
-          renderer.render(scene, camera3d);
+          renderer.render(renderPass.scene, camera3d);
         });
       });
     });
