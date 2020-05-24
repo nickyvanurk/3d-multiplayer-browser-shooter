@@ -68,11 +68,6 @@ export class CameraSystem extends System {
         camera3d.far = component.far;
         camera3d.updateProjectionMatrix();
       }
-
-      if (camera3d.layers.mask !== component.layer) {
-        camera3d.layers.disableAll();
-        camera3d.layers.enable(component.layer);
-      }
     });
   }
 }

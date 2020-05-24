@@ -62,7 +62,6 @@ export class Render extends System {
                               aspect: window.innerWidth / window.innerHeight,
                               near: 0.1,
                               far: 10000,
-                              layers: 1,
                               handleResize: true
                             })
                             .addComponent(Transform);
@@ -81,11 +80,6 @@ export class Render extends System {
     this.scene.add(light);
 
     this.composer = new EffectComposer(this.renderer);
-
-    // this.world.createEntity()
-    //   .addComponent(Object3d, {value: new THREE.Object3D()})
-    //   .addComponent(Transform)
-    //   .addComponent(Camera);
 
     this.raycaster = new THREE.Raycaster();
     this.raycaster.far = 200;
