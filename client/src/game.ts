@@ -4,6 +4,7 @@ import {LoadingManager, Scene as Scene$1} from 'three';
 import {AssetManager} from './asset-manager';
 import {World} from 'ecsy';
 
+import * as THREE from 'three';
 import {Vector3, Color} from 'three';
 
 import {Transform} from './components/transform';
@@ -23,6 +24,7 @@ import {Input} from './systems/input';
 import {PlayerInput} from './systems/player-input';
 import {PhysicsSystem} from './systems/physics-system';
 import {CameraSystem} from './systems/camera-system';
+import {TransformSystem} from './systems/transform-system';
 
 export default class Game {
   private lastTime: number;
@@ -49,11 +51,17 @@ export default class Game {
   init() {
     this.hideLoadingScreen();
 
+    // this.world
+    //   .registerSystem(CameraSystem)
+    //   .registerSystem(Input)
+    //   .registerSystem(PlayerInput)
+    //   .registerSystem(PhysicsSystem)
+    //   .registerSystem(WebGlRendererSystem);
+
+
     this.world
       .registerSystem(CameraSystem)
-      .registerSystem(Input)
-      .registerSystem(PlayerInput)
-      .registerSystem(PhysicsSystem)
+      .registerSystem(TransformSystem)
       .registerSystem(WebGlRendererSystem);
 
     this.world.createEntity().addComponent(WebGlRenderer);
@@ -72,6 +80,10 @@ export default class Game {
       .addComponent(Transform);
 
     this.world.createEntity().addComponent(RenderPass, {scene, camera});
+
+    let transform = camera.getMutableComponent(Transform);
+    transform.position.y = 1;
+    transform.position.z = -4;
 
     this.spawnModels(100);
     this.spawnPlayer();
