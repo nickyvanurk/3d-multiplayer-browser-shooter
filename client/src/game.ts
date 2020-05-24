@@ -1,10 +1,10 @@
 import './loader.css';
 
-import {LoadingManager} from 'three';
+import {LoadingManager, Scene as Scene$1} from 'three';
 import {AssetManager} from './asset-manager';
 import {World} from 'ecsy';
 
-import {Vector3} from 'three';
+import {Vector3, Color} from 'three';
 
 import {Transform} from './components/transform';
 import {Rotating} from './components/rotating';
@@ -13,8 +13,12 @@ import {PlayerController} from './components/player-controller';
 import {Physics} from './components/physics';
 import {SphereCollider} from './components/sphere-collider';
 import {Camera} from './components/camera';
+import {Scene} from './components/scene';
+import {WebGlRenderer} from './components/webgl-renderer';
+import {RenderPass} from './components/render-pass';
 
 import {Render} from './systems/render';
+import {WebGlRendererSystem} from './systems/webgl-renderer-system';
 import {Input} from './systems/input';
 import {PlayerInput} from './systems/player-input';
 import {PhysicsSystem} from './systems/physics-system';
@@ -50,10 +54,25 @@ export default class Game {
       .registerSystem(Input)
       .registerSystem(PlayerInput)
       .registerSystem(PhysicsSystem)
-      .registerSystem(Render);
+      .registerSystem(WebGlRendererSystem);
 
+    this.world.createEntity().addComponent(WebGlRenderer);
 
-    this.createCamera();
+    const scene = this.world.createEntity()
+      .addComponent(Scene, {value: new Scene$1()});
+
+    const camera = this.world.createEntity()
+      .addComponent(Camera, {
+        fov: 70,
+        aspect: window.innerWidth / window.innerHeight,
+        near: 0.1,
+        far: 10000,
+        handleResize: true
+      })
+      .addComponent(Transform);
+
+    this.world.createEntity().addComponent(RenderPass, {scene, camera});
+
     this.spawnModels(100);
     this.spawnPlayer();
   }
@@ -88,18 +107,6 @@ export default class Game {
     loadingBar.addEventListener('transitionend', (event: TransitionEvent) => {
       event.stopPropagation();
     });
-  }
-
-  createCamera() {
-    this.world.createEntity()
-    .addComponent(Camera, {
-      fov: 70,
-      aspect: window.innerWidth / window.innerHeight,
-      near: 0.1,
-      far: 10000,
-      handleResize: true
-    })
-    .addComponent(Transform);
   }
 
   spawnModels(amount: number) {
