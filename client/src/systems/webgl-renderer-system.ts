@@ -1,5 +1,5 @@
 import {System, Not, Entity} from 'ecsy';
-import {WebGLRenderer} from 'three';
+import {WebGLRenderer, Vector2, CompressedPixelFormat} from 'three';
 
 import {WebGlRenderer}  from '../components/webgl-renderer';
 import {WebGlRendererContext} from '../components/webgl-renderer-context';
@@ -50,17 +50,17 @@ export class WebGlRendererSystem extends System {
   }
 
   execute() {
-    this.queries.renderersUninitialized.results.forEach((renderer: Entity) => {
-      const component = renderer.getComponent(WebGlRenderer);
-      const webGlRenderer = new WebGLRenderer();
+    this.queries.renderersUninitialized.results.forEach((rendererEntity: Entity) => {
+      const component = rendererEntity.getComponent(WebGlRenderer);
 
-      webGlRenderer.setPixelRatio(window.devicePixelRatio);
-      webGlRenderer.setSize(component.width, component.height);
-      webGlRenderer.shadowMap.enabled = component.shadowMap;
+      const renderer = new WebGLRenderer();
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.setSize(component.width, component.height);
+      renderer.shadowMap.enabled = component.shadowMap;
 
-      document.body.appendChild(webGlRenderer.domElement);
+      document.body.appendChild(renderer.domElement);
 
-      renderer.addComponent(WebGlRendererContext, {value: webGlRenderer});
+      rendererEntity.addComponent(WebGlRendererContext, {value: renderer});
     });
 
     this.queries.renderers.results.forEach((rendererEntity: Entity) => {
@@ -75,6 +75,19 @@ export class WebGlRendererSystem extends System {
           renderer.render(renderPass.scene, camera3d);
         });
       });
+    });
+
+    this.queries.renderers.changed.forEach((rendererEntity: Entity) => {
+      const component = rendererEntity.getComponent(WebGlRenderer);
+      const renderer = rendererEntity.getComponent(WebGlRendererContext).value;
+
+      const renderSize = new Vector2();
+      renderer.getSize(renderSize);
+
+      if (renderSize.width !== component.width ||
+          renderSize.height !== component.height) {
+        renderer .setSize(component.width, component.height);
+      }
     });
 
     this.queries.object3ds.added.forEach((object3dEntity: Entity) => {
