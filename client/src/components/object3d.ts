@@ -1,8 +1,7 @@
 import {Component} from 'ecsy';
-import {Mesh} from 'three';
 
 export class Object3d extends Component {
-  value: Mesh;
+  value: any;
 
   constructor() {
     super();

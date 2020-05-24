@@ -17,6 +17,7 @@ import {Render} from './systems/render';
 import {Input} from './systems/input';
 import {PlayerInput} from './systems/player-input';
 import {PhysicsSystem} from './systems/physics-system';
+import {CameraSystem} from './systems/camera-system';
 
 export default class Game {
   private lastTime: number;
@@ -44,12 +45,13 @@ export default class Game {
     this.hideLoadingScreen();
 
     this.world
+      .registerSystem(CameraSystem)
       .registerSystem(Input)
       .registerSystem(PlayerInput)
       .registerSystem(PhysicsSystem)
       .registerSystem(Render);
 
-    this.spawnModels(1000);
+    this.spawnModels(100);
     this.spawnPlayer();
   }
 

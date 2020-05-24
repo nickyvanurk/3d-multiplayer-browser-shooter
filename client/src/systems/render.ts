@@ -21,7 +21,10 @@ export class Render extends System {
       }
     },
     camera: {
-      components: [Object3d, Camera]
+      components: [Camera, Object3d],
+      listen: {
+        added: true
+      }
     },
     inputStates: {
       components: [InputState]
@@ -52,18 +55,19 @@ export class Render extends System {
 
     this.scene = new THREE.Scene();
     this.scene.fog = new THREE.Fog(0x020207, 0.04);
-    this.camera = new THREE.PerspectiveCamera(
-      70,
-      window.innerWidth / window.innerHeight,
-      0.1,
-      10000
-    );
+
+    this.camera = this.world.createEntity()
+                            .addComponent(Camera, {
+                              fov: 70,
+                              aspect: window.innerWidth / window.innerHeight,
+                              near: 0.1,
+                              far: 10000,
+                              layers: 1,
+                              handleResize: true
+                            })
+                            .addComponent(Transform);
 
     this.renderStars();
-
-    this.camera.position.z = -4;
-    this.camera.position.y = 1;
-    this.camera.rotation.y = Math.PI;
 
     var light: any = new THREE.DirectionalLight( 0xffffff );
     light.position.set(1, 1, 1);
@@ -77,20 +81,11 @@ export class Render extends System {
     this.scene.add(light);
 
     this.composer = new EffectComposer(this.renderer);
-    this.composer.addPass(new RenderPass(this.scene, this.camera));
-    this.composer.addPass(new UnrealBloomPass(undefined, 1.6, 1, 0));
 
-    window.addEventListener('resize', () => {
-      this.camera.aspect = window.innerWidth / window.innerHeight;
-      this.camera.updateProjectionMatrix();
-      this.composer.setSize(window.innerWidth, window.innerHeight);
-      this.renderer.setSize(window.innerWidth, window.innerHeight);
-    }, false);
-
-    this.world.createEntity()
-      .addComponent(Object3d, {value: new THREE.Object3D()})
-      .addComponent(Transform)
-      .addComponent(Camera);
+    // this.world.createEntity()
+    //   .addComponent(Object3d, {value: new THREE.Object3D()})
+    //   .addComponent(Transform)
+    //   .addComponent(Camera);
 
     this.raycaster = new THREE.Raycaster();
     this.raycaster.far = 200;
@@ -107,9 +102,25 @@ export class Render extends System {
 
     this.scene.add(this.gunLine1);
     this.scene.add(this.gunLine2);
+
+    window.addEventListener('resize', () => {
+      this.composer.setSize(window.innerWidth, window.innerHeight);
+      this.renderer.setSize(window.innerWidth, window.innerHeight);
+    });
   }
 
   execute(delta: number) {
+    this.queries.camera.added.forEach((camera: any) => {
+      const camera3d = camera.getMutableComponent(Object3d).value;
+
+      camera3d.position.z = -4;
+      camera3d.position.y = 1;
+      camera3d.rotation.y = Math.PI;
+
+      this.composer.addPass(new RenderPass(this.scene, camera3d));
+      this.composer.addPass(new UnrealBloomPass(undefined, 1.6, 1, 0));
+    });
+
     this.queries.object3d.added.forEach((entity: any) => {
       this.scene.add(entity.getComponent(Object3d).value);
     });
@@ -130,12 +141,14 @@ export class Render extends System {
 
     this.queries.camera.results.forEach((entity: any) => {
       const transform = entity.getComponent(Transform);
-      this.camera.position.copy(transform.renderPosition);
-      this.camera.quaternion.copy(transform.renderRotation);
+      const camera3d = entity.getComponent(Object3d).value;
+
+      camera3d.position.copy(transform.renderPosition);
+      camera3d.quaternion.copy(transform.renderRotation);
 
       const inputStateEntity = this.queries.inputStates.results[0];
       const inputState = inputStateEntity.getMutableComponent(InputState);
-      this.raycaster.setFromCamera(inputState.mousePosition, this.camera);
+      this.raycaster.setFromCamera(inputState.mousePosition, camera3d);
     });
 
     this.queries.player.results.forEach((entity: any) => {
