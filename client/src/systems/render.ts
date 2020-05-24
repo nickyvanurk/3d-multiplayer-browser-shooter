@@ -42,7 +42,6 @@ export class Render extends System {
   private gunLine1: any;
   private gunLine2: any;
   private scene: THREE.Scene;
-  private camera: any;
   private renderer: THREE.WebGLRenderer;
   private composer: any;
 
@@ -55,16 +54,6 @@ export class Render extends System {
 
     this.scene = new THREE.Scene();
     this.scene.fog = new THREE.Fog(0x020207, 0.04);
-
-    this.camera = this.world.createEntity()
-                            .addComponent(Camera, {
-                              fov: 70,
-                              aspect: window.innerWidth / window.innerHeight,
-                              near: 0.1,
-                              far: 10000,
-                              handleResize: true
-                            })
-                            .addComponent(Transform);
 
     this.renderStars();
 

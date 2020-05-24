@@ -12,6 +12,7 @@ import {Object3d} from './components/object3d';
 import {PlayerController} from './components/player-controller';
 import {Physics} from './components/physics';
 import {SphereCollider} from './components/sphere-collider';
+import {Camera} from './components/camera';
 
 import {Render} from './systems/render';
 import {Input} from './systems/input';
@@ -51,6 +52,8 @@ export default class Game {
       .registerSystem(PhysicsSystem)
       .registerSystem(Render);
 
+
+    this.createCamera();
     this.spawnModels(100);
     this.spawnPlayer();
   }
@@ -85,6 +88,18 @@ export default class Game {
     loadingBar.addEventListener('transitionend', (event: TransitionEvent) => {
       event.stopPropagation();
     });
+  }
+
+  createCamera() {
+    this.world.createEntity()
+    .addComponent(Camera, {
+      fov: 70,
+      aspect: window.innerWidth / window.innerHeight,
+      near: 0.1,
+      far: 10000,
+      handleResize: true
+    })
+    .addComponent(Transform);
   }
 
   spawnModels(amount: number) {
