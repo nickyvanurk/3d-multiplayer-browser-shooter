@@ -1,8 +1,10 @@
 import {Component} from 'ecsy';
 import {WebGLRenderer} from 'three';
+import {EffectComposer} from 'three/examples/jsm/postprocessing/EffectComposer';
 
 export class WebGlRendererContext extends Component {
-  public value: WebGLRenderer;
+  public renderer: WebGLRenderer;
+  public composer: EffectComposer;
 
   constructor() {
     super();
@@ -11,10 +13,12 @@ export class WebGlRendererContext extends Component {
   }
 
   copy(src: WebGlRendererContext) {
-    this.value = src.value;
+    this.renderer = src.renderer;
+    this.composer = src.composer;
   }
 
   reset() {
-    this.value = null;
+    this.renderer = null;
+    this.composer = null;
   }
 }

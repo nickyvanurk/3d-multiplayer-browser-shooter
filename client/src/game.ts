@@ -25,6 +25,7 @@ import {Camera} from './components/camera';
 import {Scene} from './components/scene';
 import {WebGlRenderer} from './components/webgl-renderer';
 import {RenderPass} from './components/render-pass';
+import {UnrealBloomPass} from './components/unreal-bloom-pass';
 
 import {WebGlRendererSystem} from './systems/webgl-renderer-system';
 import {Input} from './systems/input';
@@ -71,7 +72,8 @@ export default class Game {
     const scene = new Scene$1();
     this.world.createEntity().addComponent(Scene, {value: scene});
 
-    this.world.createEntity().addComponent(RenderPass, {scene});
+    this.world.createEntity().addComponent(RenderPass);
+    this.world.createEntity().addComponent(UnrealBloomPass);
 
     const camera = this.world.createEntity()
       .addComponent(Camera, {
