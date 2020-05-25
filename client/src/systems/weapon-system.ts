@@ -48,15 +48,15 @@ export class WeaponSystem extends System {
           this.world.createEntity()
           .addComponent(Object3d, {value: this.bulletMesh.clone()})
           .addComponent(Transform, {position, rotation})
-          .addComponent(Physics, {velocity});
-          // .addComponent(Timeout, {
-          //   timer: 1000,
-          //   removeComponents: [
-          //     Physics,
-          //     Transform,
-          //     Object3d
-          //   ]
-          // });
+          .addComponent(Physics, {velocity})
+          .addComponent(Timeout, {
+            timer: 500,
+            removeComponents: [
+              Physics,
+              Transform,
+              Object3d
+            ]
+          });
         }
       }
     });

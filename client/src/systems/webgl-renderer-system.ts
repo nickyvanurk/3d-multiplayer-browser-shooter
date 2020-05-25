@@ -44,7 +44,8 @@ export class WebGlRendererSystem extends System {
     object3ds: {
       components: [Object3d],
       listen: {
-        added: true
+        added: true,
+        removed: true
       }
     }
   };
@@ -140,6 +141,13 @@ export class WebGlRendererSystem extends System {
       const object3d = object3dEntity.getComponent(Object3d).value;
 
       scene.add(object3d);
+    });
+
+    this.queries.object3ds.removed.forEach((object3dEntity: Entity) => {
+      const scene = this.queries.scene.results[0].getMutableComponent(Scene).value;
+      const object3d = object3dEntity.getRemovedComponent(Object3d).value;
+
+      scene.remove(object3d);
     });
   }
 }
