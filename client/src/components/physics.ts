@@ -20,9 +20,15 @@ export class Physics extends Component {
   }
 
   copy(src: Physics) {
-    this.velocity.copy(src.velocity);
-    this.angularVelocity.copy(src.angularVelocity);
-    this.acceleration = src.acceleration;
+    if (src.velocity) {
+      this.velocity.copy(src.velocity);
+    }
+
+    if (src.angularVelocity) {
+      this.angularVelocity.copy(src.angularVelocity)
+    };
+
+    this.acceleration = src.acceleration || this.acceleration;
   }
 
   reset() {

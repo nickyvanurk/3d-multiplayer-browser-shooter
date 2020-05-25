@@ -175,8 +175,7 @@ export default class Game {
             (Math.random() - 0.5) * 120,
             (Math.random() - 0.5) * 120,
             (Math.random() - 0.5) * 120
-          ),
-          rotation: new Vector3()
+          )
         })
         .addComponent(Physics)
         .addComponent(Rotating)
@@ -185,12 +184,6 @@ export default class Game {
   }
 
   spawnPlayer() {
-    // gun
-    //    child
-    //    offset
-    //    spawn projectile
-    //      mesh
-
     const gun = this.world.createEntity()
       .addComponent(Gun, {offset: new Vector3(0, 0, 0)});
 

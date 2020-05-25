@@ -21,7 +21,7 @@ export class Gun extends Component {
 
   reset() {
     this.offset.set(0, 0, 0);
-    this.firingRate = 500;
+    this.firingRate = 80;
     this.lastFiredTimestamp = null;
   }
 }

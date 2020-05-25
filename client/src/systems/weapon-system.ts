@@ -20,7 +20,7 @@ export class WeaponSystem extends System {
   private bulletMesh: Mesh
 
   init() {
-    const geometry = new BoxGeometry(0.1, 0.1, 0.5);
+    const geometry = new BoxGeometry(0.1, 0.1, 1);
     const material = new MeshBasicMaterial( {color: 0xff0000} );
     this.bulletMesh = new Mesh(geometry, material);
   }
@@ -41,34 +41,23 @@ export class WeaponSystem extends System {
 
           const parentTransform =  weaponEntity.getComponent(Transform);
 
-          console.log(parentTransform.rotation);
+          const position = parentTransform.position;
+          const rotation = parentTransform.rotation;
+          const velocity = new Vector3(0, 0, 0.1).applyQuaternion(parentTransform.rotation);
 
           this.world.createEntity()
           .addComponent(Object3d, {value: this.bulletMesh.clone()})
-          .addComponent(Transform, {
-            position: parentTransform.position,
-            rotation: parentTransform.renderRotation
-          })
-          .addComponent(Physics);
+          .addComponent(Transform, {position, rotation})
+          .addComponent(Physics, {velocity});
+          // .addComponent(Timeout, {
+          //   timer: 1000,
+          //   removeComponents: [
+          //     Physics,
+          //     Transform,
+          //     Object3d
+          //   ]
+          // });
         }
-
-
-        // this.world.createEntity()
-        // .addComponent(Object3d, {value: this.bulletMesh.clone()})
-        // .addComponent(Transform, {
-        //   position
-        // });
-        // if (weapon.hasComponent(Gun)) {
-        //   const gun = weapon.getMutableComponent(Gun);
-
-        //   if (gun.lastFiredTimestamp + gun.firingRate < time)  {
-        //     gun.lastFiredTimestamp = time;
-
-        //     // console.log('Firing!');
-
-
-        //   }
-        // }
       }
     });
   }
