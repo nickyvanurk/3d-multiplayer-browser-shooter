@@ -3,6 +3,7 @@ import {InputState} from '../components/input-state';
 import {PlayerController} from '../components/player-controller';
 import {PlayerInputState} from '../components/player-input-state';
 import {Weapon} from '../components/weapon';
+import {Recovering} from '../components/recovering';
 import {Active} from '../components/active';
 
 export class PlayerInput extends System {
@@ -62,8 +63,10 @@ export class PlayerInput extends System {
       const weapon = playerEntity.getMutableComponent(Weapon).value;
 
       if (activeWeapon) {
-        if (!weapon.hasComponent(Active)) {
+        if (!weapon.hasComponent(Recovering)) {
           weapon.addComponent(Active);
+        } else if (weapon.hasComponent(Active)) {
+          weapon.removeComponent(Active);
         }
       } else if (weapon.hasComponent(Active)) {
         weapon.removeComponent(Active);

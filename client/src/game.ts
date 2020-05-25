@@ -35,6 +35,7 @@ import {PlayerInput} from './systems/player-input';
 import {PhysicsSystem} from './systems/physics-system';
 import {CameraSystem} from './systems/camera-system';
 import {TransformSystem} from './systems/transform-system';
+import {TimeoutSystem} from './systems/timeout-system';
 import {WeaponSystem} from './systems/weapon-system';
 
 export default class Game {
@@ -66,6 +67,7 @@ export default class Game {
       .registerSystem(CameraSystem)
       .registerSystem(Input)
       .registerSystem(PlayerInput)
+      .registerSystem(TimeoutSystem)
       .registerSystem(WeaponSystem)
       .registerSystem(PhysicsSystem)
       .registerSystem(TransformSystem)

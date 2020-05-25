@@ -26,6 +26,7 @@ export class Transform extends Component {
 
   copy(src: Transform) {
     this.position.copy(src.position);
+    this.rotation.copy(src.rotation);
   }
 
   reset() {
