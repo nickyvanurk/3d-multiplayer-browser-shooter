@@ -21,7 +21,7 @@ export class WeaponSystem extends System {
 
   init() {
     const geometry = new BoxGeometry(0.1, 0.1, 1);
-    const material = new MeshBasicMaterial( {color: 0xff0000} );
+    const material = new MeshBasicMaterial( {color: 0xffa900} );
     this.bulletMesh = new Mesh(geometry, material);
   }
 
