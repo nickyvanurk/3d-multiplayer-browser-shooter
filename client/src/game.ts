@@ -67,7 +67,8 @@ export default class Game {
       .registerSystem(TransformSystem)
       .registerSystem(WebGlRendererSystem);
 
-    this.world.createEntity().addComponent(WebGlRenderer);
+    this.world.createEntity()
+      .addComponent(WebGlRenderer, {antialias: true, clearColor: 0x020207});
 
     const scene = new Scene$1();
     this.world.createEntity().addComponent(Scene, {value: scene});

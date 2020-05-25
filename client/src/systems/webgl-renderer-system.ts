@@ -66,9 +66,10 @@ export class WebGlRendererSystem extends System {
       this.queries.renderersUninitialized.results.forEach((rendererEntity: Entity) => {
       const component = rendererEntity.getComponent(WebGlRenderer);
 
-      const renderer = new WebGLRenderer();
+      const renderer = new WebGLRenderer({antialias: component.antialias});
       renderer.setPixelRatio(window.devicePixelRatio);
       renderer.setSize(component.width, component.height);
+      renderer.setClearColor(component.clearColor);
       renderer.shadowMap.enabled = component.shadowMap;
 
       document.body.appendChild(renderer.domElement);
