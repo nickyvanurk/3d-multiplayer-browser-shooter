@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import {System, Not} from 'ecsy';
+import {System, Not, Entity} from 'ecsy';
+
 import {Rotating} from '../components/rotating';
 import {PlayerInputState} from '../components/player-input-state';
 import {Transform} from '../components/transform';
@@ -7,6 +8,9 @@ import {Physics} from '../components/physics';
 import {Object3d} from '../components/object3d';
 import {Camera} from '../components/camera';
 import {SphereCollider} from '../components/sphere-collider';
+import {Colliding} from '../components/colliding';
+import {CollisionStart} from '../components/collision-start';
+import {CollisionStop} from '../components/collision-stop';
 
 import createFixedTimestep from 'shared/src/utils/create-fixed-timestep';
 
@@ -37,17 +41,59 @@ export class PhysicsSystem extends System {
       listen: {
         added: true
       }
+    },
+    collisions: {
+      components: [Colliding],
+      listen: {
+        added: true
+      }
+    },
+    collisionsStart: {
+      components: [CollisionStart],
+      listen: {
+        added: true
+      }
+    },
+    collisionsStop: {
+      components: [CollisionStop],
+      listen: {
+        added: true
+      }
     }
   };
 
+  private frame: number;
   private fixedUpdate: Function;
 
   init() {
+    this.frame = 0;
     this.fixedUpdate = createFixedTimestep(1000/60, this.handleFixedUpdate.bind(this));
   }
 
   execute(delta: number) {
     const nextFrameRatio = this.fixedUpdate(delta);
+
+    this.queries.collisionsStart.results.forEach((collisionStartEntity: Entity) => {
+      collisionStartEntity.removeComponent(CollisionStart);
+
+      console.log('Collision Start!');
+    });
+
+    this.queries.collisionsStop.results.forEach((collisionStopEntity: Entity) => {
+      collisionStopEntity.removeComponent(CollisionStop);
+
+      console.log('Collision Stop!');
+    });
+
+    this.queries.collisions.results.forEach((collisionEntity: Entity) => {
+      const component = collisionEntity.getComponent(Colliding);
+
+      if (component.collidingFrame !== this.frame) {
+        collisionEntity.removeComponent(Colliding);
+        collisionEntity.addComponent(CollisionStop);
+        return;
+      }
+    });
 
     this.queries.transforms.results.forEach((entity: any) => {
       const transform = entity.getMutableComponent(Transform);
@@ -72,6 +118,8 @@ export class PhysicsSystem extends System {
   }
 
   handleFixedUpdate(delta: number) {
+    this.frame++;
+
     this.queries.players.results.forEach((entity: any) => {
       const input = entity.getMutableComponent(PlayerInputState);
       const transform = entity.getMutableComponent(Transform);
@@ -151,60 +199,99 @@ export class PhysicsSystem extends System {
       octree.insert(entity);
     });
 
-    sphereColliders.forEach((entity: any) => {
+    sphereColliders.forEach((entity: Entity) => {
       const transform = entity.getMutableComponent(Transform);
       const sphereCollider = entity.getComponent(SphereCollider);
       const nearbyEntities = octree.query(transform.position, sphereCollider.radius * 2);
 
-      nearbyEntities.forEach((other: any) => {
+      const transform1 = entity.getMutableComponent(Transform);
+
+      nearbyEntities.forEach((other: Entity) => {
         if (entity === other) {
           return;
         }
 
-        const transform1 = entity.getMutableComponent(Transform);
         const transform2 = other.getMutableComponent(Transform);
-
-        const sphere1 = new THREE.Sphere().translate(transform1.position);
-        const sphere2 = new THREE.Sphere().translate(transform2.position);
 
         const sphereCollider1 = entity.getComponent(SphereCollider);
         const sphereCollider2 = other.getComponent(SphereCollider);
 
-        sphere1.radius = sphereCollider1.radius;
-        sphere2.radius = sphereCollider2.radius;
+        const sphere1 = new THREE.Sphere(transform1.position, sphereCollider1.radius);
+        const sphere2 = new THREE.Sphere(transform2.position, sphereCollider2.radius);
 
         if (sphere1.intersectsSphere(sphere2)) {
+          if (!entity.hasComponent(Colliding)) {
+            entity.addComponent(Colliding, {collisionFrame: this.frame});
+            entity.addComponent(CollisionStart);
+          }
+
+          if (!other.hasComponent(Colliding)) {
+            other.addComponent(Colliding, {collisionFrame: this.frame});
+            other.addComponent(CollisionStart);
+          }
+
+          let component = entity.getMutableComponent(Colliding);
+
+          if (!component.collidingWidth.includes(other)) {
+            component.collidingWidth.push(other);
+          }
+
+          component = other.getMutableComponent(Colliding);
+
+          if (!component.collidingWidth.includes(entity)) {
+            component.collidingWidth.push(entity);
+          }
+
+          const n = new THREE.Vector3();
+          n.copy(sphere2.center).sub(sphere1.center);
+          n.normalize();
+
           const physics1 = entity.getMutableComponent(Physics);
           const physics2 = other.getMutableComponent(Physics);
 
-          const distance = transform1.position.distanceTo(transform2.position);
+          const p =  physics1.velocity.dot(n) - physics2.velocity.dot(n);
 
-          const nx = (transform2.position.x - transform1.position.x) / distance;
-          const ny = (transform2.position.y - transform1.position.y) / distance;
-          const nz = (transform2.position.z - transform1.position.z) / distance;
+          physics1.velocity.sub(new THREE.Vector3().copy(n).multiplyScalar(p));
+          physics2.velocity.add(new THREE.Vector3().copy(n).multiplyScalar(p));
 
-          const p = (physics1.velocity.x * nx + physics1.velocity.y * ny + physics1.velocity.z * nz) -
-                    (physics2.velocity.x * nx + physics2.velocity.y * ny + physics2.velocity.z * nz);
+          const overlap = sphere1.radius + sphere2.radius - sphere1.center.distanceTo(sphere2.center);
 
-          physics1.velocity.x -= p * nx;
-          physics1.velocity.y -= p * ny;
-          physics1.velocity.z -= p * nz;
+          transform1.position.sub(new THREE.Vector3().copy(n).multiplyScalar(overlap / 2));
+          transform2.position.add(new THREE.Vector3().copy(n).multiplyScalar(overlap / 2));
 
-          physics2.velocity.x += p * nx;
-          physics2.velocity.y += p * ny;
-          physics2.velocity.z += p * nz;
+          // const distance = transform1.position.distanceTo(transform2.position);
 
-          const midpointX = (transform1.position.x + transform2.position.x) / 2;
-          const midpointY = (transform1.position.y + transform2.position.y) / 2;
-          const midpointZ = (transform1.position.z + transform2.position.z) / 2;
+          // const nx = (transform2.position.x - transform1.position.x) / distance;
+          // const ny = (transform2.position.y - transform1.position.y) / distance;
+          // const nz = (transform2.position.z - transform1.position.z) / distance;
 
-          transform1.position.x = midpointX - sphereCollider1.radius * nx;
-          transform1.position.y = midpointY - sphereCollider1.radius * ny;
-          transform1.position.z = midpointZ - sphereCollider1.radius * nz;
+          // const p = (physics1.velocity.x * nx + physics1.velocity.y * ny + physics1.velocity.z * nz) -
+          //           (physics2.velocity.x * nx + physics2.velocity.y * ny + physics2.velocity.z * nz);
 
-          transform2.position.x = midpointX + sphereCollider2.radius * nx;
-          transform2.position.y = midpointY + sphereCollider2.radius * ny;
-          transform2.position.z = midpointZ + sphereCollider2.radius * nz;
+          // physics1.velocity.x -= p * nx;
+          // physics1.velocity.y -= p * ny;
+          // physics1.velocity.z -= p * nz;
+
+          // physics2.velocity.x += p * nx;
+          // physics2.velocity.y += p * ny;
+          // physics2.velocity.z += p * nz;
+
+          // const midpointX = (transform1.position.x + transform2.position.x) / 2;
+          // const midpointY = (transform1.position.y + transform2.position.y) / 2;
+          // const midpointZ = (transform1.position.z + transform2.position.z) / 2;
+
+          // const midPoint = new THREE.Vector3().copy(transform1.position).add(transform2.position);
+
+
+
+
+          // transform1.position.x = (midPoint.x - sphereCollider1.radius) * n.x;
+          // transform1.position.y = (midPoint.y - sphereCollider1.radius) * n.y;
+          // transform1.position.z = (midPoint.z - sphereCollider1.radius) * n.z;
+
+          // transform2.position.x = (midPoint.x + sphereCollider2.radius) * n.x;
+          // transform2.position.y = (midPoint.y + sphereCollider2.radius) * n.y;
+          // transform2.position.z = (midPoint.z + sphereCollider2.radius) * n.z;
         }
       });
     });
