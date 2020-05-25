@@ -258,40 +258,6 @@ export class PhysicsSystem extends System {
 
           transform1.position.sub(new THREE.Vector3().copy(n).multiplyScalar(overlap / 2));
           transform2.position.add(new THREE.Vector3().copy(n).multiplyScalar(overlap / 2));
-
-          // const distance = transform1.position.distanceTo(transform2.position);
-
-          // const nx = (transform2.position.x - transform1.position.x) / distance;
-          // const ny = (transform2.position.y - transform1.position.y) / distance;
-          // const nz = (transform2.position.z - transform1.position.z) / distance;
-
-          // const p = (physics1.velocity.x * nx + physics1.velocity.y * ny + physics1.velocity.z * nz) -
-          //           (physics2.velocity.x * nx + physics2.velocity.y * ny + physics2.velocity.z * nz);
-
-          // physics1.velocity.x -= p * nx;
-          // physics1.velocity.y -= p * ny;
-          // physics1.velocity.z -= p * nz;
-
-          // physics2.velocity.x += p * nx;
-          // physics2.velocity.y += p * ny;
-          // physics2.velocity.z += p * nz;
-
-          // const midpointX = (transform1.position.x + transform2.position.x) / 2;
-          // const midpointY = (transform1.position.y + transform2.position.y) / 2;
-          // const midpointZ = (transform1.position.z + transform2.position.z) / 2;
-
-          // const midPoint = new THREE.Vector3().copy(transform1.position).add(transform2.position);
-
-
-
-
-          // transform1.position.x = (midPoint.x - sphereCollider1.radius) * n.x;
-          // transform1.position.y = (midPoint.y - sphereCollider1.radius) * n.y;
-          // transform1.position.z = (midPoint.z - sphereCollider1.radius) * n.z;
-
-          // transform2.position.x = (midPoint.x + sphereCollider2.radius) * n.x;
-          // transform2.position.y = (midPoint.y + sphereCollider2.radius) * n.y;
-          // transform2.position.z = (midPoint.z + sphereCollider2.radius) * n.z;
         }
       });
     });
