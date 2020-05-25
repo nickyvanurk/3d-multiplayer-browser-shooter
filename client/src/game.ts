@@ -71,6 +71,8 @@ export default class Game {
     const scene = new Scene$1();
     this.world.createEntity().addComponent(Scene, {value: scene});
 
+    this.world.createEntity().addComponent(RenderPass, {scene});
+
     const camera = this.world.createEntity()
       .addComponent(Camera, {
         fov: 70,
@@ -81,9 +83,7 @@ export default class Game {
       })
       .addComponent(Transform);
 
-    this.world.createEntity().addComponent(RenderPass, {scene, camera});
-
-    let transform = camera.getMutableComponent(Transform);
+    const transform = camera.getMutableComponent(Transform);
     transform.position.y = 1;
     transform.position.z = -4;
 
