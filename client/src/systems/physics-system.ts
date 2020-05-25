@@ -72,12 +72,6 @@ export class PhysicsSystem extends System {
   }
 
   handleFixedUpdate(delta: number) {
-    this.queries.transforms.results.forEach((entity: any) => {
-      const transform = entity.getMutableComponent(Transform);
-      transform.previousPosition.copy(transform.position);
-      transform.previousRotation.copy(transform.rotation);
-    });
-
     this.queries.players.results.forEach((entity: any) => {
       const input = entity.getMutableComponent(PlayerInputState);
       const transform = entity.getMutableComponent(Transform);

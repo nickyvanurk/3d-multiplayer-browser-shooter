@@ -16,19 +16,22 @@ export class TransformSystem extends System {
 
   execute() {
     this.queries.transforms.added.forEach((transformEntity: Entity) => {
-      const transform = transformEntity.getComponent(Transform);
-      const object3d = transformEntity.getComponent(Object3d).value;
-
-      object3d.position.copy(transform.renderPosition);
-      object3d.quaternion.copy(transform.renderRotation);
+     this.updateTransform(transformEntity);
     });
 
     this.queries.transforms.changed.forEach((transformEntity: Entity) => {
-      const transform = transformEntity.getComponent(Transform);
-      const object3d = transformEntity.getComponent(Object3d).value;
-
-      object3d.position.copy(transform.renderPosition);
-      object3d.quaternion.copy(transform.renderRotation);
+     this.updateTransform(transformEntity);
     });
+  }
+
+  updateTransform(transformEntity: Entity) {
+    const transform = transformEntity.getComponent(Transform);
+    const object3d = transformEntity.getComponent(Object3d).value;
+
+    object3d.position.copy(transform.renderPosition);
+    object3d.quaternion.copy(transform.renderRotation);
+
+    transform.previousPosition.copy(transform.position);
+    transform.previousRotation.copy(transform.rotation);
   }
 }
