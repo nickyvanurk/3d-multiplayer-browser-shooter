@@ -26,9 +26,10 @@
   },
   "dependencies": {
     "@geckos.io/client": "^1.4.1",
+    "@types/three": "^0.103.2",
     "ecsy": "^0.2.3",
     "extract-text-webpack-plugin": "^4.0.0-beta.0",
-    "three": "^0.116.1",
-    "shared": "file:../shared/"
+    "shared": "file:../shared/",
+    "three": "^0.116.1"
   }
 }

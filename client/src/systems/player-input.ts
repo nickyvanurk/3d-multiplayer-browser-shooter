@@ -1,7 +1,9 @@
-import {System} from 'ecsy';
+import {System, Entity} from 'ecsy';
 import {InputState} from '../components/input-state';
 import {PlayerController} from '../components/player-controller';
 import {PlayerInputState} from '../components/player-input-state';
+import {Weapon} from '../components/weapon';
+import {Active} from '../components/active';
 
 export class PlayerInput extends System {
   static queries: any = {
@@ -16,6 +18,9 @@ export class PlayerInput extends System {
     },
     playerInputStates: {
       components: [PlayerInputState]
+    },
+    playersWithWeapons: {
+      components: [PlayerController, Weapon]
     }
   };
 
@@ -50,5 +55,19 @@ export class PlayerInput extends System {
 
     playerInputState.yaw = -inputState.mousePosition.x;
     playerInputState.pitch = -inputState.mousePosition.y;
+
+    const activeWeapon = inputState.mouseButtonsDown.includes(playerController.weapon);
+
+    this.queries.playersWithWeapons.results.forEach((playerEntity: Entity) => {
+      const weapon = playerEntity.getMutableComponent(Weapon).value;
+
+      if (activeWeapon) {
+        if (!weapon.hasComponent(Active)) {
+          weapon.addComponent(Active);
+        }
+      } else if (weapon.hasComponent(Active)) {
+        weapon.removeComponent(Active);
+      }
+    });
   }
 }

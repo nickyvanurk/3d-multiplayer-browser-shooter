@@ -26,6 +26,8 @@ import {Scene} from './components/scene';
 import {WebGlRenderer} from './components/webgl-renderer';
 import {RenderPass} from './components/render-pass';
 import {UnrealBloomPass} from './components/unreal-bloom-pass';
+import {Weapon} from './components/weapon';
+import {Gun} from './components/gun';
 
 import {WebGlRendererSystem} from './systems/webgl-renderer-system';
 import {Input} from './systems/input';
@@ -33,6 +35,7 @@ import {PlayerInput} from './systems/player-input';
 import {PhysicsSystem} from './systems/physics-system';
 import {CameraSystem} from './systems/camera-system';
 import {TransformSystem} from './systems/transform-system';
+import {WeaponSystem} from './systems/weapon-system';
 
 export default class Game {
   private lastTime: number;
@@ -63,6 +66,7 @@ export default class Game {
       .registerSystem(CameraSystem)
       .registerSystem(Input)
       .registerSystem(PlayerInput)
+      .registerSystem(WeaponSystem)
       .registerSystem(PhysicsSystem)
       .registerSystem(TransformSystem)
       .registerSystem(WebGlRendererSystem);
@@ -179,6 +183,15 @@ export default class Game {
   }
 
   spawnPlayer() {
+    // gun
+    //    child
+    //    offset
+    //    spawn projectile
+    //      mesh
+
+    const gun = this.world.createEntity()
+      .addComponent(Gun, {offset: new Vector3(0, 0, 0)});
+
     const model = this.assetManager.getModel('spaceship');
 
     this.world.createEntity()
@@ -193,8 +206,10 @@ export default class Game {
         strafeRight: 'KeyD',
         strafeUp: 'Space',
         strafeDown: 'ControlLeft',
+        weapon: 0
       })
       .addComponent(Physics)
-      .addComponent(SphereCollider, {radius: 1});
+      .addComponent(SphereCollider, {radius: 1})
+      .addComponent(Weapon, {value: gun});
   }
 }
