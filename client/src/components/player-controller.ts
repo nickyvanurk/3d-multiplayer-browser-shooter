@@ -9,7 +9,7 @@ export class PlayerController extends Component {
   strafeDown: string;
   strafeLeft: string;
   strafeRight: string;
-  weapon: string;
+  weaponPrimary: string;
 
   constructor() {
     super();
@@ -25,6 +25,6 @@ export class PlayerController extends Component {
     this.strafeDown = null;
     this.strafeLeft = null;
     this.strafeRight = null;
-    this.weapon = null;
+    this.weaponPrimary = null;
   }
 }

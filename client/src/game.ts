@@ -26,8 +26,8 @@ import {Scene} from './components/scene';
 import {WebGlRenderer} from './components/webgl-renderer';
 import {RenderPass} from './components/render-pass';
 import {UnrealBloomPass} from './components/unreal-bloom-pass';
-import {Weapon} from './components/weapon';
-import {Gun} from './components/gun';
+import {Weapon, WeaponType} from './components/weapon';
+import {Weapons} from './components/weapons';
 
 import {WebGlRendererSystem} from './systems/webgl-renderer-system';
 import {Input} from './systems/input';
@@ -184,12 +184,9 @@ export default class Game {
   }
 
   spawnPlayer() {
-    const gun = this.world.createEntity()
-      .addComponent(Gun, {offset: new Vector3(0, 0, 0)});
-
     const model = this.assetManager.getModel('spaceship');
 
-    this.world.createEntity()
+    const player = this.world.createEntity()
       .addComponent(Object3d, {value: model.scene.clone()})
       .addComponent(Transform)
       .addComponent(PlayerController, {
@@ -201,10 +198,31 @@ export default class Game {
         strafeRight: 'KeyD',
         strafeUp: 'Space',
         strafeDown: 'ControlLeft',
-        weapon: 0
+        weaponPrimary: 0
       })
       .addComponent(Physics)
-      .addComponent(SphereCollider, {radius: 1})
-      .addComponent(Weapon, {value: gun});
+      .addComponent(SphereCollider, {radius: 1});
+
+    const weapon1 = this.world.createEntity()
+      .addComponent(Transform)
+      .addComponent(Weapon, {
+        type: WeaponType.Gun,
+        offset: new Vector3(0.5, 0, 0.5),
+        fireInterval: 100,
+        parent: player
+      });
+
+    const weapon2 = this.world.createEntity()
+      .addComponent(Transform)
+      .addComponent(Weapon, {
+        type: WeaponType.Gun,
+        offset: new Vector3(-0.5, 0, 0.5),
+        fireInterval: 100,
+        parent: player
+      });
+
+    player.addComponent(Weapons, {
+      primary: [weapon1, weapon2]
+    });
   }
 }

@@ -1,19 +1,17 @@
 import {System, Entity} from 'ecsy';
 import {BoxGeometry, MeshBasicMaterial, Mesh, Vector3} from 'three';
 
-import {Gun} from '../components/gun';
 import {Active} from '../components/active';
 import {Object3d} from '../components/object3d';
 import {Transform} from '../components/transform';
 import {Physics} from '../components/physics';
 import {Weapon} from '../components/weapon';
-import {Recovering} from '../components/recovering';
-import { Timeout } from '../components/timeout';
+import {Timeout} from '../components/timeout';
 
 export class WeaponSystem extends System {
   static queries: any = {
-    weapons: {
-      components: [Weapon]
+    weaponsActive: {
+      components: [Weapon, Active]
     }
   };
 
@@ -26,26 +24,30 @@ export class WeaponSystem extends System {
   }
 
   execute(delta: number, time: number) {
-    this.queries.weapons.results.forEach((weaponEntity: Entity) => {
-      const weapon = weaponEntity.getComponent(Weapon).value;
+    this.queries.weaponsActive.results.forEach((weaponEntity: Entity) => {
+      const weapon: Weapon = weaponEntity.getComponent(Weapon);
+      const transform = weaponEntity.getComponent(Transform);
 
-      if (weapon.hasComponent(Active)) {
-        if (weapon.hasComponent(Gun)) {
-          const gun = weapon.getComponent(Gun);
+      if (weapon.lastFiredTimestamp + weapon.fireInterval < time) {
+        weapon.lastFiredTimestamp = time;
 
-          weapon.addComponent(Recovering)
-            .addComponent(Timeout, {
-              timer: gun.firingRate,
-              removeComponents: [Recovering]
-            });
+        let position = new Vector3().copy(weapon.offset)
+          .applyQuaternion(transform.rotation)
+          .add(transform.position);
+        let rotation = transform.rotation;
 
-          const parentTransform =  weaponEntity.getComponent(Transform);
+        if (weapon.parent) {
+          const parentTransform = weapon.parent.getComponent(Transform);
 
-          const position = parentTransform.position;
-          const rotation = parentTransform.rotation;
-          const velocity = new Vector3(0, 0, 0.1).applyQuaternion(parentTransform.rotation);
+          position = new Vector3().copy(weapon.offset)
+            .applyQuaternion(parentTransform.rotation)
+            .add(parentTransform.position);
+          rotation.copy(parentTransform.rotation)
+        }
 
-          this.world.createEntity()
+        const velocity = new Vector3(0, 0, 0.1).applyQuaternion(transform.rotation);
+
+        this.world.createEntity()
           .addComponent(Object3d, {value: this.bulletMesh.clone()})
           .addComponent(Transform, {position, rotation})
           .addComponent(Physics, {velocity})
@@ -57,7 +59,6 @@ export class WeaponSystem extends System {
               Object3d
             ]
           });
-        }
       }
     });
   }

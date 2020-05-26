@@ -2,8 +2,7 @@ import {System, Entity} from 'ecsy';
 import {InputState} from '../components/input-state';
 import {PlayerController} from '../components/player-controller';
 import {PlayerInputState} from '../components/player-input-state';
-import {Weapon} from '../components/weapon';
-import {Recovering} from '../components/recovering';
+import {Weapons} from '../components/weapons';
 import {Active} from '../components/active';
 
 export class PlayerInput extends System {
@@ -21,7 +20,7 @@ export class PlayerInput extends System {
       components: [PlayerInputState]
     },
     playersWithWeapons: {
-      components: [PlayerController, Weapon]
+      components: [PlayerController, Weapons]
     }
   };
 
@@ -57,19 +56,25 @@ export class PlayerInput extends System {
     playerInputState.yaw = -inputState.mousePosition.x;
     playerInputState.pitch = -inputState.mousePosition.y;
 
-    const activeWeapon = inputState.mouseButtonsDown.includes(playerController.weapon);
+    const primaryWeaponActive = inputState.mouseButtonsDown.includes(playerController.weaponPrimary);
 
     this.queries.playersWithWeapons.results.forEach((playerEntity: Entity) => {
-      const weapon = playerEntity.getMutableComponent(Weapon).value;
+      if (primaryWeaponActive) {
+        if (playerEntity.hasComponent(Weapons)) {
+          const weapons = playerEntity.getComponent(Weapons).primary;
 
-      if (activeWeapon) {
-        if (!weapon.hasComponent(Recovering)) {
-          weapon.addComponent(Active);
-        } else if (weapon.hasComponent(Active)) {
-          weapon.removeComponent(Active);
+          weapons.forEach((weaponEntity: Entity) => {
+            weaponEntity.addComponent(Active);
+          });
         }
-      } else if (weapon.hasComponent(Active)) {
-        weapon.removeComponent(Active);
+      } else if (playerEntity.hasComponent(Weapons)) {
+        const weapons = playerEntity.getComponent(Weapons).primary;
+
+        weapons.forEach((weaponEntity: Entity) => {
+          if (weaponEntity.hasComponent(Active)) {
+            weaponEntity.removeComponent(Active);
+          }
+        });
       }
     });
   }
