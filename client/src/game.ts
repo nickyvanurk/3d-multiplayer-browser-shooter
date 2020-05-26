@@ -28,6 +28,8 @@ import {RenderPass} from './components/render-pass';
 import {UnrealBloomPass} from './components/unreal-bloom-pass';
 import {Weapon, WeaponType} from './components/weapon';
 import {Weapons} from './components/weapons';
+import {Raycaster} from './components/raycaster';
+import {RaycasterReceiver} from './components/raycast-receiver';
 
 import {WebGlRendererSystem} from './systems/webgl-renderer-system';
 import {Input} from './systems/input';
@@ -37,6 +39,7 @@ import {CameraSystem} from './systems/camera-system';
 import {TransformSystem} from './systems/transform-system';
 import {TimeoutSystem} from './systems/timeout-system';
 import {WeaponSystem} from './systems/weapon-system';
+import {RaycasterSystem} from './systems/raycaster-system';
 
 export default class Game {
   private lastTime: number;
@@ -65,6 +68,7 @@ export default class Game {
 
     this.world
       .registerSystem(CameraSystem)
+      .registerSystem(RaycasterSystem)
       .registerSystem(Input)
       .registerSystem(PlayerInput)
       .registerSystem(TimeoutSystem)
@@ -90,7 +94,8 @@ export default class Game {
         far: 10000,
         handleResize: true
       })
-      .addComponent(Transform);
+      .addComponent(Transform)
+      .addComponent(Raycaster);
 
     const transform = camera.getMutableComponent(Transform);
     transform.position.y = 1;
@@ -179,7 +184,8 @@ export default class Game {
         })
         .addComponent(Physics)
         .addComponent(Rotating)
-        .addComponent(SphereCollider, {radius: 1});
+        .addComponent(SphereCollider, {radius: 1})
+        .addComponent(RaycasterReceiver);
     }
   }
 
