@@ -1,5 +1,5 @@
 import {System, Entity} from 'ecsy';
-import {BoxGeometry, MeshBasicMaterial, Mesh, Vector3} from 'three';
+import {BoxGeometry, MeshBasicMaterial, Mesh, Vector3, Matrix4} from 'three';
 
 import {Active} from '../components/active';
 import {Object3d} from '../components/object3d';
@@ -7,12 +7,20 @@ import {Transform} from '../components/transform';
 import {Physics} from '../components/physics';
 import {Weapon} from '../components/weapon';
 import {Timeout} from '../components/timeout';
+import {Camera} from '../components/camera';
+import {Raycaster} from '../components/raycaster';
 
 export class WeaponSystem extends System {
   static queries: any = {
     weaponsActive: {
       components: [Weapon, Active]
-    }
+    },
+    cameraRaycaster: {
+      components: [Camera, Raycaster],
+      listen: {
+        added: true
+      }
+    },
   };
 
   private bulletMesh: Mesh
@@ -45,7 +53,24 @@ export class WeaponSystem extends System {
           rotation.copy(parentTransform.rotation)
         }
 
-        const velocity = new Vector3(0, 0, 0.1).applyQuaternion(transform.rotation);
+        const raycaster = this.queries.cameraRaycaster.results[0].getComponent(Raycaster);
+
+        let targetPosition = new Vector3();
+
+        if (raycaster.intersection) {
+          targetPosition = raycaster.intersection.point;
+        } else {
+          raycaster.value.ray.at(0.1*60*0.5*16, targetPosition); //speed*fps*0.5sec*physicsDelta
+        }
+
+        const targetDirection = new Vector3();
+        targetDirection.subVectors(targetPosition, position).normalize();
+
+        var mx = new Matrix4().lookAt(targetDirection, new Vector3(), new Vector3(0, 1, 0));
+        rotation = rotation.setFromRotationMatrix(mx);
+
+        const velocity = targetDirection.setLength(0.1);
+
 
         this.world.createEntity()
           .addComponent(Object3d, {value: this.bulletMesh.clone()})
