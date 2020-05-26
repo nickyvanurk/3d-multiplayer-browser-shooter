@@ -161,6 +161,7 @@ export default class Game {
     loadingScreen.classList.add('fade-out');
     loadingScreen.addEventListener('transitionend', () => {
       loadingScreen.style.zIndex = -1;
+      document.querySelector('.crosshair').setAttribute('visibility', 'visible');
     });
 
     const loadingBar: any = document.querySelector('.loading-screen hr');

@@ -49,6 +49,11 @@ export class Input extends System {
           x: (event.clientX/window.innerWidth)*2 - 1,
           y: -(event.clientY/window.innerHeight)*2 + 1
         };
+
+        document.querySelector('.crosshair').setAttribute('style',`
+          left: ${event.clientX/window.innerWidth*100}%;
+          top: ${event.clientY/window.innerHeight*100}%;
+        `);
       });
     });
   }
