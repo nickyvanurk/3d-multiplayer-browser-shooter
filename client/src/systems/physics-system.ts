@@ -75,14 +75,10 @@ export class PhysicsSystem extends System {
 
     this.queries.collisionsStart.results.forEach((collisionStartEntity: Entity) => {
       collisionStartEntity.removeComponent(CollisionStart);
-
-      console.log('Collision Start!');
     });
 
     this.queries.collisionsStop.results.forEach((collisionStopEntity: Entity) => {
       collisionStopEntity.removeComponent(CollisionStop);
-
-      console.log('Collision Stop!');
     });
 
     this.queries.collisions.results.forEach((collisionEntity: Entity) => {
