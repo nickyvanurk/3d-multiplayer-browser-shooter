@@ -15,8 +15,8 @@ import {CollisionStop} from '../components/collision-stop';
 import createFixedTimestep from 'shared/src/utils/create-fixed-timestep';
 
 import {BoundingBox, Octree} from '../utils/octree';
-import { Vector3 } from 'three';
-import { Moving } from '../components/moving';
+import {Moving} from '../components/moving';
+import {Owner} from '../components/owner';
 
 export class PhysicsSystem extends System {
   static queries: any = {
@@ -39,13 +39,13 @@ export class PhysicsSystem extends System {
       components: [Object3d, Camera]
     },
     sphereColliders: {
-      components: [Object3d, Transform, SphereCollider],
+      components: [Transform, SphereCollider],
       listen: {
         added: true
       }
     },
     sphereCollidersMoving: {
-      components: [Object3d, Transform, SphereCollider, Moving]
+      components: [Transform, SphereCollider, Moving]
     },
     collisions: {
       components: [Colliding],
@@ -82,11 +82,11 @@ export class PhysicsSystem extends System {
   }
 
   execute(delta: number) {
-    const nextFrameRatio = this.fixedUpdate(delta);
-
-    this.queries.collisionsStart.results.forEach((collisionStartEntity: Entity) => {
-      collisionStartEntity.removeComponent(CollisionStart);
+    this.queries.collisionsStart.results.forEach((entity: Entity) => {
+      entity.removeComponent(CollisionStart);
     });
+
+    const nextFrameRatio = this.fixedUpdate(delta);
 
     this.queries.collisionsStop.results.forEach((collisionStopEntity: Entity) => {
       collisionStopEntity.removeComponent(CollisionStop);
@@ -126,6 +126,15 @@ export class PhysicsSystem extends System {
 
   handleFixedUpdate(delta: number) {
     this.frame++;
+
+    this.queries.rigidBodies.results.forEach((entity: Entity) => {
+      if (entity.getComponent(Physics).velocity.length() < 0.0001) {
+        entity.getMutableComponent(Physics).velocity.setLength(0);
+        entity.removeComponent(Moving);
+      } else if (!entity.hasComponent(Moving)) {
+        entity.addComponent(Moving);
+      }
+    });
 
     this.queries.players.results.forEach((entity: any) => {
       const input = entity.getMutableComponent(PlayerInputState);
@@ -207,13 +216,31 @@ export class PhysicsSystem extends System {
     this.queries.sphereCollidersMoving.results.forEach((entity: Entity) => {
       const transform = entity.getMutableComponent(Transform);
       const sphereCollider = entity.getComponent(SphereCollider);
-      const nearbyEntities = octree.query(transform.position, sphereCollider.radius * 3);
+      const nearbyEntities = octree.query(transform.position, 3);
 
       const transform1 = entity.getMutableComponent(Transform);
 
       nearbyEntities.forEach((other: Entity) => {
         if (entity === other) {
           return;
+        }
+
+        if (entity.hasComponent(Owner)) {
+          if (entity.getComponent(Owner).value === other) {
+            return;
+          }
+        }
+
+        if (other.hasComponent(Owner)) {
+          if (other.getComponent(Owner).value === entity) {
+            return
+          }
+        }
+
+        if (entity.hasComponent(Owner) && other.hasComponent(Owner)) {
+          if (entity.getComponent(Owner).value === other.getComponent(Owner).value) {
+            return;
+          }
         }
 
         const transform2 = other.getMutableComponent(Transform);
@@ -224,15 +251,17 @@ export class PhysicsSystem extends System {
         const sphere1 = new THREE.Sphere(transform1.position, sphereCollider1.radius);
         const sphere2 = new THREE.Sphere(transform2.position, sphereCollider2.radius);
 
-        if (sphere1.intersectsSphere(sphere2)) {
+        if (transform1.position.distanceTo(transform2.position) <= sphere1.radius + sphere2.radius) {
           if (!entity.hasComponent(Colliding)) {
             entity.addComponent(Colliding, {collisionFrame: this.frame});
             entity.addComponent(CollisionStart);
+            entity.getMutableComponent(CollisionStart).collidingWidth.push(other);
           }
 
           if (!other.hasComponent(Colliding)) {
             other.addComponent(Colliding, {collisionFrame: this.frame});
             other.addComponent(CollisionStart);
+            other.getMutableComponent(CollisionStart).collidingWidth.push(entity);
           }
 
           let component = entity.getMutableComponent(Colliding);
@@ -247,33 +276,26 @@ export class PhysicsSystem extends System {
             component.collidingWidth.push(entity);
           }
 
-          const n = new THREE.Vector3();
-          n.copy(sphere2.center).sub(sphere1.center);
-          n.normalize();
+          if (!sphereCollider1.isTrigger && !sphereCollider2.isTrigger) {
+            const n = new THREE.Vector3();
+            n.copy(sphere2.center).sub(sphere1.center);
+            n.normalize();
 
-          const physics1 = entity.getMutableComponent(Physics);
-          const physics2 = other.getMutableComponent(Physics);
+            const physics1 = entity.getMutableComponent(Physics);
+            const physics2 = other.getMutableComponent(Physics);
 
-          const p =  physics1.velocity.dot(n) - physics2.velocity.dot(n);
+            const p =  physics1.velocity.dot(n) - physics2.velocity.dot(n);
 
-          physics1.velocity.sub(new THREE.Vector3().copy(n).multiplyScalar(p));
-          physics2.velocity.add(new THREE.Vector3().copy(n).multiplyScalar(p));
+            physics1.velocity.sub(new THREE.Vector3().copy(n).multiplyScalar(p));
+            physics2.velocity.add(new THREE.Vector3().copy(n).multiplyScalar(p));
 
-          const overlap = sphere1.radius + sphere2.radius - sphere1.center.distanceTo(sphere2.center);
+            const overlap = sphere1.radius + sphere2.radius - sphere1.center.distanceTo(sphere2.center);
 
-          transform1.position.sub(new THREE.Vector3().copy(n).multiplyScalar(overlap / 2));
-          transform2.position.add(new THREE.Vector3().copy(n).multiplyScalar(overlap / 2));
+            transform1.position.sub(new THREE.Vector3().copy(n).multiplyScalar(overlap / 2));
+            transform2.position.add(new THREE.Vector3().copy(n).multiplyScalar(overlap / 2));
+          }
         }
       });
-    });
-
-    this.queries.rigidBodies.results.forEach((entity: Entity) => {
-      if (entity.getComponent(Physics).velocity.length() < 0.0001) {
-        entity.getMutableComponent(Physics).velocity.setLength(0);
-        entity.removeComponent(Moving);
-      } else if (!entity.hasComponent(Moving)) {
-        entity.addComponent(Moving);
-      }
     });
   }
 }

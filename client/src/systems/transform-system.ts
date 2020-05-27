@@ -1,4 +1,4 @@
-import {System, Entity} from 'ecsy';
+import {System, Entity, Not} from 'ecsy';
 
 import {Transform} from '../components/transform';
 import {Object3d} from '../components/object3d';
@@ -16,11 +16,11 @@ export class TransformSystem extends System {
 
   execute() {
     this.queries.transforms.added.forEach((transformEntity: Entity) => {
-     this.updateTransform(transformEntity);
+      this.updateTransform(transformEntity);
     });
 
     this.queries.transforms.changed.forEach((transformEntity: Entity) => {
-     this.updateTransform(transformEntity);
+      this.updateTransform(transformEntity);
     });
   }
 

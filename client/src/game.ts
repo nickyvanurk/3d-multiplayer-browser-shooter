@@ -68,12 +68,12 @@ export default class Game {
     this.hideLoadingScreen();
 
     this.world
+      .registerSystem(DestroySystem)
       .registerSystem(CameraSystem)
       .registerSystem(RaycasterSystem)
       .registerSystem(Input)
       .registerSystem(PlayerInput)
       .registerSystem(TimeoutSystem)
-      .registerSystem(DestroySystem)
       .registerSystem(WeaponSystem)
       .registerSystem(PhysicsSystem)
       .registerSystem(TransformSystem)

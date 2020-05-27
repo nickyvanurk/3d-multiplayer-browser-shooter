@@ -10,6 +10,9 @@ import {Timeout} from '../components/timeout';
 import {Camera} from '../components/camera';
 import {Raycaster} from '../components/raycaster';
 import {Destroy} from '../components/destroy';
+import {SphereCollider} from '../components/sphere-collider';
+import {DestroyOnCollision} from '../components/destroy-on-collision';
+import {Owner} from '../components/owner';
 
 export class WeaponSystem extends System {
   static queries: any = {
@@ -40,7 +43,6 @@ export class WeaponSystem extends System {
       if (weapon.lastFiredTimestamp + weapon.fireInterval < time) {
         weapon.lastFiredTimestamp = time;
 
-        // weapon positioning/rotation
         let position = new Vector3().copy(weapon.offset)
           .applyQuaternion(transform.rotation)
           .add(transform.position);
@@ -55,7 +57,6 @@ export class WeaponSystem extends System {
           rotation.copy(parentTransform.rotation)
         }
 
-        // weapon aiming
         const raycaster = this.queries.cameraRaycaster.results[0].getComponent(Raycaster);
 
         let targetPosition = new Vector3();
@@ -74,15 +75,20 @@ export class WeaponSystem extends System {
 
         const velocity = targetDirection.setLength(0.1);
 
-        // bullet creation
-        this.world.createEntity()
+        const projectile = this.world.createEntity()
           .addComponent(Object3d, {value: this.bulletMesh.clone()})
           .addComponent(Transform, {position, rotation})
           .addComponent(Physics, {velocity})
+          .addComponent(SphereCollider, {isTrigger: true, radius: 0.1})
+          .addComponent(DestroyOnCollision)
           .addComponent(Timeout, {
             timer: 500,
             addComponents: [Destroy]
           });
+
+        if (weapon.parent) {
+          projectile.addComponent(Owner, {value: weapon.parent});
+        }
       }
     });
   }
