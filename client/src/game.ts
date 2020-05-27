@@ -135,7 +135,7 @@ export default class Game {
     var mesh = new Points(geometry, material);
     scene.add(mesh);
 
-    this.spawnModels(100);
+    this.spawnModels(1000);
     this.spawnPlayer();
   }
 
@@ -210,7 +210,7 @@ export default class Game {
         strafeLeft: 'KeyA',
         strafeRight: 'KeyD',
         strafeUp: 'Space',
-        strafeDown: 'ControlLeft',
+        strafeDown: 'ShiftLeft',
         weaponPrimary: 0
       })
       .addComponent(Physics)
