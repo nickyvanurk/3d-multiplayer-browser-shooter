@@ -79,7 +79,7 @@ export class WeaponSystem extends System {
           .addComponent(Object3d, {value: this.bulletMesh.clone()})
           .addComponent(Transform, {position, rotation})
           .addComponent(Physics, {velocity})
-          .addComponent(SphereCollider, {isTrigger: true, radius: 0.1})
+          .addComponent(SphereCollider, {radius: 0.1, isTrigger: true, raycast: true})
           .addComponent(DestroyOnCollision)
           .addComponent(Timeout, {
             timer: 500,

@@ -17,11 +17,12 @@ import createFixedTimestep from 'shared/src/utils/create-fixed-timestep';
 import {BoundingBox, Octree} from '../utils/octree';
 import {Moving} from '../components/moving';
 import {Owner} from '../components/owner';
+import {Raycaster, Vector3} from 'three';
 
 export class PhysicsSystem extends System {
   static queries: any = {
     transforms: {
-      components: [Transform]
+      components: [Transform, Object3d]
     },
     rotating: {
       components: [Transform, Rotating]
@@ -104,6 +105,7 @@ export class PhysicsSystem extends System {
 
     this.queries.transforms.results.forEach((entity: any) => {
       const transform = entity.getMutableComponent(Transform);
+
       transform.renderPosition = new THREE.Vector3().copy(transform.position)
                                                     .multiplyScalar(nextFrameRatio)
                                                     .add(new THREE.Vector3()
@@ -134,6 +136,13 @@ export class PhysicsSystem extends System {
       } else if (!entity.hasComponent(Moving)) {
         entity.addComponent(Moving);
       }
+    });
+
+    this.queries.transforms.results.forEach((entity: any) => {
+      const transform = entity.getMutableComponent(Transform);
+
+      transform.previousPosition.copy(transform.position);
+      transform.previousRotation.copy(transform.rotation);
     });
 
     this.queries.players.results.forEach((entity: any) => {
@@ -214,11 +223,10 @@ export class PhysicsSystem extends System {
     });
 
     this.queries.sphereCollidersMoving.results.forEach((entity: Entity) => {
-      const transform = entity.getMutableComponent(Transform);
-      const sphereCollider = entity.getComponent(SphereCollider);
-      const nearbyEntities = octree.query(transform.position, 3);
-
       const transform1 = entity.getMutableComponent(Transform);
+      const sphereCollider1 = entity.getComponent(SphereCollider);
+      const nearbyEntities = octree.query(transform1.position, 3);
+      const sphere1 = new THREE.Sphere(transform1.position, sphereCollider1.radius);
 
       nearbyEntities.forEach((other: Entity) => {
         if (entity === other) {
@@ -244,14 +252,21 @@ export class PhysicsSystem extends System {
         }
 
         const transform2 = other.getMutableComponent(Transform);
-
-        const sphereCollider1 = entity.getComponent(SphereCollider);
         const sphereCollider2 = other.getComponent(SphereCollider);
 
-        const sphere1 = new THREE.Sphere(transform1.position, sphereCollider1.radius);
         const sphere2 = new THREE.Sphere(transform2.position, sphereCollider2.radius);
 
-        if (transform1.position.distanceTo(transform2.position) <= sphere1.radius + sphere2.radius) {
+
+        let isRaycastHit = false;
+
+        if (sphereCollider1.raycast) {
+          const d = transform1.position.clone().sub(transform1.previousPosition);
+          const l = d.length();
+          const raycaster = new Raycaster(transform1.previousPosition, d.normalize(), 0, l);
+          isRaycastHit = raycaster.ray.intersectSphere(sphere2, new Vector3()) !== null;
+        }
+
+        if (sphere1.intersectsSphere(sphere2) || isRaycastHit) {
           if (!entity.hasComponent(Colliding)) {
             entity.addComponent(Colliding, {collisionFrame: this.frame});
             entity.addComponent(CollisionStart);

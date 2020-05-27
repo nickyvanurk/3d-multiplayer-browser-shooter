@@ -30,8 +30,5 @@ export class TransformSystem extends System {
 
     object3d.position.copy(transform.renderPosition);
     object3d.quaternion.copy(transform.renderRotation);
-
-    transform.previousPosition.copy(transform.position);
-    transform.previousRotation.copy(transform.rotation);
   }
 }

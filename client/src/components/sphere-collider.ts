@@ -1,8 +1,9 @@
 import {Component} from 'ecsy';
 
 export class SphereCollider extends Component {
-  public isTrigger: boolean;
   public radius: number;
+  public isTrigger: boolean;
+  public raycast: boolean;
 
   constructor() {
     super();
@@ -11,12 +12,14 @@ export class SphereCollider extends Component {
   }
 
   copy(src: SphereCollider) {
-    this.isTrigger = src.isTrigger || this.isTrigger;
     this.radius = src.radius || this.radius;
+    this.isTrigger = src.isTrigger || this.isTrigger;
+    this.raycast = src.raycast || this.raycast;
   }
 
   reset() {
-    this.isTrigger = false;
     this.radius = null;
+    this.isTrigger = false;
+    this.raycast = false
   }
 }

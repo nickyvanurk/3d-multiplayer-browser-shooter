@@ -191,7 +191,7 @@ export default class Game {
         })
         .addComponent(Physics)
         .addComponent(Rotating)
-        .addComponent(SphereCollider, {radius: 1})
+        .addComponent(SphereCollider, {radius: 1.25})
         .addComponent(RaycasterReceiver);
     }
   }
@@ -214,7 +214,7 @@ export default class Game {
         weaponPrimary: 0
       })
       .addComponent(Physics)
-      .addComponent(SphereCollider, {radius: 1});
+      .addComponent(SphereCollider, {radius: 1.25});
 
     const weapon1 = this.world.createEntity()
       .addComponent(Transform)
