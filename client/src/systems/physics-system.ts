@@ -15,6 +15,8 @@ import {CollisionStop} from '../components/collision-stop';
 import createFixedTimestep from 'shared/src/utils/create-fixed-timestep';
 
 import {BoundingBox, Octree} from '../utils/octree';
+import { Vector3 } from 'three';
+import { Moving } from '../components/moving';
 
 export class PhysicsSystem extends System {
   static queries: any = {
@@ -59,6 +61,12 @@ export class PhysicsSystem extends System {
       listen: {
         added: true
       }
+    },
+    rigidBodies: {
+      components: [Physics]
+    },
+    movingObjects: {
+      components: [Moving]
     }
   };
 
@@ -256,6 +264,15 @@ export class PhysicsSystem extends System {
           transform2.position.add(new THREE.Vector3().copy(n).multiplyScalar(overlap / 2));
         }
       });
+    });
+
+    this.queries.rigidBodies.results.forEach((entity: Entity) => {
+      if (entity.getComponent(Physics).velocity.length() < 0.0001) {
+        entity.getMutableComponent(Physics).velocity.setLength(0);
+        entity.removeComponent(Moving);
+      } else if (!entity.hasComponent(Moving)) {
+        entity.addComponent(Moving);
+      }
     });
   }
 }

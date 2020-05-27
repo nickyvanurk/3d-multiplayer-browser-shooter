@@ -40,6 +40,7 @@ import {TransformSystem} from './systems/transform-system';
 import {TimeoutSystem} from './systems/timeout-system';
 import {WeaponSystem} from './systems/weapon-system';
 import {RaycasterSystem} from './systems/raycaster-system';
+import {DestroySystem} from './systems/destroy-system';
 
 export default class Game {
   private lastTime: number;
@@ -72,6 +73,7 @@ export default class Game {
       .registerSystem(Input)
       .registerSystem(PlayerInput)
       .registerSystem(TimeoutSystem)
+      .registerSystem(DestroySystem)
       .registerSystem(WeaponSystem)
       .registerSystem(PhysicsSystem)
       .registerSystem(TransformSystem)
