@@ -143,6 +143,10 @@ export default class Game {
     let time = performance.now();
     let delta = time - this.lastTime;
 
+    if (delta > 250) {
+      delta = 250;
+    }
+
     this.world.execute(delta, time);
 
     this.lastTime = time;
