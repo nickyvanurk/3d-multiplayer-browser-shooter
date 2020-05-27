@@ -44,6 +44,9 @@ export class PhysicsSystem extends System {
         added: true
       }
     },
+    sphereCollidersMoving: {
+      components: [Object3d, Transform, SphereCollider, Moving]
+    },
     collisions: {
       components: [Colliding],
       listen: {
@@ -197,16 +200,14 @@ export class PhysicsSystem extends System {
       new THREE.Vector3(1000, 1000, 1000)
     ), 1);
 
-    const sphereColliders = this.queries.sphereColliders.results;
-
-    sphereColliders.forEach((entity: any) => {
+    this.queries.sphereColliders.results.forEach((entity: any) => {
       octree.insert(entity);
     });
 
-    sphereColliders.forEach((entity: Entity) => {
+    this.queries.sphereCollidersMoving.results.forEach((entity: Entity) => {
       const transform = entity.getMutableComponent(Transform);
       const sphereCollider = entity.getComponent(SphereCollider);
-      const nearbyEntities = octree.query(transform.position, sphereCollider.radius * 2);
+      const nearbyEntities = octree.query(transform.position, sphereCollider.radius * 3);
 
       const transform1 = entity.getMutableComponent(Transform);
 
