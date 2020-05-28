@@ -5,7 +5,7 @@ import {PlayerInputState} from '../components/player-input-state';
 import {Weapons} from '../components/weapons';
 import {Active} from '../components/active';
 
-export class PlayerInput extends System {
+export class PlayerInputSystem extends System {
   static queries: any = {
     inputStates: {
       components: [InputState]

@@ -32,8 +32,8 @@ import {Raycaster} from './components/raycaster';
 import {RaycasterReceiver} from './components/raycast-receiver';
 
 import {WebGlRendererSystem} from './systems/webgl-renderer-system';
-import {Input} from './systems/input';
-import {PlayerInput} from './systems/player-input';
+import {InputSystem} from './systems/input-system';
+import {PlayerInputSystem} from './systems/player-input-system';
 import {PhysicsSystem} from './systems/physics-system';
 import {CameraSystem} from './systems/camera-system';
 import {TransformSystem} from './systems/transform-system';
@@ -68,11 +68,11 @@ export default class Game {
     this.hideLoadingScreen();
 
     this.world
+      .registerSystem(InputSystem)
+      .registerSystem(PlayerInputSystem)
       .registerSystem(DestroySystem)
       .registerSystem(CameraSystem)
       .registerSystem(RaycasterSystem)
-      .registerSystem(Input)
-      .registerSystem(PlayerInput)
       .registerSystem(TimeoutSystem)
       .registerSystem(WeaponSystem)
       .registerSystem(PhysicsSystem)

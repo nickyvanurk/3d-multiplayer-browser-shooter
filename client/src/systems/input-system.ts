@@ -1,7 +1,7 @@
 import {System} from 'ecsy';
 import {InputState} from '../components/input-state';
 
-export class Input extends System {
+export class InputSystem extends System {
   static queries: any = {
     inputStates: {
       components: [InputState],
