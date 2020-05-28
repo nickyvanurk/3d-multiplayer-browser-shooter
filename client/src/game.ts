@@ -135,7 +135,7 @@ export default class Game {
     var mesh = new Points(geometry, material);
     scene.add(mesh);
 
-    this.spawnModels(1000);
+    this.spawnModels(100);
     this.spawnPlayer();
   }
 
