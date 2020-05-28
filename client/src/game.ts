@@ -30,6 +30,7 @@ import {Weapon, WeaponType} from './components/weapon';
 import {Weapons} from './components/weapons';
 import {Raycaster} from './components/raycaster';
 import {RaycasterReceiver} from './components/raycast-receiver';
+import {Health} from './components/health';
 
 import {WebGlRendererSystem} from './systems/webgl-renderer-system';
 import {InputSystem} from './systems/input-system';
@@ -41,6 +42,7 @@ import {TimeoutSystem} from './systems/timeout-system';
 import {WeaponSystem} from './systems/weapon-system';
 import {RaycasterSystem} from './systems/raycaster-system';
 import {DestroySystem} from './systems/destroy-system';
+import {HealthSystem} from './systems/health-system';
 
 export default class Game {
   private lastTime: number;
@@ -76,6 +78,7 @@ export default class Game {
       .registerSystem(TimeoutSystem)
       .registerSystem(WeaponSystem)
       .registerSystem(PhysicsSystem)
+      .registerSystem(HealthSystem)
       .registerSystem(TransformSystem)
       .registerSystem(WebGlRendererSystem);
 
@@ -192,7 +195,8 @@ export default class Game {
         .addComponent(Physics)
         .addComponent(Rotating)
         .addComponent(SphereCollider, {radius: 1.25})
-        .addComponent(RaycasterReceiver);
+        .addComponent(RaycasterReceiver)
+        .addComponent(Health, {value: 100});
     }
   }
 
@@ -214,7 +218,8 @@ export default class Game {
         weaponPrimary: 0
       })
       .addComponent(Physics)
-      .addComponent(SphereCollider, {radius: 1.25});
+      .addComponent(SphereCollider, {radius: 1.25})
+      .addComponent(Health, {value: 100});
 
     const weapon1 = this.world.createEntity()
       .addComponent(Transform)

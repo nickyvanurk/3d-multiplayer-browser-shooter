@@ -13,6 +13,7 @@ import {Destroy} from '../components/destroy';
 import {SphereCollider} from '../components/sphere-collider';
 import {DestroyOnCollision} from '../components/destroy-on-collision';
 import {Owner} from '../components/owner';
+import {Damage} from '../components/damage';
 
 export class WeaponSystem extends System {
   static queries: any = {
@@ -81,6 +82,7 @@ export class WeaponSystem extends System {
           .addComponent(Physics, {velocity})
           .addComponent(SphereCollider, {radius: 0.1, isTrigger: true, raycast: true})
           .addComponent(DestroyOnCollision)
+          .addComponent(Damage, {value: 5})
           .addComponent(Timeout, {
             timer: 500,
             addComponents: [Destroy]
