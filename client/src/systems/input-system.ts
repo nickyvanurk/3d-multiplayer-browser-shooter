@@ -37,6 +37,14 @@ export class InputSystem extends System {
         }
       });
 
+      document.addEventListener('contextmenu', (event: any) => {
+        if (!state.mouseButtonsDown.includes(event.button)) {
+          state.mouseButtonsDown.push(event.button);
+        }
+
+        event.preventDefault();
+      });
+
       document.addEventListener('mouseup', (event: any) => {
         if (state.mouseButtonsDown.includes(event.button)) {
           state.mouseButtonsDown = state.mouseButtonsDown.filter(
