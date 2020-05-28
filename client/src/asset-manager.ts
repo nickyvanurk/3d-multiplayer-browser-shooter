@@ -36,8 +36,6 @@ export class AssetManager {
         }
       });
 
-      gltf.scene.scale.set(0.005, 0.005, 0.005);
-
       this.models.set(args.name, gltf);
     });
   }

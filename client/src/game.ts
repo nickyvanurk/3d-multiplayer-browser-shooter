@@ -16,7 +16,6 @@ import {AssetManager} from './asset-manager';
 import {World} from 'ecsy';
 
 import {Transform} from './components/transform';
-import {Rotating} from './components/rotating';
 import {Object3d} from './components/object3d';
 import {PlayerController} from './components/player-controller';
 import {Physics} from './components/physics';
@@ -48,10 +47,13 @@ import {HealthSystem} from './systems/health-system';
 import {ParticleEffectSystem} from './systems/particle-effect-system';
 import {ScreenshakeSystem} from './systems/screenshake-system';
 
+import {randomNumberGenerator} from './utils/rng';
+
 export default class Game {
   private lastTime: number;
   private world: World;
   private assetManager: AssetManager;
+  private rng: Function;
 
   constructor() {
     this.lastTime = performance.now();
@@ -62,6 +64,7 @@ export default class Game {
 
     this.assetManager = new AssetManager(loadingManager);
     this.assetManager.loadModel({name: 'spaceship', url: 'models/spaceship.gltf'});
+    this.assetManager.loadModel({name: 'asteroid', url: 'models/asteroid.gltf'});
 
     this.world = new World();
   }
@@ -125,7 +128,7 @@ export default class Game {
     scene.fog = new Fog(0x020207, 0.04);
 
     const positions = []
-    for (let i = 0; i < 2000; i++) {
+    for (let i = 0; i < 1000; i++) {
       const r = 4000
       const theta = 2 * Math.PI * Math.random()
       const phi = Math.acos(2 * Math.random() - 1)
@@ -144,6 +147,7 @@ export default class Game {
     var mesh = new Points(geometry, material);
     scene.add(mesh);
 
+    this.spawnAsteroids(100);
     this.spawnModels(100);
     this.spawnPlayer();
   }
@@ -185,21 +189,57 @@ export default class Game {
     });
   }
 
+  spawnAsteroids(amount: number) {
+    const rng = randomNumberGenerator(5);
+    const model = this.assetManager.getModel('asteroid');
+
+    model.scene.children[0].position.set(
+      -0.016298329457640648,
+      -0.012838120572268963,
+      0.24073271453380585
+    );
+
+    for (let i = 0; i < amount; ++i) {
+      const scaleValue = [1, 5, 10, 20, 40, 60, 120, 240, 560];
+      const scale = scaleValue[Math.floor(rng() * scaleValue.length)];
+
+      model.scene.scale.set(scale, scale, scale);
+      model.scene.children[0].rotation.set(
+        rng() * Math.PI * 2,
+        rng() * Math.PI * 2,
+        rng() * Math.PI * 2
+      );
+
+      this.world.createEntity()
+        .addComponent(Object3d, {value: model.scene.clone()})
+        .addComponent(Transform, {
+          position: new Vector3(
+            (rng() - 0.5) * 800,
+            (rng() - 0.5) * 800,
+            (rng() - 0.5) * 800
+          )
+        })
+        .addComponent(RaycasterReceiver)
+        .addComponent(ParticleEffectOnDestroy, {type: ParticleEffectType.Explosion});
+    }
+  }
+
   spawnModels(amount: number) {
     const model = this.assetManager.getModel('spaceship');
+
+    model.scene.scale.set(0.005, 0.005, 0.005);
 
     for (let i = 0; i < amount; ++i) {
       this.world.createEntity()
         .addComponent(Object3d, {value: model.scene.clone()})
         .addComponent(Transform, {
           position: new Vector3(
-            (Math.random() - 0.5) * 120,
-            (Math.random() - 0.5) * 120,
-            (Math.random() - 0.5) * 120
+            (Math.random() - 0.5) * 500,
+            (Math.random() - 0.5) * 500,
+            (Math.random() - 0.5) * 500
           )
         })
         .addComponent(Physics)
-        .addComponent(Rotating)
         .addComponent(SphereCollider, {radius: 1.25})
         .addComponent(RaycasterReceiver)
         .addComponent(Health, {value: 100})
@@ -209,6 +249,8 @@ export default class Game {
 
   spawnPlayer() {
     const model = this.assetManager.getModel('spaceship');
+
+    model.scene.scale.set(0.005, 0.005, 0.005);
 
     const player = this.world.createEntity()
       .addComponent(Object3d, {value: model.scene.clone()})
