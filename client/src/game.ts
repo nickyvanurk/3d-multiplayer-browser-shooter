@@ -31,6 +31,8 @@ import {Weapons} from './components/weapons';
 import {Raycaster} from './components/raycaster';
 import {RaycasterReceiver} from './components/raycast-receiver';
 import {Health} from './components/health';
+import {ParticleEffectOnDestroy} from './components/particle-effect-on-destroy';
+import {ParticleEffectType} from './components/particle-effect';
 
 import {WebGlRendererSystem} from './systems/webgl-renderer-system';
 import {InputSystem} from './systems/input-system';
@@ -43,6 +45,7 @@ import {WeaponSystem} from './systems/weapon-system';
 import {RaycasterSystem} from './systems/raycaster-system';
 import {DestroySystem} from './systems/destroy-system';
 import {HealthSystem} from './systems/health-system';
+import {ParticleEffectSystem} from './systems/particle-effect-system';
 
 export default class Game {
   private lastTime: number;
@@ -79,6 +82,7 @@ export default class Game {
       .registerSystem(WeaponSystem)
       .registerSystem(PhysicsSystem)
       .registerSystem(HealthSystem)
+      .registerSystem(ParticleEffectSystem)
       .registerSystem(TransformSystem)
       .registerSystem(WebGlRendererSystem);
 
@@ -196,7 +200,8 @@ export default class Game {
         .addComponent(Rotating)
         .addComponent(SphereCollider, {radius: 1.25})
         .addComponent(RaycasterReceiver)
-        .addComponent(Health, {value: 100});
+        .addComponent(Health, {value: 100})
+        .addComponent(ParticleEffectOnDestroy, {type: ParticleEffectType.Explosion});
     }
   }
 
@@ -219,7 +224,8 @@ export default class Game {
       })
       .addComponent(Physics)
       .addComponent(SphereCollider, {radius: 1.25})
-      .addComponent(Health, {value: 100});
+      .addComponent(Health, {value: 100})
+      .addComponent(ParticleEffectOnDestroy, {type: ParticleEffectType.Explosion});
 
     const weapon1 = this.world.createEntity()
       .addComponent(Transform)
