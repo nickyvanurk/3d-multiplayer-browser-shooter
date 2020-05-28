@@ -180,7 +180,7 @@ export class PhysicsSystem extends System {
       physics.velocity.y *= Math.pow(physics.damping, delta/1000);
       physics.velocity.z *= Math.pow(physics.damping, delta/1000);
 
-      this.queries.camera.results.forEach((entity: any) => {
+      this.queries.camera.results.forEach((entity: Entity) => {
         const obj = new THREE.Object3D();
         obj.position.copy(transform.position);
         obj.quaternion.copy(transform.rotation);

@@ -46,6 +46,7 @@ import {RaycasterSystem} from './systems/raycaster-system';
 import {DestroySystem} from './systems/destroy-system';
 import {HealthSystem} from './systems/health-system';
 import {ParticleEffectSystem} from './systems/particle-effect-system';
+import {ScreenshakeSystem} from './systems/screenshake-system';
 
 export default class Game {
   private lastTime: number;
@@ -84,6 +85,7 @@ export default class Game {
       .registerSystem(HealthSystem)
       .registerSystem(ParticleEffectSystem)
       .registerSystem(TransformSystem)
+      .registerSystem(ScreenshakeSystem)
       .registerSystem(WebGlRendererSystem);
 
     this.world.createEntity()

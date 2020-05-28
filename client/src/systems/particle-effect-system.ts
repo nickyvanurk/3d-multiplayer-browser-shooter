@@ -4,6 +4,7 @@ import {ParticleEffect} from '../components/particle-effect';
 import {Transform} from '../components/transform';
 import {ParticleEffectType} from '../components/particle-effect';
 import {Destroy} from '../components/destroy';
+import {Screenshake} from '../components/screenshake';
 
 import {
   InstancedMesh as InstancedMesh$1,
@@ -106,6 +107,16 @@ export class ParticleEffectSystem extends System {
       this.meshes.forEach((mesh: InstancedMesh$1, i: number) => {
         // @ts-ignore
         mesh.material.opacity = this.materials[i].opacity;
+      });
+
+      this.world.createEntity()
+        .addComponent(Transform, {
+          position: entity.getComponent(Transform).position.clone()
+        })
+        .addComponent(Screenshake, {
+        strength: 1,
+        damping: 0.05,
+        distance: 60
       });
     });
 
