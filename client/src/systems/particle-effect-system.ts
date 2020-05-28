@@ -1,8 +1,9 @@
-import {System, Entity, SystemStateComponent} from 'ecsy';
+import {System, Entity} from 'ecsy';
 import {Scene} from '../components/scene';
 import {ParticleEffect} from '../components/particle-effect';
 import {Transform} from '../components/transform';
 import {ParticleEffectType} from '../components/particle-effect';
+import {Destroy} from '../components/destroy';
 
 import {
   InstancedMesh as InstancedMesh$1,
@@ -144,8 +145,7 @@ export class ParticleEffectSystem extends System {
       });
 
       if (highestOpacity === 0) {
-        // @ts-ignore
-        if (entity.alive) entity.remove(); // have to check if alive, bug in ECSY
+        entity.addComponent(Destroy);
       }
     });
   }

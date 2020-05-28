@@ -68,7 +68,7 @@ export class WebGlRendererSystem extends System {
       const component = rendererEntity.getComponent(WebGlRenderer);
 
       const renderer = new WebGLRenderer({antialias: component.antialias});
-      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.setPixelRatio(1);
       renderer.setSize(component.width, component.height);
       renderer.setClearColor(component.clearColor);
       renderer.shadowMap.enabled = component.shadowMap;
