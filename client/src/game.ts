@@ -194,12 +194,6 @@ export default class Game {
     const rng = randomNumberGenerator(5);
     const model = this.assetManager.getModel('asteroid');
 
-    model.scene.children[0].position.set(
-      -0.016298329457640648,
-      -0.012838120572268963,
-      0.24073271453380585
-    );
-
     for (let i = 0; i < amount; ++i) {
       const scaleValue = [1, 5, 10];
       const scale = scaleValue[Math.floor(rng() * scaleValue.length)];
@@ -231,8 +225,6 @@ export default class Game {
   spawnModels(amount: number) {
     const model = this.assetManager.getModel('spaceship');
 
-    model.scene.scale.set(0.005, 0.005, 0.005);
-
     for (let i = 0; i < amount; ++i) {
       this.world.createEntity()
         .addComponent(Object3d, {value: model.scene.clone()})
@@ -253,8 +245,6 @@ export default class Game {
 
   spawnPlayer() {
     const model = this.assetManager.getModel('spaceship');
-
-    model.scene.scale.set(0.005, 0.005, 0.005);
 
     const player = this.world.createEntity()
       .addComponent(Object3d, {value: model.scene.clone()})
