@@ -1,5 +1,6 @@
-import * as THREE from 'three';
 import {System, Not, Entity} from 'ecsy';
+import {Raycaster, Vector3, Scene as Scene$1, Quaternion, Euler, Object3D, Sphere, Mesh} from 'three';
+import {BufferGeometryUtils} from 'three/examples/jsm/utils/BufferGeometryUtils';
 
 import {Rotating} from '../components/rotating';
 import {PlayerInputState} from '../components/player-input-state';
@@ -17,7 +18,6 @@ import createFixedTimestep from 'shared/src/utils/create-fixed-timestep';
 import {BoundingBox, Octree} from '../utils/octree';
 import {Moving} from '../components/moving';
 import {Owner} from '../components/owner';
-import {Raycaster, Vector3} from 'three';
 
 export class PhysicsSystem extends System {
   static queries: any = {
@@ -83,6 +83,30 @@ export class PhysicsSystem extends System {
   }
 
   execute(delta: number) {
+    this.queries.sphereColliders.added.forEach((entity: Entity) => {
+      if (!entity.getComponent(SphereCollider).radius && entity.getComponent(Object3d)) {
+        const object3d = entity.getComponent(Object3d).value;
+        const sphereCollider = entity.getMutableComponent(SphereCollider);
+
+        let combinedGeometry: any = [];
+
+        object3d.traverse((child: Mesh) => {
+          if (child.isMesh) {
+            combinedGeometry.push(child.geometry.clone().applyMatrix4(object3d.matrix));
+          }
+        });
+
+        const geometry = BufferGeometryUtils.mergeBufferGeometries(combinedGeometry);
+        geometry.computeBoundingSphere();
+
+        sphereCollider.radius = geometry.boundingSphere.radius * Math.max(
+          Math.abs(object3d.scale.x),
+          Math.abs(object3d.scale.x),
+          Math.abs(object3d.scale.y)
+        );
+      }
+    });
+
     this.queries.collisionsStart.results.forEach((entity: Entity) => {
       entity.removeComponent(CollisionStart);
     });
@@ -106,12 +130,12 @@ export class PhysicsSystem extends System {
     this.queries.transforms.results.forEach((entity: any) => {
       const transform = entity.getMutableComponent(Transform);
 
-      transform.renderPosition = new THREE.Vector3().copy(transform.position)
+      transform.renderPosition = new Vector3().copy(transform.position)
                                                     .multiplyScalar(nextFrameRatio)
-                                                    .add(new THREE.Vector3()
+                                                    .add(new Vector3()
                                                       .copy(transform.previousPosition)
                                                       .multiplyScalar(1 - nextFrameRatio));
-      transform.renderRotation = new THREE.Quaternion().copy(transform.previousRotation)
+      transform.renderRotation = new Quaternion().copy(transform.previousRotation)
                                                        .slerp(transform.rotation, nextFrameRatio);
     });
 
@@ -121,7 +145,7 @@ export class PhysicsSystem extends System {
       this.queries.camera.results.forEach((entity: any) => {
         const cameraTransform = entity.getMutableComponent(Transform);
         cameraTransform.rotation.copy(transform.rotation);
-        cameraTransform.rotation.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI, 0, 'XYZ')).normalize());
+        cameraTransform.rotation.multiply(new Quaternion().setFromEuler(new Euler(0, Math.PI, 0, 'XYZ')).normalize());
       });
     });
   }
@@ -156,7 +180,7 @@ export class PhysicsSystem extends System {
 
       physics.angularVelocity.z *= Math.pow(physics.angularDamping, delta/1000);
 
-      const q = new THREE.Quaternion(
+      const q = new Quaternion(
         physics.angularVelocity.x*delta,
         physics.angularVelocity.y*delta,
         physics.angularVelocity.z*delta,
@@ -164,9 +188,9 @@ export class PhysicsSystem extends System {
       ).normalize();
       transform.rotation.multiply(q);
 
-      let directionX = new THREE.Vector3(1, 0, 0).applyQuaternion(transform.rotation).normalize();
-      let directionY = new THREE.Vector3(0, 1, 0).applyQuaternion(transform.rotation).normalize();
-      let directionZ = new THREE.Vector3(0, 0, 1).applyQuaternion(transform.rotation).normalize();
+      let directionX = new Vector3(1, 0, 0).applyQuaternion(transform.rotation).normalize();
+      let directionY = new Vector3(0, 1, 0).applyQuaternion(transform.rotation).normalize();
+      let directionZ = new Vector3(0, 0, 1).applyQuaternion(transform.rotation).normalize();
 
       physics.velocity.add(directionZ.multiplyScalar(physics.acceleration * delta * input.movementZ));
       physics.velocity.add(directionX.multiplyScalar(physics.acceleration * delta * input.movementX));
@@ -181,12 +205,12 @@ export class PhysicsSystem extends System {
       physics.velocity.z *= Math.pow(physics.damping, delta/1000);
 
       this.queries.camera.results.forEach((entity: Entity) => {
-        const obj = new THREE.Object3D();
+        const obj = new Object3D();
         obj.position.copy(transform.position);
         obj.quaternion.copy(transform.rotation);
         obj.translateY(1);
         obj.translateZ(-4);
-        obj.quaternion.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI, 0, 'XYZ')).normalize());
+        obj.quaternion.multiply(new Quaternion().setFromEuler(new Euler(0, Math.PI, 0, 'XYZ')).normalize());
 
         const cameraTransform = entity.getMutableComponent(Transform);
         cameraTransform.position.lerp(obj.position, 1 - Math.exp(-10 * (delta/1000)));
@@ -209,13 +233,13 @@ export class PhysicsSystem extends System {
 
     this.queries.rotating.results.forEach((entity: any) => {
       let rotation = entity.getMutableComponent(Transform).rotation;
-      rotation.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), 0.001*delta));
-      rotation.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), 0.001*delta));
+      rotation.multiply(new Quaternion().setFromAxisAngle(new Vector3(1, 0, 0), 0.001*delta));
+      rotation.multiply(new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), 0.001*delta));
     });
 
     const octree = new Octree(new BoundingBox(
-      new THREE.Vector3(0, 0, 0),
-      new THREE.Vector3(1000, 1000, 1000)
+      new Vector3(0, 0, 0),
+      new Vector3(1000, 1000, 1000)
     ), 1);
 
     this.queries.sphereColliders.results.forEach((entity: any) => {
@@ -226,7 +250,7 @@ export class PhysicsSystem extends System {
       const transform1 = entity.getMutableComponent(Transform);
       const sphereCollider1 = entity.getComponent(SphereCollider);
       const nearbyEntities = octree.query(transform1.position, 3);
-      const sphere1 = new THREE.Sphere(transform1.position, sphereCollider1.radius);
+      const sphere1 = new Sphere(transform1.position, sphereCollider1.radius);
 
       nearbyEntities.forEach((other: Entity) => {
         if (entity === other) {
@@ -254,7 +278,7 @@ export class PhysicsSystem extends System {
         const transform2 = other.getMutableComponent(Transform);
         const sphereCollider2 = other.getComponent(SphereCollider);
 
-        const sphere2 = new THREE.Sphere(transform2.position, sphereCollider2.radius);
+        const sphere2 = new Sphere(transform2.position, sphereCollider2.radius);
 
 
         let isRaycastHit = false;
@@ -292,7 +316,7 @@ export class PhysicsSystem extends System {
           }
 
           if (!sphereCollider1.isTrigger && !sphereCollider2.isTrigger) {
-            const n = new THREE.Vector3();
+            const n = new Vector3();
             n.copy(sphere2.center).sub(sphere1.center);
             n.normalize();
 
@@ -301,16 +325,31 @@ export class PhysicsSystem extends System {
 
             const p =  physics1.velocity.dot(n) - physics2.velocity.dot(n);
 
-            physics1.velocity.sub(new THREE.Vector3().copy(n).multiplyScalar(p));
-            physics2.velocity.add(new THREE.Vector3().copy(n).multiplyScalar(p));
+            physics1.velocity.sub(new Vector3().copy(n).multiplyScalar(p));
+            physics2.velocity.add(new Vector3().copy(n).multiplyScalar(p));
 
             const overlap = sphere1.radius + sphere2.radius - sphere1.center.distanceTo(sphere2.center);
 
-            transform1.position.sub(new THREE.Vector3().copy(n).multiplyScalar(overlap / 2));
-            transform2.position.add(new THREE.Vector3().copy(n).multiplyScalar(overlap / 2));
+            transform1.position.sub(new Vector3().copy(n).multiplyScalar(overlap / 2));
+            transform2.position.add(new Vector3().copy(n).multiplyScalar(overlap / 2));
           }
         }
       });
     });
+  }
+
+  computeSceneBoundingSphere(scene: Scene$1) {
+    let combinedGeometry: any = [];
+
+    scene.traverse((child: Mesh) => {
+      if (child.isMesh) {
+        combinedGeometry.push(child.geometry.clone().applyMatrix4(scene.matrix));
+      }
+    });
+
+    const geometry = BufferGeometryUtils.mergeBufferGeometries(combinedGeometry);
+    geometry.computeBoundingSphere()
+
+    return geometry.boundingSphere;
   }
 }

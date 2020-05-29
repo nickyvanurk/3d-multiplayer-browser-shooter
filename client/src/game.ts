@@ -32,6 +32,7 @@ import {RaycasterReceiver} from './components/raycast-receiver';
 import {Health} from './components/health';
 import {ParticleEffectOnDestroy} from './components/particle-effect-on-destroy';
 import {ParticleEffectType} from './components/particle-effect';
+import {MeshCollider} from './components/mesh-collider';
 
 import {WebGlRendererSystem} from './systems/webgl-renderer-system';
 import {InputSystem} from './systems/input-system';
@@ -234,9 +235,9 @@ export default class Game {
         .addComponent(Object3d, {value: model.scene.clone()})
         .addComponent(Transform, {
           position: new Vector3(
-            (Math.random() - 0.5) * 500,
-            (Math.random() - 0.5) * 500,
-            (Math.random() - 0.5) * 500
+            (Math.random() - 0.5) * 120,
+            (Math.random() - 0.5) * 120,
+            (Math.random() - 0.5) * 120
           )
         })
         .addComponent(Physics)
