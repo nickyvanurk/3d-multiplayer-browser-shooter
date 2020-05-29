@@ -257,7 +257,7 @@ export default class Game {
         strafeLeft: 'KeyA',
         strafeRight: 'KeyD',
         strafeUp: 'Space',
-        strafeDown: 'KeyCa',
+        strafeDown: 'KeyC',
         boost: 'ShiftLeft',
         weaponPrimary: 0
       })
