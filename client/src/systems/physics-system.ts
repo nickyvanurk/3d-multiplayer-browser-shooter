@@ -290,13 +290,20 @@ export class PhysicsSystem extends System {
           const transform2 = other.getMutableComponent(Transform);
           const object3d = other.getComponent(Object3d).value;
 
-          const d = transform1.position.clone().sub(transform1.previousPosition);
-          const raycaster = new Raycaster(transform1.previousPosition, d.normalize(), 0, sphere1.radius);
-
+          const d = transform2.position.clone().sub(transform1.position);
+          const raycaster = new Raycaster(transform1.position, d.normalize(), 0, sphere1.radius);
           const intersection = raycaster.intersectObject(object3d, true)[0];
 
+          // for fast moving objects
+          let isRaycastHit = false;
+          if (sphereCollider1.raycast) {
+            const d = transform1.position.clone().sub(transform1.previousPosition);
+            const l = d.length();
+            const raycaster = new Raycaster(transform1.previousPosition, d.normalize(), 0, l);
+            isRaycastHit = raycaster.intersectObject(object3d, true)[0] !== undefined;
+          }
 
-          if (intersection && intersection.distance < sphere1.radius) {
+          if ((intersection && intersection.distance < sphere1.radius) || isRaycastHit) {
             if (!entity.hasComponent(Colliding)) {
               entity.addComponent(Colliding, {collisionFrame: this.frame});
               entity.addComponent(CollisionStart);
@@ -321,7 +328,7 @@ export class PhysicsSystem extends System {
               physics1.velocity.sub(new Vector3().copy(n).multiplyScalar(p));
               physics2.velocity.add(new Vector3().copy(n).multiplyScalar(p));
 
-              const overlap = sphere1.radius - transform1.position.distanceTo(intersection.point);
+              const overlap = sphere1.radius - intersection.distance;
 
               transform1.position.sub(new Vector3().copy(n).multiplyScalar(overlap / 2));
               transform2.position.add(new Vector3().copy(n).multiplyScalar(overlap / 2));
