@@ -56,6 +56,12 @@ export class PlayerInputSystem extends System {
     playerInputState.yaw = -inputState.mousePosition.x;
     playerInputState.pitch = -inputState.mousePosition.y;
 
+    if (inputState.keysDown.includes(playerController.boost)) {
+      playerInputState.movementX *= 2;
+      playerInputState.movementY *= 2;
+      playerInputState.movementZ *= 2;
+    }
+
     const primaryWeaponActive = inputState.mouseButtonsDown.includes(playerController.weaponPrimary);
 
     this.queries.playersWithWeapons.results.forEach((playerEntity: Entity) => {

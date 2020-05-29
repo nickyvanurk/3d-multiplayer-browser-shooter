@@ -257,7 +257,8 @@ export default class Game {
         strafeLeft: 'KeyA',
         strafeRight: 'KeyD',
         strafeUp: 'Space',
-        strafeDown: 'ShiftLeft',
+        strafeDown: 'KeyCa',
+        boost: 'ShiftLeft',
         weaponPrimary: 0
       })
       .addComponent(Physics)
