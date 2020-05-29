@@ -201,7 +201,7 @@ export default class Game {
     );
 
     for (let i = 0; i < amount; ++i) {
-      const scaleValue = [1, 5, 10, 20, 40, 60, 120, 240, 560];
+      const scaleValue = [1, 5, 10];
       const scale = scaleValue[Math.floor(rng() * scaleValue.length)];
 
       model.scene.scale.set(scale, scale, scale);
@@ -211,17 +211,20 @@ export default class Game {
         rng() * Math.PI * 2
       );
 
-      this.world.createEntity()
+      const asteroid = this.world.createEntity()
         .addComponent(Object3d, {value: model.scene.clone()})
         .addComponent(Transform, {
           position: new Vector3(
-            (rng() - 0.5) * 800,
-            (rng() - 0.5) * 800,
-            (rng() - 0.5) * 800
+            (rng() - 0.5) * 120,
+            (rng() - 0.5) * 120,
+            (rng() - 0.5) * 120
           )
         })
         .addComponent(RaycasterReceiver)
         .addComponent(ParticleEffectOnDestroy, {type: ParticleEffectType.Explosion});
+
+      asteroid.addComponent(Physics);
+      asteroid.addComponent(MeshCollider);
     }
   }
 

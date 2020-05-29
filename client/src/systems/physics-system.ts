@@ -18,6 +18,7 @@ import createFixedTimestep from 'shared/src/utils/create-fixed-timestep';
 import {BoundingBox, Octree} from '../utils/octree';
 import {Moving} from '../components/moving';
 import {Owner} from '../components/owner';
+import { MeshCollider } from '../components/mesh-collider';
 
 export class PhysicsSystem extends System {
   static queries: any = {
@@ -38,6 +39,9 @@ export class PhysicsSystem extends System {
     },
     camera: {
       components: [Object3d, Camera]
+    },
+    meshColliders: {
+      components: [Transform, MeshCollider]
     },
     sphereColliders: {
       components: [Transform, SphereCollider],
@@ -242,15 +246,21 @@ export class PhysicsSystem extends System {
       new Vector3(1000, 1000, 1000)
     ), 1);
 
-    this.queries.sphereColliders.results.forEach((entity: any) => {
+    this.queries.meshColliders.results.forEach((entity: Entity) => {
+      octree.insert(entity);
+    });
+
+    this.queries.sphereColliders.results.forEach((entity: Entity) => {
       octree.insert(entity);
     });
 
     this.queries.sphereCollidersMoving.results.forEach((entity: Entity) => {
       const transform1 = entity.getMutableComponent(Transform);
       const sphereCollider1 = entity.getComponent(SphereCollider);
-      const nearbyEntities = octree.query(transform1.position, 3);
       const sphere1 = new Sphere(transform1.position, sphereCollider1.radius);
+
+      const scanRange = 10;
+      const nearbyEntities = octree.query(transform1.position, scanRange);
 
       nearbyEntities.forEach((other: Entity) => {
         if (entity === other) {
@@ -275,63 +285,107 @@ export class PhysicsSystem extends System {
           }
         }
 
-        const transform2 = other.getMutableComponent(Transform);
-        const sphereCollider2 = other.getComponent(SphereCollider);
 
-        const sphere2 = new Sphere(transform2.position, sphereCollider2.radius);
+        if (other.hasComponent(MeshCollider)) {
+          const transform2 = other.getMutableComponent(Transform);
+          const object3d = other.getComponent(Object3d).value;
 
-
-        let isRaycastHit = false;
-
-        if (sphereCollider1.raycast) {
           const d = transform1.position.clone().sub(transform1.previousPosition);
-          const l = d.length();
-          const raycaster = new Raycaster(transform1.previousPosition, d.normalize(), 0, l);
-          isRaycastHit = raycaster.ray.intersectSphere(sphere2, new Vector3()) !== null;
+          const raycaster = new Raycaster(transform1.previousPosition, d.normalize(), 0, sphere1.radius);
+
+          const intersection = raycaster.intersectObject(object3d, true)[0];
+
+
+          if (intersection && intersection.distance < sphere1.radius) {
+            if (!entity.hasComponent(Colliding)) {
+              entity.addComponent(Colliding, {collisionFrame: this.frame});
+              entity.addComponent(CollisionStart);
+              entity.getMutableComponent(CollisionStart).collidingWidth.push(other);
+            }
+
+            let component = entity.getMutableComponent(Colliding);
+            if (!component.collidingWidth.includes(other)) {
+              component.collidingWidth.push(other);
+            }
+
+            if (!sphereCollider1.isTrigger) {
+              const n = new Vector3();
+              n.copy(intersection.point).sub(sphere1.center);
+              n.normalize();
+
+              const physics1 = entity.getMutableComponent(Physics);
+              const physics2 = other.getMutableComponent(Physics);
+
+              const p =  physics1.velocity.dot(n) - physics2.velocity.dot(n);
+
+              physics1.velocity.sub(new Vector3().copy(n).multiplyScalar(p));
+              physics2.velocity.add(new Vector3().copy(n).multiplyScalar(p));
+
+              const overlap = sphere1.radius - transform1.position.distanceTo(intersection.point);
+
+              transform1.position.sub(new Vector3().copy(n).multiplyScalar(overlap / 2));
+              transform2.position.add(new Vector3().copy(n).multiplyScalar(overlap / 2));
+            }
+          }
         }
+        else if (other.hasComponent(SphereCollider)) {
+          const transform2 = other.getMutableComponent(Transform);
+          const sphereCollider2 = other.getComponent(SphereCollider);
 
-        if (sphere1.intersectsSphere(sphere2) || isRaycastHit) {
-          if (!entity.hasComponent(Colliding)) {
-            entity.addComponent(Colliding, {collisionFrame: this.frame});
-            entity.addComponent(CollisionStart);
-            entity.getMutableComponent(CollisionStart).collidingWidth.push(other);
+          const sphere2 = new Sphere(transform2.position, sphereCollider2.radius);
+
+          let isRaycastHit = false;
+
+          if (sphereCollider1.raycast) {
+            const d = transform1.position.clone().sub(transform1.previousPosition);
+            const l = d.length();
+            const raycaster = new Raycaster(transform1.previousPosition, d.normalize(), 0, l);
+            isRaycastHit = raycaster.ray.intersectSphere(sphere2, new Vector3()) !== null;
           }
 
-          if (!other.hasComponent(Colliding)) {
-            other.addComponent(Colliding, {collisionFrame: this.frame});
-            other.addComponent(CollisionStart);
-            other.getMutableComponent(CollisionStart).collidingWidth.push(entity);
-          }
+          if (sphere1.intersectsSphere(sphere2) || isRaycastHit) {
+            if (!entity.hasComponent(Colliding)) {
+              entity.addComponent(Colliding, {collisionFrame: this.frame});
+              entity.addComponent(CollisionStart);
+              entity.getMutableComponent(CollisionStart).collidingWidth.push(other);
+            }
 
-          let component = entity.getMutableComponent(Colliding);
+            if (!other.hasComponent(Colliding)) {
+              other.addComponent(Colliding, {collisionFrame: this.frame});
+              other.addComponent(CollisionStart);
+              other.getMutableComponent(CollisionStart).collidingWidth.push(entity);
+            }
 
-          if (!component.collidingWidth.includes(other)) {
-            component.collidingWidth.push(other);
-          }
+            let component = entity.getMutableComponent(Colliding);
 
-          component = other.getMutableComponent(Colliding);
+            if (!component.collidingWidth.includes(other)) {
+              component.collidingWidth.push(other);
+            }
 
-          if (!component.collidingWidth.includes(entity)) {
-            component.collidingWidth.push(entity);
-          }
+            component = other.getMutableComponent(Colliding);
 
-          if (!sphereCollider1.isTrigger && !sphereCollider2.isTrigger) {
-            const n = new Vector3();
-            n.copy(sphere2.center).sub(sphere1.center);
-            n.normalize();
+            if (!component.collidingWidth.includes(entity)) {
+              component.collidingWidth.push(entity);
+            }
 
-            const physics1 = entity.getMutableComponent(Physics);
-            const physics2 = other.getMutableComponent(Physics);
+            if (!sphereCollider1.isTrigger && !sphereCollider2.isTrigger) {
+              const n = new Vector3();
+              n.copy(sphere2.center).sub(sphere1.center);
+              n.normalize();
 
-            const p =  physics1.velocity.dot(n) - physics2.velocity.dot(n);
+              const physics1 = entity.getMutableComponent(Physics);
+              const physics2 = other.getMutableComponent(Physics);
 
-            physics1.velocity.sub(new Vector3().copy(n).multiplyScalar(p));
-            physics2.velocity.add(new Vector3().copy(n).multiplyScalar(p));
+              const p =  physics1.velocity.dot(n) - physics2.velocity.dot(n);
 
-            const overlap = sphere1.radius + sphere2.radius - sphere1.center.distanceTo(sphere2.center);
+              physics1.velocity.sub(new Vector3().copy(n).multiplyScalar(p));
+              physics2.velocity.add(new Vector3().copy(n).multiplyScalar(p));
 
-            transform1.position.sub(new Vector3().copy(n).multiplyScalar(overlap / 2));
-            transform2.position.add(new Vector3().copy(n).multiplyScalar(overlap / 2));
+              const overlap = sphere1.radius + sphere2.radius - sphere1.center.distanceTo(sphere2.center);
+
+              transform1.position.sub(new Vector3().copy(n).multiplyScalar(overlap / 2));
+              transform2.position.add(new Vector3().copy(n).multiplyScalar(overlap / 2));
+            }
           }
         }
       });
