@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 import WebSocket from 'ws';
-import Server from './server';
+import { Server } from './server';
 
 dotenv.config();
 

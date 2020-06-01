@@ -2,11 +2,17 @@ import logger from './utils/logger';
 import WebSocket from 'ws';
 import { v4 as uuidv4 } from 'uuid';
 
-export default class Server {
+import World from './world';
+
+export class Server {
   private sessions: Map<string, Session>;
+  private world: World;
 
   constructor() {
     this.sessions = new Map();
+    this.world = new World(+process.env.MAX_PLAYERS!, this);
+
+    this.world.run();
   }
 
   register(ws: WebSocket) {
@@ -18,6 +24,8 @@ export default class Server {
     ws.on('close', () => this.unregister(id));
     ws.on('error', () => this.unregister(id));
     ws.on('message', (data) => this.handleMessage(id, data.toString()));
+
+    this.world.addPlayer(session);
   }
 
   unregister(id: string) {
@@ -33,8 +41,6 @@ export default class Server {
       return;
     }
 
-    logger.info(`${id}: ${data}`);
-
     this.send(session, `You have been assigned id ${id}`);
   }
 
@@ -49,7 +55,7 @@ export default class Server {
   }
 }
 
-type Session = {
+export type Session = {
   id: string,
   ws: WebSocket
 };
