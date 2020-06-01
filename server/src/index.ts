@@ -1,12 +1,9 @@
-import logger from './utils/logger';
 import WebSocket from 'ws';
+import Server from './server';
 
 const wss = new WebSocket.Server({ port: 1337 });
+const server = new Server();
 
 wss.on('connection', (ws: WebSocket) => {
-  ws.on('message', (message: WebSocket.Data) => {
-    logger.info(`received: ${message}`);
-  });
-
-  ws.send('something');
+  server.register(ws);
 });

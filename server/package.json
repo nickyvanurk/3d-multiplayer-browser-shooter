@@ -19,8 +19,10 @@
     "typescript": "^3.8.3"
   },
   "dependencies": {
+    "@types/uuid": "^8.0.0",
     "@types/ws": "^7.2.4",
     "shared": "file:../shared/",
+    "uuid": "^8.1.0",
     "winston": "^3.2.1",
     "ws": "^7.3.0"
   }
