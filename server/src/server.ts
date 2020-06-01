@@ -52,4 +52,4 @@ export default class Server {
 type Session = {
   id: string,
   ws: WebSocket
-}
+};
