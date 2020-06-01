@@ -21,6 +21,7 @@
   "dependencies": {
     "@types/uuid": "^8.0.0",
     "@types/ws": "^7.2.4",
+    "dotenv": "^8.2.0",
     "shared": "file:../shared/",
     "uuid": "^8.1.0",
     "winston": "^3.2.1",

@@ -1,7 +1,10 @@
+import dotenv from 'dotenv';
 import WebSocket from 'ws';
 import Server from './server';
 
-const wss = new WebSocket.Server({ port: 1337 });
+dotenv.config();
+
+const wss = new WebSocket.Server({ port: +process.env.PORT! || 1337 });
 const server = new Server();
 
 wss.on('connection', (ws: WebSocket) => {
