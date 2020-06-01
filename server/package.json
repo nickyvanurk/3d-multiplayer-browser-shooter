@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start:dev": "LOG_LEVER=debug nodemon",
+    "start:dev": "nodemon",
     "build": "rimraf ./build && tsc",
     "start": "npm run build && node build/index.js"
   },
@@ -19,8 +19,9 @@
     "typescript": "^3.8.3"
   },
   "dependencies": {
-    "@geckos.io/server": "^1.4.1",
+    "@types/ws": "^7.2.4",
     "shared": "file:../shared/",
-    "winston": "^3.2.1"
+    "winston": "^3.2.1",
+    "ws": "^7.3.0"
   }
 }

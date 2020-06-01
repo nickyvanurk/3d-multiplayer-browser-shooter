@@ -1,19 +1,12 @@
-import geckos from '@geckos.io/server';
 import logger from './utils/logger';
+import WebSocket from 'ws';
 
-const io = geckos();
+const wss = new WebSocket.Server({ port: 1337 });
 
-io.listen(parseInt(process.env.PORT || '3000'));
+wss.on('connection', (ws: WebSocket) => {
+  ws.on('message', (message: WebSocket.Data) => {
+    logger.info(`received: ${message}`);
+  });
 
-io.onConnection(channel => {
-  logger.info(`Client connected`);
-
-  channel.onDisconnect(() => {
-    logger.info(`Client disonnected`);
-  })
-
-  channel.on('chat message', (data: any) => {
-    logger.info(`Client message: ${data}`);
-    io.room(channel.roomId).emit('chat message', data);
-  })
+  ws.send('something');
 });

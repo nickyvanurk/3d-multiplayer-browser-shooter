@@ -151,6 +151,16 @@ export default class Game {
     this.spawnAsteroids(100);
     this.spawnModels(100);
     this.spawnPlayer();
+
+    const socket = new WebSocket('ws://localhost:1337');
+
+    socket.addEventListener('open', (event: Event) => {
+      socket.send('Hello server!');
+    });
+
+    socket.addEventListener('message', (event: MessageEvent) => {
+      console.log(`Message from server ${event.data}`);
+    });
   }
 
   run() {
