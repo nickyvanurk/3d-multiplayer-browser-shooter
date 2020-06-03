@@ -152,15 +152,27 @@ export default class Game {
     this.spawnModels(100);
     this.spawnPlayer();
 
+    this.connect();
+  }
+
+  connect() {
     const socket = new WebSocket(`ws://${process.env.SERVER_URL}`);
 
-    socket.addEventListener('open', (event: Event) => {
-      socket.send('Hello server!');
-    });
+    socket.onopen = this.handleConnect.bind(this);
+    socket.onclose = this.handleDisconnect.bind(this);
+    socket.onmessage = this.handleMessage.bind(this);
+  }
 
-    socket.addEventListener('message', (event: MessageEvent) => {
-      console.log(`Message from server ${event.data}`);
-    });
+  handleConnect(event: Event) {
+    console.log(`Connected to server ${process.env.SERVER_URL}`);
+  }
+
+  handleDisconnect(event: Event) {
+    console.log(`Disconnect from server ${process.env.SERVER_URL}`);
+  }
+
+  handleMessage(event: MessageEvent) {
+    console.log(`Message from server ${event.data}`);
   }
 
   run() {
