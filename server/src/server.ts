@@ -31,6 +31,7 @@ export class Server {
   }
 
   unregister(id: string) {
+    this.world.removePlayer(this.sessions.get(id)!);
     this.sessions.delete(id);
     logger.info(`${id}: closed connection`);
   }

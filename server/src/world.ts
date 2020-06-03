@@ -36,6 +36,15 @@ export default class World {
     this.playerCount++;
   }
 
+  removePlayer(session: Session) {
+    this.playerCount--;
+
+    if (this.playerCount < 0) {
+      this.playerCount = 0;
+      logger.error(`world.playerCount can't be negative`);
+    }
+  }
+
   get randomStartingPosition() : Vector3 {
     return {
       x: Math.floor(Math.random() * (this.bounds.x - 1)) + 1,
