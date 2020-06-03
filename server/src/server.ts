@@ -43,8 +43,6 @@ export class Server {
       logger.error(`Can't find session ${id}`);
       return;
     }
-
-    this.send(session, `You have been assigned id ${id}`);
   }
 
   send(session: Session, payload: object | string) {
