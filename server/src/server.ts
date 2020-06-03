@@ -25,7 +25,9 @@ export class Server {
     ws.on('error', () => this.unregister(id));
     ws.on('message', (data) => this.handleMessage(id, data.toString()));
 
-    this.world.addPlayer(session);
+    if (this.world.playerCount <= this.world.maxPlayers) {
+      this.world.addPlayer(session);
+    }
   }
 
   unregister(id: string) {
