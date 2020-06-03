@@ -2,6 +2,7 @@ const path = require('path');
 const ExtractTextPlugin = require('extract-text-webpack-plugin');
 const {CleanWebpackPlugin} = require('clean-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const Dotenv = require('dotenv-webpack');
 
 module.exports = {
   entry: {
@@ -31,7 +32,8 @@ module.exports = {
     new HtmlWebpackPlugin({
       title: 'Void',
       template: 'src/index.html'
-    })
+    }),
+    new Dotenv()
   ],
   resolve: {
     extensions: ['.tsx', '.ts', '.js'],
@@ -39,5 +41,5 @@ module.exports = {
   output: {
     filename: '[name].bundle.js',
     path: path.resolve(__dirname, 'dist')
-  },
+  }
 };

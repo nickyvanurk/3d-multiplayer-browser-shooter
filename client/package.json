@@ -14,6 +14,7 @@
     "@types/html-webpack-plugin": "^3.2.2",
     "clean-webpack-plugin": "^3.0.0",
     "css-loader": "^3.5.3",
+    "dotenv-webpack": "^1.8.0",
     "file-loader": "^6.0.0",
     "html-webpack-plugin": "^4.3.0",
     "style-loader": "^1.2.1",

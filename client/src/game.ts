@@ -152,7 +152,7 @@ export default class Game {
     this.spawnModels(100);
     this.spawnPlayer();
 
-    const socket = new WebSocket('ws://localhost:1337');
+    const socket = new WebSocket(`ws://${process.env.SERVER_URL}`);
 
     socket.addEventListener('open', (event: Event) => {
       socket.send('Hello server!');

@@ -3,4 +3,5 @@ client/node_modules
 server/node_modules
 client/dist
 server/build
+client/.*
 server/.*
