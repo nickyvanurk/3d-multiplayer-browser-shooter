@@ -47,6 +47,7 @@ import {DestroySystem} from './systems/destroy-system';
 import {HealthSystem} from './systems/health-system';
 import {ParticleEffectSystem} from './systems/particle-effect-system';
 import {ScreenshakeSystem} from './systems/screenshake-system';
+import {NetworkSystem} from './systems/network-system';
 
 import {randomNumberGenerator} from './utils/rng';
 
@@ -78,6 +79,7 @@ export default class Game {
     this.hideLoadingScreen();
 
     this.world
+      .registerSystem(NetworkSystem)
       .registerSystem(InputSystem)
       .registerSystem(PlayerInputSystem)
       .registerSystem(DestroySystem)
@@ -151,28 +153,6 @@ export default class Game {
     this.spawnAsteroids(100);
     this.spawnModels(100);
     this.spawnPlayer();
-
-    this.connect();
-  }
-
-  connect() {
-    const socket = new WebSocket(`ws://${process.env.SERVER_URL}`);
-
-    socket.onopen = this.handleConnect.bind(this);
-    socket.onclose = this.handleDisconnect.bind(this);
-    socket.onmessage = this.handleMessage.bind(this);
-  }
-
-  handleConnect(event: Event) {
-    console.log(`Connected to server ${process.env.SERVER_URL}`);
-  }
-
-  handleDisconnect(event: Event) {
-    console.log(`Disconnect from server ${process.env.SERVER_URL}`);
-  }
-
-  handleMessage(event: MessageEvent) {
-    console.log(`Message from server ${event.data}`);
   }
 
   run() {

@@ -21,4 +21,17 @@ export class PlayerInputState extends Component {
     this.yaw = null;
     this.pitch = null;
   }
+
+  serialize() {
+    return {
+      movement: {
+        x: this.movementX,
+        y: this.movementY,
+        z: this.movementZ
+      },
+      roll: this.roll,
+      yaw: this.yaw,
+      pitch: this.pitch
+    }
+  }
 }
