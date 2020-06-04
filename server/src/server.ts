@@ -1,62 +1,18 @@
 import logger from './utils/logger';
-import WebSocket from 'ws';
-import { v4 as uuidv4 } from 'uuid';
+import { World } from 'ecsy';
 
-import World from './world';
+import { NetworkSystem } from './systems/network-system';
 
 export class Server {
-  private sessions: Map<string, Session>;
   private world: World;
 
   constructor() {
-    this.sessions = new Map();
-    this.world = new World(+process.env.MAX_PLAYERS!, this);
+    this.world = new World();
 
-    this.world.run();
+    this.init();
   }
 
-  register(ws: WebSocket) {
-    const id = uuidv4();
-    const session = { id, ws };
-
-    this.sessions.set(id, session);
-
-    ws.on('close', () => this.unregister(id));
-    ws.on('error', () => this.unregister(id));
-    ws.on('message', (data) => this.handleMessage(id, data.toString()));
-
-    if (this.world.playerCount <= this.world.maxPlayers) {
-      this.world.addPlayer(session);
-    }
-  }
-
-  unregister(id: string) {
-    this.world.removePlayer(this.sessions.get(id)!);
-    this.sessions.delete(id);
-    logger.info(`${id}: closed connection`);
-  }
-
-  handleMessage(id: string, data: string) {
-    const session = this.sessions.get(id);
-
-    if (!session) {
-      logger.error(`Can't find session ${id}`);
-      return;
-    }
-  }
-
-  send(session: Session, payload: object | string) {
-    try {
-      if (session.ws.readyState === WebSocket.OPEN) {
-        session.ws.send(JSON.stringify(payload));
-      }
-    } catch (error) {
-      logger.error(`Error sending to ${session.id}`);
-    }
+  init() {
+    this.world.registerSystem(NetworkSystem);
   }
 }
-
-export type Session = {
-  id: string,
-  ws: WebSocket
-};
