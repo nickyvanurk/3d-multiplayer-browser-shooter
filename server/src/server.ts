@@ -3,6 +3,7 @@ import { World } from 'ecsy';
 import { performance } from 'perf_hooks';
 
 import { NetworkSystem } from './systems/network-system';
+import { PhysicsSystem } from 'shared/src/systems/physics-system';
 
 export class Server {
   private world: World;
@@ -18,7 +19,9 @@ export class Server {
   }
 
   init() {
-    this.world.registerSystem(NetworkSystem);
+    this.world
+      .registerSystem(NetworkSystem)
+      .registerSystem(PhysicsSystem);
   }
 
   run() {

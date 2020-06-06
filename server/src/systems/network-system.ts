@@ -4,7 +4,9 @@ import WebSocket from 'ws';
 import { v4 as uuidv4 } from 'uuid';
 
 import createFixedTimestep from 'shared/src/utils/create-fixed-timestep';
-import { PlayerInputState } from '../components/player-input-state';
+import { PlayerInputState } from 'shared/src/components/player-input-state';
+import { Transform } from 'shared/src/components/transform';
+import { Physics  } from 'shared/src/components/physics';
 
 export class NetworkSystem extends System {
   static queries: any = {
@@ -48,7 +50,10 @@ export class NetworkSystem extends System {
 
   handleConnect(ws: WebSocket) {
     const id = uuidv4();
-    const player = this.world.createEntity().addComponent(PlayerInputState);
+    const player = this.world.createEntity()
+      .addComponent(PlayerInputState)
+      .addComponent(Transform)
+      .addComponent(Physics);
 
     this.players.set(id, { ws, entity: player });
 

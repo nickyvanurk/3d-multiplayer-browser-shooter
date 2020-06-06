@@ -2,6 +2,8 @@
   "name": "shared",
   "author": "Nicky van Urk",
   "dependencies": {
+    "ecsy": "^0.2.6",
+    "three": "^0.117.1",
     "winston": "^3.2.1"
   }
 }
