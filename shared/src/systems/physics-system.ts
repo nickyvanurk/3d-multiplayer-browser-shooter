@@ -1,10 +1,11 @@
-import {System, Entity} from 'ecsy';
-import {Vector3, Quaternion, Euler, Object3D} from 'three';
+import { System, Entity } from 'ecsy';
+import { Vector3, Quaternion, SphereBufferGeometry } from 'three';
+import Ammo from 'ammo.js';
 
-import {PlayerInputState} from '../components/player-input-state';
-import {Transform} from '../components/transform';
-import {Physics} from '../components/physics';
-import {Moving} from '../components/moving';
+import { PlayerInputState } from '../components/player-input-state';
+import { Transform } from '../components/transform';
+import { Physics } from '../components/physics';
+import { Moving } from '../components/moving';
 
 import createFixedTimestep from '../utils/create-fixed-timestep';
 
@@ -28,9 +29,15 @@ export class PhysicsSystem extends System {
   };
 
   private fixedUpdate: Function;
+  private physicsWorld: any;
+  private dispatcher: any;
 
   init() {
     this.fixedUpdate = createFixedTimestep(1000/60, this.handleFixedUpdate.bind(this));
+
+    Ammo(Ammo).then(() => {
+      this.physicsWorld = this.createWorld();
+    });
   }
 
   execute(delta: number) {
@@ -101,5 +108,20 @@ export class PhysicsSystem extends System {
       physics.velocity.y *= Math.pow(physics.damping, delta/1000);
       physics.velocity.z *= Math.pow(physics.damping, delta/1000);
     });
+  }
+
+  createWorld() {
+    const config = new Ammo.btDefaultCollisionConfiguration();
+    this.dispatcher = new Ammo.btCollisionDispatcher(config);
+    const cache = new Ammo.btDbvtBroadphase();
+    const solver = new Ammo.btSequentialImpulseConstraintSolver();
+    const world = new Ammo.btDiscreteDynamicsWorld(
+      this.dispatcher,
+      cache,
+      solver,
+      config
+    );
+
+    return world;
   }
 }
