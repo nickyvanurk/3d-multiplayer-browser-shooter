@@ -15,7 +15,7 @@ export class RaycasterSystem extends System {
       }
     },
     raycasterReceivers: {
-      components: [RaycasterReceiver]
+      components: [RaycasterReceiver, Object3d]
     },
     inputState: {
       components: [InputState]

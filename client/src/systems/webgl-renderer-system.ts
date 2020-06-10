@@ -1,16 +1,20 @@
-import {System, Not, Entity} from 'ecsy';
-import {WebGLRenderer, Vector2} from 'three';
-import {EffectComposer} from 'three/examples/jsm/postprocessing/EffectComposer';
-import {RenderPass as RenderPass$1} from 'three/examples/jsm/postprocessing/RenderPass' ;
-import {UnrealBloomPass as UnrealBloomPass$1} from 'three/examples/jsm/postprocessing/UnrealBloomPass' ;
+import { System, Not, Entity } from 'ecsy';
+import { WebGLRenderer, Vector2, LoadingManager } from 'three';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer';
+import { RenderPass as RenderPass$1 } from 'three/examples/jsm/postprocessing/RenderPass' ;
+import { UnrealBloomPass as UnrealBloomPass$1 } from 'three/examples/jsm/postprocessing/UnrealBloomPass' ;
 
-import {WebGlRenderer}  from '../components/webgl-renderer';
-import {WebGlRendererContext} from '../components/webgl-renderer-context';
-import {RenderPass} from '../components/render-pass';
-import {UnrealBloomPass} from '../components/unreal-bloom-pass';
-import {Camera} from '../components/camera';
-import {Scene} from '../components/scene';
-import {Object3d} from '../components/object3d';
+import { AssetManager } from '../asset-manager';
+
+import { WebGlRenderer }  from '../components/webgl-renderer';
+import { WebGlRendererContext } from '../components/webgl-renderer-context';
+import { RenderPass } from '../components/render-pass';
+import { UnrealBloomPass } from '../components/unreal-bloom-pass';
+import { Camera } from '../components/camera';
+import { Scene } from '../components/scene';
+import { Object3d } from '../components/object3d';
+import { Player } from '../components/player';
+import { Asteroid } from '../components/asteroid';
 
 export class WebGlRendererSystem extends System {
   static queries: any = {
@@ -47,8 +51,22 @@ export class WebGlRendererSystem extends System {
         added: true,
         removed: true
       }
+    },
+    players: {
+      components: [Player],
+      listen: {
+        added: true
+      }
+    },
+    asteroids: {
+      components: [Asteroid],
+      listen: {
+        added: true
+      }
     }
   };
+
+  private assetManager: AssetManager;
 
   init() {
     window.addEventListener('resize', () => {
@@ -61,10 +79,51 @@ export class WebGlRendererSystem extends System {
         }
       });
     });
+
+    const loadingManager = new LoadingManager();
+    loadingManager.onLoad = this.handleLoad.bind(this);
+    loadingManager.onProgress = this.handleProgress.bind(this);
+
+    this.assetManager = new AssetManager(loadingManager);
+    this.assetManager.loadModel({name: 'spaceship', url: 'models/spaceship.gltf'});
+    this.assetManager.loadModel({name: 'asteroid', url: 'models/asteroid.gltf'});
+
+    this.stop();
+  }
+
+  handleLoad() {
+    this.hideLoadingScreen();
+    this.play();
+  }
+
+  handleProgress(url: string, itemsLoaded: number, itemsTotal: number) {
+    this.updateLoadingScreen(Math.floor(itemsLoaded / itemsTotal * 100));
+  }
+
+  updateLoadingScreen(percentage: number) {
+    const progressText: any = document.querySelector('.loading-screen h1');
+    progressText.innerText = `${percentage}%`;
+
+    const progressBar: any = document.querySelector('.loading-screen hr');
+    progressBar.style.width = `${percentage}%`;
+  }
+
+  hideLoadingScreen() {
+    const loadingScreen: any = document.querySelector('.loading-screen');
+    loadingScreen.classList.add('fade-out');
+    loadingScreen.addEventListener('transitionend', () => {
+      loadingScreen.style.zIndex = -1;
+      document.querySelector('.crosshair').setAttribute('visibility', 'visible');
+    });
+
+    const loadingBar: any = document.querySelector('.loading-screen hr');
+    loadingBar.addEventListener('transitionend', (event: TransitionEvent) => {
+      event.stopPropagation();
+    });
   }
 
   execute() {
-      this.queries.renderersUninitialized.results.forEach((rendererEntity: Entity) => {
+    this.queries.renderersUninitialized.results.forEach((rendererEntity: Entity) => {
       const component = rendererEntity.getComponent(WebGlRenderer);
 
       const renderer = new WebGLRenderer({antialias: component.antialias});
@@ -134,6 +193,16 @@ export class WebGlRendererSystem extends System {
         );
         composer.addPass(bloomPass);
       });
+    });
+
+    this.queries.players.added.forEach((entity: Entity) => {
+      const model = this.assetManager.getModel('spaceship');
+      entity.addComponent(Object3d, {value: model});
+    });
+
+    this.queries.asteroids.added.forEach((entity: Entity) => {
+      const model = this.assetManager.getModel('asteroid');
+      entity.addComponent(Object3d, {value: model});
     });
 
     this.queries.object3ds.added.forEach((object3dEntity: Entity) => {

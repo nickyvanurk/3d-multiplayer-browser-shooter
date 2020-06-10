@@ -41,6 +41,6 @@ export class AssetManager {
   }
 
   getModel(name: string) {
-    return this.models.get(name);
+    return this.models.get(name).scene.clone();
   }
 }

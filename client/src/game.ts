@@ -1,7 +1,6 @@
 import './loader.css';
 
 import {
-  LoadingManager,
   Scene as Scene$1,
   Vector3,
   AmbientLight,
@@ -10,74 +9,61 @@ import {
   BufferGeometry,
   BufferAttribute,
   PointsMaterial,
-  Points
+  Points,
+  Quaternion
 } from 'three';
-import {AssetManager} from './asset-manager';
-import {World} from 'ecsy';
+import { World } from 'ecsy';
 
-import {Transform} from './components/transform';
-import {Object3d} from './components/object3d';
-import {PlayerController} from './components/player-controller';
-import {Physics} from './components/physics';
-import {SphereCollider} from './components/sphere-collider';
-import {Camera} from './components/camera';
-import {Scene} from './components/scene';
-import {WebGlRenderer} from './components/webgl-renderer';
-import {RenderPass} from './components/render-pass';
-import {UnrealBloomPass} from './components/unreal-bloom-pass';
-import {Weapon, WeaponType} from './components/weapon';
-import {Weapons} from './components/weapons';
-import {Raycaster} from './components/raycaster';
-import {RaycasterReceiver} from './components/raycast-receiver';
-import {Health} from './components/health';
-import {ParticleEffectOnDestroy} from './components/particle-effect-on-destroy';
-import {ParticleEffectType} from './components/particle-effect';
-import {MeshCollider} from './components/mesh-collider';
+import { Transform } from './components/transform';
+import { PlayerController } from './components/player-controller';
+import { Physics } from './components/physics';
+import { SphereCollider } from './components/sphere-collider';
+import { Camera } from './components/camera';
+import { Scene } from './components/scene';
+import { WebGlRenderer } from './components/webgl-renderer';
+import { RenderPass } from './components/render-pass';
+import { UnrealBloomPass } from './components/unreal-bloom-pass';
+import { Weapon ,WeaponType } from './components/weapon';
+import { Weapons } from './components/weapons';
+import { Raycaster } from './components/raycaster';
+import { RaycasterReceiver } from './components/raycast-receiver';
+import { Health } from './components/health';
+import { ParticleEffectOnDestroy } from './components/particle-effect-on-destroy';
+import { ParticleEffectType } from './components/particle-effect';
+import { MeshCollider } from './components/mesh-collider';
+import { Player } from './components/player';
+import { Asteroid } from './components/asteroid';
 
-import {WebGlRendererSystem} from './systems/webgl-renderer-system';
-import {InputSystem} from './systems/input-system';
-import {PlayerInputSystem} from './systems/player-input-system';
-import {PhysicsSystem} from './systems/physics-system';
-import {CameraSystem} from './systems/camera-system';
-import {TransformSystem} from './systems/transform-system';
-import {TimeoutSystem} from './systems/timeout-system';
-import {WeaponSystem} from './systems/weapon-system';
-import {RaycasterSystem} from './systems/raycaster-system';
-import {DestroySystem} from './systems/destroy-system';
-import {HealthSystem} from './systems/health-system';
-import {ParticleEffectSystem} from './systems/particle-effect-system';
-import {ScreenshakeSystem} from './systems/screenshake-system';
-import {NetworkSystem} from './systems/network-system';
+import { WebGlRendererSystem } from './systems/webgl-renderer-system';
+import { InputSystem } from './systems/input-system';
+import { PlayerInputSystem } from './systems/player-input-system';
+import { PhysicsSystem } from './systems/physics-system';
+import { CameraSystem } from './systems/camera-system';
+import { TransformSystem } from './systems/transform-system';
+import { TimeoutSystem } from './systems/timeout-system';
+import { WeaponSystem } from './systems/weapon-system';
+import { RaycasterSystem } from './systems/raycaster-system';
+import { DestroySystem } from './systems/destroy-system';
+import { HealthSystem } from './systems/health-system';
+import { ParticleEffectSystem } from './systems/particle-effect-system';
+import { ScreenshakeSystem } from './systems/screenshake-system';
+import { NetworkSystem } from './systems/network-system';
 
-import {randomNumberGenerator} from './utils/rng';
+import { randomNumberGenerator } from './utils/rng';
 
 export default class Game {
   private lastTime: number;
   private world: World;
-  private assetManager: AssetManager;
   private rng: Function;
 
   constructor() {
     this.lastTime = performance.now();
-
-    const loadingManager = new LoadingManager();
-    loadingManager.onLoad = this.init.bind(this);
-    loadingManager.onProgress = this.handleProgress.bind(this);
-
-    this.assetManager = new AssetManager(loadingManager);
-    this.assetManager.loadModel({name: 'spaceship', url: 'models/spaceship.gltf'});
-    this.assetManager.loadModel({name: 'asteroid', url: 'models/asteroid.gltf'});
-
     this.world = new World();
-  }
 
-  handleProgress(url: string, itemsLoaded: number, itemsTotal: number) {
-    this.updateLoadingScreen(Math.floor(itemsLoaded / itemsTotal * 100));
+    this.init();
   }
 
   init() {
-    this.hideLoadingScreen();
-
     this.world
       .registerSystem(NetworkSystem)
       .registerSystem(InputSystem)
@@ -170,66 +156,41 @@ export default class Game {
     requestAnimationFrame(this.run.bind(this));
   }
 
-  updateLoadingScreen(percentage: number) {
-    const progressText: any = document.querySelector('.loading-screen h1');
-    progressText.innerText = `${percentage}%`;
-
-    const progressBar: any = document.querySelector('.loading-screen hr');
-    progressBar.style.width = `${percentage}%`;
-  }
-
-  hideLoadingScreen() {
-    const loadingScreen: any = document.querySelector('.loading-screen');
-    loadingScreen.classList.add('fade-out');
-    loadingScreen.addEventListener('transitionend', () => {
-      loadingScreen.style.zIndex = -1;
-      document.querySelector('.crosshair').setAttribute('visibility', 'visible');
-    });
-
-    const loadingBar: any = document.querySelector('.loading-screen hr');
-    loadingBar.addEventListener('transitionend', (event: TransitionEvent) => {
-      event.stopPropagation();
-    });
-  }
-
   spawnAsteroids(amount: number) {
     const rng = randomNumberGenerator(5);
-    const model = this.assetManager.getModel('asteroid');
 
     for (let i = 0; i < amount; ++i) {
       const scaleValue = [1, 5, 10];
       const scale = scaleValue[Math.floor(rng() * scaleValue.length)];
 
-      model.scene.scale.set(scale, scale, scale);
-      model.scene.children[0].rotation.set(
-        rng() * Math.PI * 2,
-        rng() * Math.PI * 2,
-        rng() * Math.PI * 2
-      );
+      const rotation = new Quaternion();
+      rotation.setFromAxisAngle(new Vector3(1, 0, 0), rng() * Math.PI * 2);
+      rotation.setFromAxisAngle(new Vector3(0, 1, 0), rng() * Math.PI * 2);
+      rotation.setFromAxisAngle(new Vector3(0, 0, 1), rng() * Math.PI * 2);
 
       const asteroid = this.world.createEntity()
-        .addComponent(Object3d, {value: model.scene.clone()})
         .addComponent(Transform, {
           position: new Vector3(
             (rng() - 0.5) * 120,
             (rng() - 0.5) * 120,
             (rng() - 0.5) * 120
-          )
+          ),
+          rotation,
+          scale: new Vector3(scale, scale, scale)
         })
         .addComponent(RaycasterReceiver)
         .addComponent(ParticleEffectOnDestroy, {type: ParticleEffectType.Explosion});
 
       asteroid.addComponent(Physics);
       asteroid.addComponent(MeshCollider);
+      asteroid.addComponent(Asteroid);
     }
   }
 
   spawnModels(amount: number) {
-    const model = this.assetManager.getModel('spaceship');
-
     for (let i = 0; i < amount; ++i) {
       this.world.createEntity()
-        .addComponent(Object3d, {value: model.scene.clone()})
+        .addComponent(Player)
         .addComponent(Transform, {
           position: new Vector3(
             (Math.random() - 0.5) * 120,
@@ -246,10 +207,7 @@ export default class Game {
   }
 
   spawnPlayer() {
-    const model = this.assetManager.getModel('spaceship');
-
     const player = this.world.createEntity()
-      .addComponent(Object3d, {value: model.scene.clone()})
       .addComponent(Transform)
       .addComponent(PlayerController, {
         rollLeft: 'KeyQ',
@@ -266,7 +224,8 @@ export default class Game {
       .addComponent(Physics)
       .addComponent(SphereCollider, {radius: 1.25})
       .addComponent(Health, {value: 100})
-      .addComponent(ParticleEffectOnDestroy, {type: ParticleEffectType.Explosion});
+      .addComponent(ParticleEffectOnDestroy, {type: ParticleEffectType.Explosion})
+      .addComponent(Player);
 
     const weapon1 = this.world.createEntity()
       .addComponent(Transform)

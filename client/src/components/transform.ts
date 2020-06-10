@@ -7,6 +7,7 @@ export class Transform extends Component {
 
   position: Vector3;
   rotation: Quaternion;
+  scale: Vector3;
 
   renderPosition: Vector3;
   renderRotation: Quaternion;
@@ -19,6 +20,7 @@ export class Transform extends Component {
 
     this.position = new Vector3(0, 0, 0);
     this.rotation = new Quaternion();
+    this.scale = new Vector3(1, 1, 1);
 
     this.renderPosition = new Vector3(0, 0, 0);
     this.renderRotation = new Quaternion();
@@ -32,6 +34,10 @@ export class Transform extends Component {
     if (src.rotation) {
       this.rotation.copy(src.rotation);
     }
+
+    if (src.scale) {
+      this.scale.copy(src.scale);
+    }
   }
 
   reset() {
@@ -40,6 +46,7 @@ export class Transform extends Component {
 
     this.position.set(0, 0, 0);
     this.rotation.set(0, 0, 0, 0);
+    this.scale.set(1, 1, 1);
 
     this.renderPosition.set(0, 0, 0);
     this.renderRotation.set(0, 0, 0, 0);
