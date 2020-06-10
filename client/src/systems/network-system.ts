@@ -1,7 +1,12 @@
-import { System } from 'ecsy';
+import { System, Entity } from 'ecsy';
+
+import createFixedTimestep from 'shared/src/utils/create-fixed-timestep';
 
 import { PlayerInputState } from '../components/player-input-state';
-import createFixedTimestep from 'shared/src/utils/create-fixed-timestep';
+import { Transform } from '../components/transform';
+import { Physics } from '../components/physics';
+import { Vector3, Quaternion } from 'three';
+import { Player } from '../components/player';
 
 export class NetworkSystem extends System {
   static queries: any = {
@@ -12,6 +17,7 @@ export class NetworkSystem extends System {
 
   private socket: WebSocket;
   private fixedUpdate: Function;
+  private players: Map<string, PlayerType>;
 
   init() {
     this.socket = new WebSocket(`ws://${process.env.SERVER_URL}`);
@@ -21,6 +27,8 @@ export class NetworkSystem extends System {
     this.socket.onmessage = this.handleMessage.bind(this);
 
     this.fixedUpdate = createFixedTimestep(1000/60, this.handleFixedUpdate.bind(this));
+
+    this.players = new Map<string, PlayerType>();
   }
 
   execute(delta: number) {
@@ -44,7 +52,30 @@ export class NetworkSystem extends System {
   }
 
   handleMessage(event: MessageEvent) {
-    console.log(`Message from server ${event.data}`);
+    const message: PlayerTransformMessage = JSON.parse(event.data);
+
+    const p = message.position;
+    const r = message.rotation;
+
+    const player = this.players.get(message.id);
+
+    if (!player) {
+      const player = this.world.createEntity()
+        .addComponent(Player)
+        .addComponent(Transform, {
+          position: new Vector3(p.x, p.y, p.z),
+          rotation: new Quaternion(r.x, r.y, r.z, r.w)
+        })
+        .addComponent(Physics);
+
+      this.players.set(message.id, { entity: player });
+
+      return;
+    }
+
+    const transform = player.entity.getMutableComponent(Transform);
+    transform.position.set(p.x, p.y, p.z);
+    transform.rotation.set(r.x, r.y, r.z, r.w);
   }
 
   send(payload: object | string) {
@@ -57,3 +88,22 @@ export class NetworkSystem extends System {
     }
   }
 }
+
+type PlayerType = {
+  entity: Entity
+};
+
+type PlayerTransformMessage = {
+  id: string,
+  position: {
+    x: number,
+    y: number,
+    z: number
+  },
+  rotation: {
+    x: number,
+    y: number,
+    z: number,
+    w: number
+  }
+};

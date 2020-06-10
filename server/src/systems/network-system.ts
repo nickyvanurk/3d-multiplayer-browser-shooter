@@ -4,6 +4,7 @@ import WebSocket from 'ws';
 import { v4 as uuidv4 } from 'uuid';
 
 import createFixedTimestep from 'shared/src/utils/create-fixed-timestep';
+
 import { PlayerInputState } from 'shared/src/components/player-input-state';
 import { Transform } from 'shared/src/components/transform';
 import { Physics  } from 'shared/src/components/physics';
@@ -47,16 +48,24 @@ export class NetworkSystem extends System {
   }
 
   handleFixedUpdate(delta: number) {
+    const transforms = [];
+
     this.players.forEach((player: Player, id: string) => {
       const transform = player.entity.getComponent(Transform);
       const p = transform.position;
       const r = transform.rotation;
 
-      this.send(id, {
+      transforms.push({
         id,
         position: { x: p.x, y: p.y, z: p.z },
         rotation: { x: r.x, y: r.y, z: r.z, w: r.w }
       });
+    });
+
+    this.players.forEach((player: Player, id: string) => {
+      transforms.forEach((transform: any) => {
+        this.send(id, { ...transform });
+      })
     });
   }
 
