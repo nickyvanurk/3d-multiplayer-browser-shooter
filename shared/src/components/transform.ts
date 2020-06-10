@@ -36,12 +36,12 @@ export class Transform extends Component {
 
   reset() {
     this.previousPosition.set(0, 0, 0);
-    this.previousRotation.set(0, 0, 0, 0);
+    this.previousRotation.set(0, 0, 0, 1);
 
     this.position.set(0, 0, 0);
-    this.rotation.set(0, 0, 0, 0);
+    this.rotation.set(0, 0, 0, 1);
 
     this.renderPosition.set(0, 0, 0);
-    this.renderRotation.set(0, 0, 0, 0);
+    this.renderRotation.set(0, 0, 0, 1);
   }
 }
