@@ -46,7 +46,19 @@ export class NetworkSystem extends System {
     this.fixedUpdate(delta);
   }
 
-  handleFixedUpdate(delta: number) { }
+  handleFixedUpdate(delta: number) {
+    this.players.forEach((player: Player, id: string) => {
+      const transform = player.entity.getComponent(Transform);
+      const p = transform.position;
+      const r = transform.rotation;
+
+      this.send(id, {
+        id,
+        position: { x: p.x, y: p.y, z: p.z },
+        rotation: { x: r.x, y: r.y, z: r.z, w: r.w }
+      });
+    });
+  }
 
   handleConnect(ws: WebSocket) {
     const id = uuidv4();
