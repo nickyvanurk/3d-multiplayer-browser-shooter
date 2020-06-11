@@ -50,6 +50,7 @@ import { ScreenshakeSystem } from './systems/screenshake-system';
 import { NetworkSystem } from './systems/network-system';
 
 import { randomNumberGenerator } from './utils/rng';
+import { CameraTarget } from './components/camera-target';
 
 export default class Game {
   private lastTime: number;
@@ -208,6 +209,7 @@ export default class Game {
 
   spawnPlayer() {
     const player = this.world.createEntity()
+      .addComponent(Player)
       .addComponent(Transform)
       .addComponent(PlayerController, {
         rollLeft: 'KeyQ',
@@ -221,11 +223,11 @@ export default class Game {
         boost: 'ShiftLeft',
         weaponPrimary: 0
       })
+      .addComponent(CameraTarget)
       .addComponent(Physics)
       .addComponent(SphereCollider, {radius: 1.25})
       .addComponent(Health, {value: 100})
-      .addComponent(ParticleEffectOnDestroy, {type: ParticleEffectType.Explosion})
-      .addComponent(Player);
+      .addComponent(ParticleEffectOnDestroy, {type: ParticleEffectType.Explosion});
 
     const weapon1 = this.world.createEntity()
       .addComponent(Transform)

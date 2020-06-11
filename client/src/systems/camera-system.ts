@@ -1,8 +1,8 @@
-import {System, Not, Entity} from 'ecsy';
-import {PerspectiveCamera} from 'three';
+import { System, Not, Entity } from 'ecsy';
+import { PerspectiveCamera } from 'three';
 
-import {Camera} from '../components/camera';
-import {Object3d} from '../components/object3d';
+import { Camera } from '../components/camera';
+import { Object3d } from '../components/object3d';
 
 export class CameraSystem extends System {
   static queries: any = {

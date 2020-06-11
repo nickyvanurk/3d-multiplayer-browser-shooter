@@ -19,6 +19,7 @@ import {BoundingBox, Octree} from '../utils/octree';
 import {Moving} from '../components/moving';
 import {Owner} from '../components/owner';
 import { MeshCollider } from '../components/mesh-collider';
+import { CameraTarget } from '../components/camera-target';
 
 export class PhysicsSystem extends System {
   static queries: any = {
@@ -75,6 +76,9 @@ export class PhysicsSystem extends System {
     },
     movingObjects: {
       components: [Moving]
+    },
+    cameraTarget: {
+      components: [CameraTarget]
     }
   };
 
@@ -142,16 +146,6 @@ export class PhysicsSystem extends System {
       transform.renderRotation = new Quaternion().copy(transform.previousRotation)
                                                        .slerp(transform.rotation, nextFrameRatio);
     });
-
-    this.queries.players.added.forEach((entity: any) => {
-      const transform = entity.getMutableComponent(Transform);
-
-      this.queries.camera.results.forEach((entity: any) => {
-        const cameraTransform = entity.getMutableComponent(Transform);
-        cameraTransform.rotation.copy(transform.rotation);
-        cameraTransform.rotation.multiply(new Quaternion().setFromEuler(new Euler(0, Math.PI, 0, 'XYZ')).normalize());
-      });
-    });
   }
 
   handleFixedUpdate(delta: number) {
@@ -207,19 +201,6 @@ export class PhysicsSystem extends System {
       physics.velocity.x *= Math.pow(physics.damping, delta/1000);
       physics.velocity.y *= Math.pow(physics.damping, delta/1000);
       physics.velocity.z *= Math.pow(physics.damping, delta/1000);
-
-      this.queries.camera.results.forEach((entity: Entity) => {
-        const obj = new Object3D();
-        obj.position.copy(transform.position);
-        obj.quaternion.copy(transform.rotation);
-        obj.translateY(1);
-        obj.translateZ(-4);
-        obj.quaternion.multiply(new Quaternion().setFromEuler(new Euler(0, Math.PI, 0, 'XYZ')).normalize());
-
-        const cameraTransform = entity.getMutableComponent(Transform);
-        cameraTransform.position.lerp(obj.position, 1 - Math.exp(-10 * (delta/1000)));
-        cameraTransform.rotation.slerp(obj.quaternion,  1 - Math.exp(-10 * (delta/1000)));
-      });
     });
 
     this.queries.others.results.forEach((entity: any) => {
@@ -240,6 +221,24 @@ export class PhysicsSystem extends System {
       rotation.multiply(new Quaternion().setFromAxisAngle(new Vector3(1, 0, 0), 0.001*delta));
       rotation.multiply(new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), 0.001*delta));
     });
+
+    const camera = this.queries.camera.results[0];
+    const cameraTarget = this.queries.cameraTarget.results[0];
+
+    if (camera && cameraTarget) {
+      const transform = cameraTarget.getComponent(Transform);
+
+      const obj = new Object3D();
+      obj.position.copy(transform.position);
+      obj.quaternion.copy(transform.rotation);
+      obj.translateY(1);
+      obj.translateZ(-4);
+      obj.quaternion.multiply(new Quaternion().setFromEuler(new Euler(0, Math.PI, 0, 'XYZ')).normalize());
+
+      const cameraTransform = camera.getMutableComponent(Transform);
+      cameraTransform.position.lerp(obj.position, 1 - Math.exp(-10 * (delta/1000)));
+      cameraTransform.rotation.slerp(obj.quaternion,  1 - Math.exp(-10 * (delta/1000)));
+    }
 
     const octree = new Octree(new BoundingBox(
       new Vector3(0, 0, 0),
