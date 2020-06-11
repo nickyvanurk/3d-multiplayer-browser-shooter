@@ -65,8 +65,7 @@ export class NetworkSystem extends System {
         .addComponent(Transform, {
           position: new Vector3(p.x, p.y, p.z),
           rotation: new Quaternion(r.x, r.y, r.z, r.w)
-        })
-        .addComponent(Physics);
+        });
 
       this.players.set(message.id, { entity: player });
 
