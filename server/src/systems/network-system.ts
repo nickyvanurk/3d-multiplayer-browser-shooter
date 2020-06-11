@@ -64,7 +64,10 @@ export class NetworkSystem extends System {
 
     this.players.forEach((player: Player, id: string) => {
       transforms.forEach((transform: any) => {
-        this.send(id, { ...transform });
+        this.send(id, {
+          type: MessageType.State,
+          payload: { id, ...transform }
+        });
       })
     });
   }
@@ -81,6 +84,11 @@ export class NetworkSystem extends System {
     ws.on('close', () => this.handleDisconnect(id));
     ws.on('error', () => this.handleDisconnect(id));
     ws.on('message', (data) => this.handleMessage(id, data));
+
+    this.send(id, {
+      type: MessageType.Init,
+      payload: { id }
+    });
 
     logger.info(`${id}: connected`);
   }
@@ -99,7 +107,7 @@ export class NetworkSystem extends System {
       return;
     }
 
-    const received: PlayerInputStateMessage = JSON.parse(<string> data);
+    const received: MessagePlayerState = JSON.parse(<string> data);
     const playerInputState = entity.getMutableComponent(PlayerInputState);
 
     playerInputState.movementX = received.movement.x;
@@ -130,7 +138,7 @@ type Player = {
   entity: Entity
 };
 
-type PlayerInputStateMessage = {
+type MessagePlayerState = {
   movement: {
     x: number,
     y: number,
@@ -140,3 +148,8 @@ type PlayerInputStateMessage = {
   yaw: number,
   pitch: number
 };
+
+enum MessageType {
+  Init,
+  State
+}

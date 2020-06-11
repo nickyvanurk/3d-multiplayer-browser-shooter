@@ -139,7 +139,7 @@ export default class Game {
 
     this.spawnAsteroids(100);
     this.spawnModels(100);
-    this.spawnPlayer();
+    // this.spawnPlayer();
   }
 
   run() {
