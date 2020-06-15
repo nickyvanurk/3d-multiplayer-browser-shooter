@@ -81,6 +81,8 @@ export default class Game {
       .registerSystem(ScreenshakeSystem)
       .registerSystem(WebGlRendererSystem);
 
+    // this.world.getSystem(PhysicsSystem).stop();
+
     this.world.createEntity()
       .addComponent(WebGlRenderer, {antialias: true, clearColor: 0x020207});
 

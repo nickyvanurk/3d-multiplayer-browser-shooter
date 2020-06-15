@@ -91,49 +91,49 @@ export class PhysicsSystem extends System {
   }
 
   execute(delta: number) {
-    this.queries.sphereColliders.added.forEach((entity: Entity) => {
-      if (!entity.getComponent(SphereCollider).radius && entity.getComponent(Object3d)) {
-        const object3d = entity.getComponent(Object3d).value;
-        const sphereCollider = entity.getMutableComponent(SphereCollider);
+    // this.queries.sphereColliders.added.forEach((entity: Entity) => {
+    //   if (!entity.getComponent(SphereCollider).radius && entity.getComponent(Object3d)) {
+    //     const object3d = entity.getComponent(Object3d).value;
+    //     const sphereCollider = entity.getMutableComponent(SphereCollider);
 
-        let combinedGeometry: any = [];
+    //     let combinedGeometry: any = [];
 
-        object3d.traverse((child: Mesh) => {
-          if (child.isMesh) {
-            combinedGeometry.push(child.geometry.clone().applyMatrix4(object3d.matrix));
-          }
-        });
+    //     object3d.traverse((child: Mesh) => {
+    //       if (child.isMesh) {
+    //         combinedGeometry.push(child.geometry.clone().applyMatrix4(object3d.matrix));
+    //       }
+    //     });
 
-        const geometry = BufferGeometryUtils.mergeBufferGeometries(combinedGeometry);
-        geometry.computeBoundingSphere();
+    //     const geometry = BufferGeometryUtils.mergeBufferGeometries(combinedGeometry);
+    //     geometry.computeBoundingSphere();
 
-        sphereCollider.radius = geometry.boundingSphere.radius * Math.max(
-          Math.abs(object3d.scale.x),
-          Math.abs(object3d.scale.x),
-          Math.abs(object3d.scale.y)
-        );
-      }
-    });
+    //     sphereCollider.radius = geometry.boundingSphere.radius * Math.max(
+    //       Math.abs(object3d.scale.x),
+    //       Math.abs(object3d.scale.x),
+    //       Math.abs(object3d.scale.y)
+    //     );
+    //   }
+    // });
 
-    this.queries.collisionsStart.results.forEach((entity: Entity) => {
-      entity.removeComponent(CollisionStart);
-    });
+    // this.queries.collisionsStart.results.forEach((entity: Entity) => {
+    //   entity.removeComponent(CollisionStart);
+    // });
 
     const nextFrameRatio = this.fixedUpdate(delta);
 
-    this.queries.collisionsStop.results.forEach((collisionStopEntity: Entity) => {
-      collisionStopEntity.removeComponent(CollisionStop);
-    });
+    // this.queries.collisionsStop.results.forEach((collisionStopEntity: Entity) => {
+    //   collisionStopEntity.removeComponent(CollisionStop);
+    // });
 
-    this.queries.collisions.results.forEach((collisionEntity: Entity) => {
-      const component = collisionEntity.getComponent(Colliding);
+    // this.queries.collisions.results.forEach((collisionEntity: Entity) => {
+    //   const component = collisionEntity.getComponent(Colliding);
 
-      if (component.collidingFrame !== this.frame) {
-        collisionEntity.removeComponent(Colliding);
-        collisionEntity.addComponent(CollisionStop);
-        return;
-      }
-    });
+    //   if (component.collidingFrame !== this.frame) {
+    //     collisionEntity.removeComponent(Colliding);
+    //     collisionEntity.addComponent(CollisionStop);
+    //     return;
+    //   }
+    // });
 
     this.queries.transforms.results.forEach((entity: any) => {
       const transform = entity.getMutableComponent(Transform);
@@ -146,6 +146,8 @@ export class PhysicsSystem extends System {
       transform.renderRotation = new Quaternion().copy(transform.previousRotation)
                                                        .slerp(transform.rotation, nextFrameRatio);
     });
+
+    this.stop();
   }
 
   handleFixedUpdate(delta: number) {
@@ -167,41 +169,41 @@ export class PhysicsSystem extends System {
       transform.previousRotation.copy(transform.rotation);
     });
 
-    this.queries.players.results.forEach((entity: any) => {
-      const input = entity.getMutableComponent(PlayerInputState);
-      const transform = entity.getMutableComponent(Transform);
-      const physics = entity.getMutableComponent(Physics);
+    // this.queries.players.results.forEach((entity: any) => {
+    //   const input = entity.getMutableComponent(PlayerInputState);
+    //   const transform = entity.getMutableComponent(Transform);
+    //   const physics = entity.getMutableComponent(Physics);
 
-      physics.angularVelocity.x = 0.0000625*delta * input.pitch;
-      physics.angularVelocity.y = 0.0000625*delta * input.yaw;
-      physics.angularVelocity.z += physics.angularAcceleration*delta * input.roll;
+    //   physics.angularVelocity.x = 0.0000625*delta * input.pitch;
+    //   physics.angularVelocity.y = 0.0000625*delta * input.yaw;
+    //   physics.angularVelocity.z += physics.angularAcceleration*delta * input.roll;
 
-      physics.angularVelocity.z *= Math.pow(physics.angularDamping, delta/1000);
+    //   physics.angularVelocity.z *= Math.pow(physics.angularDamping, delta/1000);
 
-      const q = new Quaternion(
-        physics.angularVelocity.x*delta,
-        physics.angularVelocity.y*delta,
-        physics.angularVelocity.z*delta,
-      1
-      ).normalize();
-      transform.rotation.multiply(q);
+    //   const q = new Quaternion(
+    //     physics.angularVelocity.x*delta,
+    //     physics.angularVelocity.y*delta,
+    //     physics.angularVelocity.z*delta,
+    //   1
+    //   ).normalize();
+    //   transform.rotation.multiply(q);
 
-      let directionX = new Vector3(1, 0, 0).applyQuaternion(transform.rotation).normalize();
-      let directionY = new Vector3(0, 1, 0).applyQuaternion(transform.rotation).normalize();
-      let directionZ = new Vector3(0, 0, 1).applyQuaternion(transform.rotation).normalize();
+    //   let directionX = new Vector3(1, 0, 0).applyQuaternion(transform.rotation).normalize();
+    //   let directionY = new Vector3(0, 1, 0).applyQuaternion(transform.rotation).normalize();
+    //   let directionZ = new Vector3(0, 0, 1).applyQuaternion(transform.rotation).normalize();
 
-      physics.velocity.add(directionZ.multiplyScalar(physics.acceleration * delta * input.movementZ));
-      physics.velocity.add(directionX.multiplyScalar(physics.acceleration * delta * input.movementX));
-      physics.velocity.add(directionY.multiplyScalar(physics.acceleration * delta * input.movementY));
+    //   physics.velocity.add(directionZ.multiplyScalar(physics.acceleration * delta * input.movementZ));
+    //   physics.velocity.add(directionX.multiplyScalar(physics.acceleration * delta * input.movementX));
+    //   physics.velocity.add(directionY.multiplyScalar(physics.acceleration * delta * input.movementY));
 
-      transform.position.x += physics.velocity.x*delta;
-      transform.position.y += physics.velocity.y*delta;
-      transform.position.z += physics.velocity.z*delta;
+    //   transform.position.x += physics.velocity.x*delta;
+    //   transform.position.y += physics.velocity.y*delta;
+    //   transform.position.z += physics.velocity.z*delta;
 
-      physics.velocity.x *= Math.pow(physics.damping, delta/1000);
-      physics.velocity.y *= Math.pow(physics.damping, delta/1000);
-      physics.velocity.z *= Math.pow(physics.damping, delta/1000);
-    });
+    //   physics.velocity.x *= Math.pow(physics.damping, delta/1000);
+    //   physics.velocity.y *= Math.pow(physics.damping, delta/1000);
+    //   physics.velocity.z *= Math.pow(physics.damping, delta/1000);
+    // });
 
     this.queries.others.results.forEach((entity: any) => {
       const transform = entity.getMutableComponent(Transform);

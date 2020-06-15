@@ -52,21 +52,26 @@ export class NetworkSystem extends System {
 
     this.players.forEach((player: Player, id: string) => {
       const transform = player.entity.getComponent(Transform);
+      const playerInputState = player.entity.getMutableComponent(PlayerInputState);
+
       const p = transform.position;
       const r = transform.rotation;
 
       transforms.push({
         id,
         position: { x: p.x, y: p.y, z: p.z },
-        rotation: { x: r.x, y: r.y, z: r.z, w: r.w }
+        rotation: { x: r.x, y: r.y, z: r.z, w: r.w },
+        state: playerInputState.serialize()
       });
     });
 
     this.players.forEach((player: Player, id: string) => {
+      const lastProcessedInput = player.lastProcessedInput;
+
       transforms.forEach((transform: any) => {
         this.send(id, {
           type: MessageType.State,
-          payload: { id, ...transform }
+          payload: { id, ...transform, lastProcessedInput }
         });
       })
     });
@@ -79,7 +84,7 @@ export class NetworkSystem extends System {
       .addComponent(Transform)
       .addComponent(Physics);
 
-    this.players.set(id, { ws, entity: player });
+    this.players.set(id, { ws, entity: player, lastProcessedInput: 0 });
 
     ws.on('close', () => this.handleDisconnect(id));
     ws.on('error', () => this.handleDisconnect(id));
@@ -100,15 +105,15 @@ export class NetworkSystem extends System {
   }
 
   handleMessage(id: string, data: WebSocket.Data) {
-    const entity = this.players.get(id).entity;
+    const player = this.players.get(id);
 
-    if (!entity.hasComponent(PlayerInputState)) {
+    if (!player.entity.hasComponent(PlayerInputState)) {
       logger.error(`Player ${id} should have PlayerInputState`);
       return;
     }
 
     const received: MessagePlayerState = JSON.parse(<string> data);
-    const playerInputState = entity.getMutableComponent(PlayerInputState);
+    const playerInputState = player.entity.getMutableComponent(PlayerInputState);
 
     playerInputState.movementX = received.movement.x;
     playerInputState.movementY = received.movement.y;
@@ -116,6 +121,8 @@ export class NetworkSystem extends System {
     playerInputState.roll = received.roll;
     playerInputState.yaw = received.yaw;
     playerInputState.pitch = received.pitch;
+
+    player.lastProcessedInput++;
   }
 
   send(id: string, payload: object | string) {
@@ -135,7 +142,8 @@ export class NetworkSystem extends System {
 
 type Player = {
   ws: WebSocket,
-  entity: Entity
+  entity: Entity,
+  lastProcessedInput: number
 };
 
 type MessagePlayerState = {

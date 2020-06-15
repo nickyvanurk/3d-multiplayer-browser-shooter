@@ -14,12 +14,12 @@ export class PlayerInputState extends Component {
   }
 
   reset() {
-    this.movementX = null;
-    this.movementY = null;
-    this.movementZ = null;
-    this.roll = null;
-    this.yaw = null;
-    this.pitch = null;
+    this.movementX = 0;
+    this.movementY = 0;
+    this.movementZ = 0;
+    this.roll = 0;
+    this.yaw = 0;
+    this.pitch = 0;
   }
 
   serialize() {
