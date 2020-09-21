@@ -7,6 +7,9 @@ export default class Game {
 
   init() {
     console.info('Initializing client');
+
+    this.socket = new WebSocket(`ws://${process.env.SERVER_URL}:${process.env.PORT}`);
+    this.socket.onopen = this.handleConnect.bind(this);
   }
 
   run() {
@@ -20,6 +23,10 @@ export default class Game {
     this.lastTime = time;
 
     requestAnimationFrame(this.run.bind(this));
+  }
+
+  handleConnect() {
+    console.log(`Connected to server ${process.env.SERVER_URL}:${process.env.PORT}`);
   }
 }
 
