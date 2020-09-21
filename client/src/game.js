@@ -6,6 +6,7 @@ export default class Game {
   }
 
   init() {
+    console.info('Initializing client');
   }
 
   run() {
@@ -16,8 +17,6 @@ export default class Game {
       delta = 250;
     }
     
-    console.log('world update');
-
     this.lastTime = time;
 
     requestAnimationFrame(this.run.bind(this));

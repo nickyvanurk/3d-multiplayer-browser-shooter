@@ -15,9 +15,9 @@ module.exports = {
         use: [MiniCssExtractPlugin.loader, 'css-loader']
       },
       {
-        test: /\.(js)$/,
+        test: /\.m?js$/,
         exclude: /node_modules/,
-        use: ['babel-loader']
+        use: { loader: 'babel-loader' }
       }
     ]
   },
@@ -38,5 +38,9 @@ module.exports = {
   output: {
     filename: '[name].bundle.js',
     path: path.resolve(__dirname, 'public')
-  }
+  },
+  node: {
+    fs: 'empty'
+  },
+  target: 'web'
 };

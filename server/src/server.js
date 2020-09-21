@@ -1,3 +1,4 @@
+import logger from './utils/logger';
 import { performance } from 'perf_hooks';
 
 export class Server {
@@ -9,6 +10,7 @@ export class Server {
   }
 
   init() {
+    logger.info('Initializing server');
   }
 
   run() {
@@ -19,8 +21,6 @@ export class Server {
       delta = 250;
     }
     
-    console.log('world update');
-
     this.lastTime = time;
 
     setTimeout(this.run.bind(this), 1000/this.updatesPerSecond);
