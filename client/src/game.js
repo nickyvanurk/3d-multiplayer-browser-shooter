@@ -10,6 +10,7 @@ export default class Game {
 
     this.socket = new WebSocket(`ws://${process.env.SERVER_URL}:${process.env.PORT}`);
     this.socket.onopen = this.handleConnect.bind(this);
+    this.socket.onclose = this.handleDisconnect.bind(this);
   }
 
   run() {
@@ -27,6 +28,10 @@ export default class Game {
 
   handleConnect() {
     console.log(`Connected to server ${process.env.SERVER_URL}:${process.env.PORT}`);
+  }
+
+  handleDisconnect() {
+    console.log('Disconnected from server');
   }
 }
 

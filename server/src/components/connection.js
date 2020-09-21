@@ -1,7 +1,8 @@
 import { Component, Types } from 'ecsy';
 
-export class Connection extends Component {
-  schema: {
-    id: { type: Types.Number }
-  }
+export class Connection extends Component {}
+
+Connection.schema = {
+  id: { type: Types.String },
+  connection: { type: Types.Ref }
 }

@@ -5,6 +5,8 @@ import { v4 as uuidv4 } from 'uuid';
 
 import logger from './utils/logger';
 
+import { Connection } from './components/connection';
+
 export class Server {
   constructor() {
     this.updatesPerSecond = 10;
@@ -22,7 +24,11 @@ export class Server {
     const wss = new WebSocket.Server({ port });
     logger.info(`Listening on port ${ port }`);
     
-    wss.on('connection', this.handleConnect);
+    wss.on('connection', this.handleConnect.bind(this));
+    
+    for (const world of this.worlds) {
+      world.registerComponent(Connection);
+    }
   }
 
   run() {
@@ -42,11 +48,35 @@ export class Server {
     setTimeout(this.run.bind(this), 1000/this.updatesPerSecond);
   }
   
-  handleConnect() {
+  handleConnect(ws) {
     logger.info('New connection');
 
-    // check world population; get world that is not full
-    // create connection component?
+    let hasEnteredWorld = false;
+    
+    for (const [index, world] of this.worlds.entries()) {
+      const connections = world.componentsManager.getComponentsPool(Connection).count;
+
+      if (connections < process.env.PLAYERS_PER_WORLD) {
+        const id = uuidv4();
+        
+        world.createEntity().addComponent(Connection, {
+          id: uuidv4(),
+          connection: ws
+        });
+
+        hasEnteredWorld = true;
+        
+        logger.info(`Player ${id} entered world ${index}`);
+
+        break;
+      }
+    }
+
+    if (!hasEnteredWorld) {
+      ws.close();
+
+      logger.info('Worlds are full; closing connection');
+    }
   }
 }
 
