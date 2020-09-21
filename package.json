@@ -4,20 +4,35 @@
   "description": "3D multiplayer space shooter game.",
   "main": "app.js",
   "scripts": {
-    "client:start:dev": "cd client && npm run start:dev",
-    "client:build": "cd client && npm run build",
-    "server:start:dev": "cd server && npm run start:dev",
-    "server:start": "cd server && npm run start",
-    "postinstall": "cd client && npm install && cd ../server && npm install",
-    "lint": "eslint . --ext .ts",
-    "lint-and-fix": "eslint . --ext .ts --fix"
+    "client:start:dev": "webpack-dev-server --config client/webpack.dev.js",
+    "client:build": "webpack --config client/webpack.prod.js",
+    "server:start:dev": "nodemon --config server/nodemon.json --exec babel-node -- server/src/index.js",
+    "server:start": "babel-node server/src/index.js",
+    "lint": "eslint . --ext .js",
+    "lint-and-fix": "eslint . --ext .js --fix"
   },
   "author": "N. van Urk",
   "license": "MIT",
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "^2.31.0",
-    "@typescript-eslint/parser": "^2.31.0",
-    "eslint": "^6.8.0",
-    "typescript": "^3.8.3"
+    "@babel/core": "^7.11.6",
+    "@babel/eslint-parser": "^7.11.5",
+    "@babel/node": "^7.10.5",
+    "@babel/preset-env": "^7.11.5",
+    "clean-webpack-plugin": "^3.0.0",
+    "css-loader": "^4.3.0",
+    "dotenv-webpack": "^3.0.0",
+    "eslint": "^7.9.0",
+    "file-loader": "^6.1.0",
+    "html-webpack-plugin": "^4.5.0",
+    "mini-css-extract-plugin": "^0.11.2",
+    "nodemon": "^2.0.4",
+    "style-loader": "^1.2.1",
+    "webpack": "^4.44.2",
+    "webpack-cli": "^3.3.12",
+    "webpack-dev-server": "^3.11.0",
+    "webpack-merge": "^5.1.4"
+  },
+  "dependencies": {
+    "dotenv": "^8.2.0"
   }
 }

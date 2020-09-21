@@ -1,45 +1,37 @@
 const path = require('path');
-const ExtractTextPlugin = require('extract-text-webpack-plugin');
-const {CleanWebpackPlugin} = require('clean-webpack-plugin');
+const MiniCssExtractPlugin = require('mini-css-extract-plugin');
+const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const Dotenv = require('dotenv-webpack');
 
 module.exports = {
   entry: {
-    app: './src/index.ts'
+    app: './client/src/index.js'
   },
   module: {
     rules: [
       {
-        test: /\.tsx?$/,
-        use: 'ts-loader',
-        exclude: /node_modules/,
-      },
-      {
-        test: /\.css$/,
-        use: ExtractTextPlugin.extract({
-          fallback: 'style-loader',
-          use: 'css-loader'
-        })
+        test: /\.css$/i,
+        use: [MiniCssExtractPlugin.loader, 'css-loader']
       }
     ]
   },
   plugins: [
-    new ExtractTextPlugin('style.css'),
+    new MiniCssExtractPlugin(),
     new CleanWebpackPlugin({
       cleanOnceBeforeBuildPatterns: ['**/*', '!models', '!models/*.*']
     }),
     new HtmlWebpackPlugin({
       title: 'Void',
-      template: 'src/index.html'
+      template: './client/src/index.html'
     }),
     new Dotenv()
   ],
   resolve: {
-    extensions: ['.tsx', '.ts', '.js'],
+    extensions: ['.js'],
   },
   output: {
     filename: '[name].bundle.js',
-    path: path.resolve(__dirname, 'dist')
+    path: path.resolve(__dirname, 'public')
   }
 };

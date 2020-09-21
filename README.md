@@ -1,3 +1,5 @@
+# This project is in the process of being rebuild from scratch.
+
 # [3D Multiplayer Browser Shooter](https://urk-3d-multi-space-game.herokuapp.com)
 
 A 3D multiplayer space dogfight game made with three.js, express and ws. Complete with score and chat functionality.
@@ -10,11 +12,9 @@ These instructions will get you a copy of the project up and running on your loc
 
 ### Prerequisites
 
-For development the following versions were used. Proper functionality can't be guaranteed for earlier versions.
-
-* [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) >= 2.21.0
-* [Node.js](https://nodejs.org/en/download/package-manager/) >= 12.3.1
-* [npm](https://www.npmjs.com/get-npm) >= 6.9.0
+* [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
+* [Node.js](https://nodejs.org/en/download/package-manager/)
+* [npm](https://www.npmjs.com/get-npm)
 
 ### Installing
 
@@ -33,14 +33,16 @@ npm install
 Start the game server
 
 ```
-npm run dev
+npm run server:start:dev
 ```
 
-Surf to localhost:3000!
+Start the web server
 
-## Deployment
+```
+npm run client:start:dev
+```
 
-To deploy the application you have to change 'localhost' on line 367 in public/js/main.js to the IP of the server. Then host the public folder to make it accessible for users. Make sure to open up port 8080 if there are any problems connecting to the server.
+Surf to localhost:8080!
 
 ## License
 

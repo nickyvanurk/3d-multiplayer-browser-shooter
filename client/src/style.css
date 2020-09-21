@@ -3,29 +3,3 @@
   margin: 0;
 }
 
-body {
-  background: black;
-  padding: 0;
-  width: 100vw;
-  height: 100vh;
-  overflow: hidden;
-  display: flex;
-  font-family: Roboto;
-  position: relative;
-  cursor: none;
-}
-
-h1, p, h2, h3, h4, ul, li, div {
-  margin: 0;
-  padding: 0;
-}
-
-.crosshair {
-  position: absolute;
-  z-index: 1;
-  fill: white;
-  color: white;
-  left: 50vw;
-  top: 50vh;
-  transform: translate(-50%, -50%);
-}
