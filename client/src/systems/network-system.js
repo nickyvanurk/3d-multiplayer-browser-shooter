@@ -1,5 +1,7 @@
 import { System } from 'ecsy';
 
+import Types from '../../../shared/types';
+
 import { Connection } from '../../../shared/components/connection';
 
 export class NetworkSystem extends System {
@@ -11,39 +13,57 @@ export class NetworkSystem extends System {
   };
 
   init() {
+    this.ws = new WebSocket(`ws://${process.env.SERVER_URL}:${process.env.PORT}`);
+    this.ws.onopen = this.handleConnect.bind(this);
+    this.ws.onclose = this.handleDisconnect.bind(this);
+    this.ws.onmessage = (event) => { this.handleMessage(event.data); };
   }
 
   execute() {
-    this.queries.connections.added.forEach(entity => {
-      const connection = entity.getComponent(Connection);
-      const ws = connection.ws;
-      
-      ws.onmessage = (event) => { this.handleMessage(connection, event.data); };
+  }
   
-      // Allow the websocket connection to fully instantiate on server.
-      // In the future the user has to input their name so there is a
-      // natural delay.
-      setTimeout(() => {
-        // TODO: Create message codes
-        this.sendMessage(connection, 'Hello');
-      }, 200);
-    });
+  handleConnect() {
+    console.log(`Connected to server ${process.env.SERVER_URL}:${process.env.PORT}`);
   }
 
-  handleMessage(connection, data) {
-    console.info(`Message from server: ${data}`);
-
-    // TODO: Wait for ID and username
-    //       Spawn player
+  handleDisconnect() {
+    console.log('Disconnected from server');
   }
 
-  sendMessage({ ws } = connection, data) {
+  handleMessage(data) {
+    const message = JSON.parse(data);
+
+    console.log(message);
+
+    if (message === 'go') {
+      console.info('Starting client/server handshake');
+      
+      // TODO: Get username from UI
+      this.sendHello('Nicky');
+      return;
+    }
+
+    const messageType = message[0];
+
+    if (messageType === Types.Messages.WELCOME) {
+      const id = message[1];
+      const name = message[2];
+
+      this.world.createEntity().addComponent(Connection, { id, ws: this.ws, name });
+    }
+  }
+
+  sendMessage(data) {
     try {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(data);
+      if (this.ws.readyState === WebSocket.OPEN) {
+        this.ws.send(JSON.stringify(data));
       }
     } catch {
       console.warning('Error sending message');
     }
+  }
+
+  sendHello(username = '') {
+    this.sendMessage([Types.Messages.HELLO, username]);
   }
 }

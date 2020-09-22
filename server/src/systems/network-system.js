@@ -3,6 +3,8 @@ import WebSocket from 'ws';
 
 import logger from '../utils/logger';
 import createFixedTimestep from '../../../shared/utils/create-fixed-timestep';
+import Types from '../../../shared/types';
+import Utils from '../../../shared/utils';
 
 import { Connection } from '../../../shared/components/connection';
 
@@ -20,17 +22,14 @@ export class NetworkSystem extends System {
 
   execute(delta) {
     this.queries.connections.added.forEach(entity => {
-      const connection = entity.getComponent(Connection);
+      const connection = entity.getMutableComponent(Connection);
       const ws = connection.ws;
 
       ws.isAlive = true;
-      ws.on('message', (data) => { this.handleMessage(connection, data); });
       ws.on('pong', () => { ws.isAlive = true; });
+      ws.on('message', (data) => { this.handleMessage(connection, data); });
       
-      // TODO: Shared message types
-      // Think about code re-use for client and server
-      // Implement network-system for client
-      // Spawn player
+      this.sendMessage(connection, 'go');
     });
 
     this.queries.connections.results.forEach(entity => {
@@ -40,7 +39,7 @@ export class NetworkSystem extends System {
       if (readyState === WebSocket.CLOSING ||
           readyState === WebSocket.CLOSED) {
         entity.removeComponent(Connection);
-        logger.info(`Player ${connection.id} removed`);
+        logger.debug(`Player ${connection.id} removed`);
       }
     });
 
@@ -48,15 +47,31 @@ export class NetworkSystem extends System {
   }
 
   handleMessage(connection, data) {
-    console.info(`Message from client: ${data}`);
-  
-    this.sendMessage(connection, 'Hello');
+    const message = JSON.parse(data);
+
+    logger.debug(`Message from ${connection.id}: ${message}`);
+
+    const messageType = parseInt(message[0]);
+
+    if (messageType === Types.Messages.HELLO) {
+      const name = Utils.sanitize(message[1]);
+      
+      if (name) {
+        connection.name = name.substr(0, 15);
+      }
+
+      this.sendMessage(connection, [
+        Types.Messages.WELCOME,
+        connection.id,
+        connection.name
+      ]);
+    }
   }
 
   sendMessage({ id, ws } = connection, data) {
     try {
       if (ws.readyState === WebSocket.OPEN) {
-        ws.send(data);
+        ws.send(JSON.stringify(data));
       }
     } catch {
       logger.warning(`Error sending to ${id}`);

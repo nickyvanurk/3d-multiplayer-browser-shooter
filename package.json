@@ -37,6 +37,7 @@
   "dependencies": {
     "dotenv": "^8.2.0",
     "ecsy": "^0.4.2",
+    "sanitize-html": "^1.27.4",
     "uuid": "^8.3.0",
     "winston": "^3.3.3",
     "winston-transport-browserconsole": "^1.0.5",
