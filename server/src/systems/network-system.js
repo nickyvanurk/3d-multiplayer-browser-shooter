@@ -23,7 +23,7 @@ export class NetworkSystem extends System {
       const ws = entity.getComponent(Connection).ws;
 
       ws.isAlive = true;
-      ws.on('pong', () => { ws.isAlive = true });
+      ws.on('pong', () => { ws.isAlive = true; });
     });
 
     this.queries.connections.results.forEach(entity => {

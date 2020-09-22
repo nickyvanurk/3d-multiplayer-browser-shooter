@@ -11,5 +11,5 @@ export default function createFixedTimestep(timestep, callback) {
 
     return lag / timestep;
   };
-};
+}
 

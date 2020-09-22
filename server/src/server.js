@@ -25,7 +25,7 @@ export class Server {
   init() {
     const port = +process.env.PORT || 1337;
     const wss = new WebSocket.Server({ port });
-    logger.info(`Listening on port ${ port }`);
+    logger.info(`Listening on port ${port}`);
     
     wss.on('connection', this.handleConnect.bind(this));
     
@@ -70,7 +70,7 @@ export class Server {
 
     if (!this.tryAddConnectionToWorld(ws)) {
       this.connectionQueue.push(ws);
-      logger.info('Worlds are full; Connection enqueued');
+      logger.info('Connection enqueued: worlds are full');
     }
   }
 
