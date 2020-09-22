@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import logger from './utils/logger';
 
 import { Connection } from './components/connection';
+import { NetworkSystem } from './systems/network-system';
 
 export class Server {
   constructor() {
@@ -27,7 +28,9 @@ export class Server {
     wss.on('connection', this.handleConnect.bind(this));
     
     for (const world of this.worlds) {
-      world.registerComponent(Connection);
+      world
+        .registerComponent(Connection)
+        .registerSystem(NetworkSystem);
     }
   }
 
@@ -54,15 +57,12 @@ export class Server {
     let hasEnteredWorld = false;
     
     for (const [index, world] of this.worlds.entries()) {
-      const connections = world.componentsManager.getComponentsPool(Connection).count;
+      const connections = world.componentsManager.numComponents[Connection._typeId];
 
       if (connections < process.env.PLAYERS_PER_WORLD) {
         const id = uuidv4();
         
-        world.createEntity().addComponent(Connection, {
-          id: uuidv4(),
-          connection: ws
-        });
+        world.createEntity().addComponent(Connection, { id, ws });
 
         hasEnteredWorld = true;
         
@@ -74,7 +74,6 @@ export class Server {
 
     if (!hasEnteredWorld) {
       ws.close();
-
       logger.info('Worlds are full; closing connection');
     }
   }
