@@ -37,6 +37,8 @@ export class Server {
   }
 
   run() {
+    setTimeout(this.run.bind(this), 1000/this.updatesPerSecond);
+
     let time = performance.now();
     let delta = time - this.lastTime;
 
@@ -48,8 +50,7 @@ export class Server {
       const ws = this.connectionQueue[0];
 
       if (ws.readyState !== WebSocket.OPEN) {
-        this.connectionQueue.shift();
-        return;
+        return this.connectionQueue.shift();
       }
 
       if (this.tryAddConnectionToWorld(ws)) {
@@ -62,8 +63,6 @@ export class Server {
     }
     
     this.lastTime = time;
-
-    setTimeout(this.run.bind(this), 1000/this.updatesPerSecond);
   }
   
   handleConnect(ws) {
