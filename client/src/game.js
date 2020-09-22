@@ -1,16 +1,25 @@
+import { World } from 'ecsy';
+
+import { Connection } from '../../shared/components/connection';
+import { NetworkSystem } from './systems/network-system';
+
 export default class Game {
   constructor() {
     this.lastTime = performance.now();
+
+    this.world = new World();
 
     this.init();
   }
 
   init() {
-    console.info('Initializing client');
+    this.ws = new WebSocket(`ws://${process.env.SERVER_URL}:${process.env.PORT}`);
+    this.ws.onopen = this.handleConnect.bind(this);
+    this.ws.onclose = this.handleDisconnect.bind(this);
 
-    this.socket = new WebSocket(`ws://${process.env.SERVER_URL}:${process.env.PORT}`);
-    this.socket.onopen = this.handleConnect.bind(this);
-    this.socket.onclose = this.handleDisconnect.bind(this);
+    this.world
+      .registerComponent(Connection)
+      .registerSystem(NetworkSystem);
   }
 
   run() {
@@ -20,6 +29,8 @@ export default class Game {
     if (delta > 250) {
       delta = 250;
     }
+
+    this.world.execute(delta, time);
     
     this.lastTime = time;
 
@@ -28,6 +39,8 @@ export default class Game {
 
   handleConnect() {
     console.log(`Connected to server ${process.env.SERVER_URL}:${process.env.PORT}`);
+    
+    this.world.createEntity().addComponent(Connection, { id: null, ws: this.ws });
   }
 
   handleDisconnect() {

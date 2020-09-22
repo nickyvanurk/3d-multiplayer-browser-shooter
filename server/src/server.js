@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import logger from './utils/logger';
 
-import { Connection } from './components/connection';
+import { Connection } from '../../shared/components/connection';
 import { NetworkSystem } from './systems/network-system';
 
 export class Server {
