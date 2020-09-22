@@ -16,6 +16,8 @@ export class Server {
     this.worlds = [];
     this.worlds.push(new World());
     this.worlds.push(new World());
+
+    this.connectionQueue = [];
     
     this.init();
   }
@@ -42,6 +44,19 @@ export class Server {
       delta = 250;
     }
 
+    if (this.connectionQueue.length) {
+      const ws = this.connectionQueue[0];
+
+      if (ws.readyState !== WebSocket.OPEN) {
+        this.connectionQueue.shift();
+        return;
+      }
+
+      if (this.tryAddConnectionToWorld(ws)) {
+        this.connectionQueue.shift();
+      }
+    }
+
     for (const world of this.worlds) {
       world.execute(delta, time);
     }
@@ -54,8 +69,13 @@ export class Server {
   handleConnect(ws) {
     logger.info('New connection');
 
-    let hasEnteredWorld = false;
-    
+    if (!this.tryAddConnectionToWorld(ws)) {
+      this.connectionQueue.push(ws);
+      logger.info('Worlds are full; Connection enqueued');
+    }
+  }
+
+  tryAddConnectionToWorld(ws) {
     for (const [index, world] of this.worlds.entries()) {
       const connections = world.componentsManager.numComponents[Connection._typeId];
 
@@ -63,19 +83,13 @@ export class Server {
         const id = uuidv4();
         
         world.createEntity().addComponent(Connection, { id, ws });
-
-        hasEnteredWorld = true;
-        
         logger.info(`Player ${id} entered world ${index}`);
 
-        break;
+        return true;
       }
     }
-
-    if (!hasEnteredWorld) {
-      ws.close();
-      logger.info('Worlds are full; closing connection');
-    }
+    
+    return false;
   }
 }
 
