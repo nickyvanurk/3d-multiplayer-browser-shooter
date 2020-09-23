@@ -1,17 +1,28 @@
 import { performance } from 'perf_hooks';
+import { World as World$1 } from 'ecsy';
+
 import logger from './utils/logger';
+import { Connection } from './components/connection';
+import { NetworkSystem } from './systems/network-system';
 
 export default class World {
-  constructor(id, maxConnections, server) {
+  constructor(id, maxPlayers, server) {
     this.id = id;
-    this.maxConnections = maxConnections;
+    this.maxPlayers = maxPlayers;
     this.server = server;
     this.updatesPerSecond = 10;
     this.lastTime = performance.now();
 
-    this.connectionCount = 0;
+    this.players = {};
+
+    this.playerCount = 0;
+
+    this.world = new World$1();
+    this.world
+      .registerComponent(Connection)
+      .registerSystem(NetworkSystem, this);
     
-    logger.log(`${this.id} running`);
+    logger.info(`${this.id} running`);
   }
   
   run() {
@@ -23,18 +34,24 @@ export default class World {
     if (delta > 250) {
       delta = 250;
     }
+
+    this.world.execute(delta, time);
     
     this.lastTime = time;
   }
 
-  addConnection(ws) {
-    logger.log(`Adding client to ${this.id}`);
-    ws.on('close', this.handleDisconnect.bind(this));
-    this.connectionCount++;
+  handlePlayerConnect(connection) {
+    logger.debug(`Creating player ${connection.id}`);
+    this.players[connection.id] = this.world
+      .createEntity()
+      .addComponent(Connection, { value: connection });
+    this.playerCount++;
   }
-
-  handleDisconnect() {
-    logger.log('Client disconnect');
-    this.connectionCount--;
+  
+  handlePlayerDisconnect(connection) {
+    logger.debug(`Deleting player ${connection.id}`);
+    this.players[connection.id].remove();
+    delete this.players[connection.id];
+    this.playerCount--;
   }
 }

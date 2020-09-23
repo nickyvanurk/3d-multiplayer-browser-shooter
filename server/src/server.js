@@ -1,65 +1,56 @@
 import WebSocket from 'ws';
 
-import logger from './utils/logger';
-import World from './world';
+import Utils from '../../shared/utils';
+import Connection from './connection';
 
-export class Server {
-  constructor() {
-    this.worlds = [];
-    this.connectionQueue = [];
-    this.updatesPerSecond = 10;
-    
-    this.init();
-  }
+export default class Server {
+  constructor(port) {
+    this.connections = {};
+    this.counter = 0;
 
-  init() {
-    const port = +process.env.PORT || 1337;
-    const wss = new WebSocket.Server({ port });
-    logger.info(`Listening on port ${port}`);
-    
-    wss.on('connection', this.handleConnect.bind(this));
-    
-    for (let i = 0; i < process.env.WORLDS; ++i) {
-      const world = new World(`world${i}`, process.env.PLAYERS_PER_WORLD, wss);
-      world.run();
-      this.worlds.push(world);
-    }
-  }
+    this.wss = new WebSocket.Server({ port });
 
-  run() {
-    setTimeout(this.run.bind(this), 1000/this.updatesPerSecond);
+    this.wss.on('connection', (connection, req) => {
+      connection.remoteAddress = req.socket.remoteAddress;
 
-    if (this.connectionQueue.length) {
-      const ws = this.connectionQueue[0];
+      const con = new Connection(this.createId(), connection, this);
 
-      if (ws.readyState !== WebSocket.OPEN) {
-        return this.connectionQueue.shift();
+      if (this.onConnectionCallback) {
+        this.onConnectionCallback(con);
       }
 
-      if (this.tryAddConnectionToWorld(ws)) {
-        this.connectionQueue.shift();
+      this.addConnection(con);
+    });
+
+    this.wss.on('error', (error) => {
+      if (this.onErrorCallback) {
+        this.onErrorCallback(error);
       }
-    }
+    });
+  }
+
+  onConnection(callback) {
+    this.onConnectionCallback = callback;
+  }
+
+  onError(callback) {
+    this.onErrorCallback = callback;
+  }
+
+  addConnection(connection) {
+    this.connections[connection.id] = connection;
+  }
+
+  removeConnection(id) {
+    delete this.connections[id];
   }
   
-  handleConnect(ws) {
-    logger.info('New connection');
-
-    if (!this.tryAddConnectionToWorld(ws)) {
-      this.connectionQueue.push(ws);
-      logger.info('Connection enqueued: worlds are full');
-    }
+  getConnection(id) {
+    return this.connections[id];
   }
 
-  tryAddConnectionToWorld(ws) {
-    for (const world of this.worlds) {
-      if (world.connectionCount < world.maxConnections) {
-        world.addConnection(ws);
-        return true;
-      }
-    }
-    
-    return false;
+  createId() {
+    return '5' + Utils.random(99) + '' + (this.counter++);
   }
 }
 
