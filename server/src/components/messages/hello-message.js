@@ -7,6 +7,13 @@ export class HelloMessage extends Component {
     id: { type: Types$1.Number },
     name: { type: Types$1.String }
   };
+
+  static deserialize(message) {
+    return {
+      id: message[0],
+      name: message[1]
+    };
+  }
   
   serialize() {
     return [Types.Messages.HELLO, this.id, this.name];

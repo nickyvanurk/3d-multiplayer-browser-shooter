@@ -3,8 +3,9 @@ import { World as World$1 } from 'ecsy';
 
 import logger from './utils/logger';
 import { Connection } from './components/connection';
+import { NetworkEvent } from './components/network-event';
 import { HelloMessage } from './components/messages/hello-message';
-import { NetworkSystem } from './systems/network-system';
+import { NetworkEventSystem } from './systems/network-event-system';
 import { NetworkMessageSystem } from './systems/network-message-system';
 
 export default class World {
@@ -19,11 +20,11 @@ export default class World {
 
     this.playerCount = 0;
 
-    this.world = new World$1();
-    this.world
+    this.world = new World$1()
       .registerComponent(Connection)
+      .registerComponent(NetworkEvent)
       .registerComponent(HelloMessage)
-      .registerSystem(NetworkSystem, this)
+      .registerSystem(NetworkEventSystem)
       .registerSystem(NetworkMessageSystem);
     
     logger.info(`${this.id} running`);
@@ -50,6 +51,17 @@ export default class World {
       .createEntity()
       .addComponent(Connection, { value: connection });
     this.playerCount++;
+    
+    connection.onMessage((message) => {
+      const type = message.shift();
+      this.players[connection.id].addComponent(NetworkEvent, { type, message });
+    });
+
+    connection.onDisconnect(() => {
+      this.handlePlayerDisconnect(connection);
+    });
+
+    connection.send('go');
   }
   
   handlePlayerDisconnect(connection) {
