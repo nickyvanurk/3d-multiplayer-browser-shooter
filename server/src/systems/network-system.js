@@ -2,6 +2,7 @@ import { System } from 'ecsy';
 
 import logger from '../utils/logger';
 import { Connection } from '../components/connection';
+import { HelloMessage } from '../components/messages/hello-message';
 
 export class NetworkSystem extends System {
   static queries = {
@@ -21,6 +22,15 @@ export class NetworkSystem extends System {
 
       connection.onMessage((message) => {
         logger.debug(`Message from ${connection.id}: ${message}`);
+        
+        switch (message) {
+          case 'hello':
+            entity.addComponent(HelloMessage, {
+              id: parseInt(connection.id),
+              name: 'UNKNOWN'
+            });
+            break;
+        }
       }); 
 
       connection.onDisconnect(() => {

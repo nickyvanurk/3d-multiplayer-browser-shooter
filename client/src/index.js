@@ -9,7 +9,7 @@ function main() {
   game.run();
   
   connection.onConnection(() => {
-    console.log(`Connected to server`);
+    console.log('Connected to server');
     
     connection.onMessage((message) => {
       console.log(message);

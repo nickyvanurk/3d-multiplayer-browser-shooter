@@ -50,7 +50,7 @@ export default class Server {
   }
 
   createId() {
-    return '5' + Utils.random(99) + '' + (this.counter++);
+    return +('5' + Utils.random(99) + '' + (this.counter++));
   }
 }
 
