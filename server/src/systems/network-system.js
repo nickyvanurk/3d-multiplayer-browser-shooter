@@ -26,7 +26,7 @@ export class NetworkSystem extends System {
         switch (message) {
           case 'hello':
             entity.addComponent(HelloMessage, {
-              id: parseInt(connection.id),
+              id: connection.id,
               name: 'UNKNOWN'
             });
             break;
