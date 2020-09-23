@@ -1,23 +1,13 @@
-import { performance } from 'perf_hooks';
-import { World } from 'ecsy';
 import WebSocket from 'ws';
-import { v4 as uuidv4 } from 'uuid';
 
 import logger from './utils/logger';
-
-import { Connection } from '../../shared/components/connection';
-import { NetworkSystem } from './systems/network-system';
+import World from './world';
 
 export class Server {
   constructor() {
-    this.updatesPerSecond = 10;
-    this.lastTime = performance.now();
-
     this.worlds = [];
-    this.worlds.push(new World());
-    this.worlds.push(new World());
-
     this.connectionQueue = [];
+    this.updatesPerSecond = 10;
     
     this.init();
   }
@@ -29,22 +19,15 @@ export class Server {
     
     wss.on('connection', this.handleConnect.bind(this));
     
-    for (const world of this.worlds) {
-      world
-        .registerComponent(Connection)
-        .registerSystem(NetworkSystem);
+    for (let i = 0; i < process.env.WORLDS; ++i) {
+      const world = new World(`world${i}`, process.env.PLAYERS_PER_WORLD, wss);
+      world.run();
+      this.worlds.push(world);
     }
   }
 
   run() {
     setTimeout(this.run.bind(this), 1000/this.updatesPerSecond);
-
-    let time = performance.now();
-    let delta = time - this.lastTime;
-
-    if (delta > 250) {
-      delta = 250;
-    }
 
     if (this.connectionQueue.length) {
       const ws = this.connectionQueue[0];
@@ -57,12 +40,6 @@ export class Server {
         this.connectionQueue.shift();
       }
     }
-
-    for (const world of this.worlds) {
-      world.execute(delta, time);
-    }
-    
-    this.lastTime = time;
   }
   
   handleConnect(ws) {
@@ -75,15 +52,9 @@ export class Server {
   }
 
   tryAddConnectionToWorld(ws) {
-    for (const [index, world] of this.worlds.entries()) {
-      const connections = world.componentsManager.numComponents[Connection._typeId];
-
-      if (connections < process.env.PLAYERS_PER_WORLD) {
-        const id = uuidv4();
-        
-        world.createEntity().addComponent(Connection, { id, ws });
-        logger.info(`Player ${id} entered world ${index}`);
-
+    for (const world of this.worlds) {
+      if (world.connectionCount < world.maxConnections) {
+        world.addConnection(ws);
         return true;
       }
     }
