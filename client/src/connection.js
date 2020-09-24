@@ -1,6 +1,12 @@
+import Types from '../../shared/types';
+import Messages from '../../shared/messages';
+
 export default class Connection {
   constructor(host, port) {
     this.connection = new WebSocket(`ws://${host}:${port}`);
+
+    this.incomingMessageQueue = [];
+    this.outgoingMessageQueue = [];
 
     this.connection.onopen = (event) => {
       if (this.onOpenCallback) {
@@ -15,9 +21,15 @@ export default class Connection {
     };
 
     this.connection.onmessage = (event) => {
-      if (this.onMessageCallback) {
-        this.onMessageCallback(JSON.parse(event.data));
+      let data = JSON.parse(event.data);
+      const type = data.shift();
+      
+      switch (type) {
+        case Types.Messages.GO: data = Messages.Go.deserialize(data); break;
+        case Types.Messages.WELCOME: data = Messages.Welcome.deserialize(data); break;
       }
+
+      this.incomingMessageQueue.push({ type, data });
     };
 
     this.connection.onerror = (event) => {
@@ -35,16 +47,35 @@ export default class Connection {
     this.onCloseCallback = callback;
   }
 
-  onMessage(callback) {
-    this.onMessageCallback = callback;
-  }
-
   onError(callback) {
     this.onErrorCallback = callback;
+  }
+
+  pushMessage(message) {
+    this.outgoingMessageQueue.push(message);
+  }
+
+  popMessage() {
+    return this.incomingMessageQueue.shift();
+  }
+
+  sendOutgoingMessages() {
+    while (this.hasOutgoingMessage()) {
+      const message = this.outgoingMessageQueue.shift();
+      this.connection.send(JSON.stringify(message.serialize()));
+    }
   }
   
   send(message) {
     this.connection.send(JSON.stringify(message));
+  }
+
+  hasIncomingMessage() {
+    return this.incomingMessageQueue.length > 0;
+  }
+
+  hasOutgoingMessage() {
+    return this.outgoingMessageQueue.length > 0;
   }
 
   getConnection() {

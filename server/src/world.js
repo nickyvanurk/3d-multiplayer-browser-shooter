@@ -2,9 +2,10 @@ import { performance } from 'perf_hooks';
 import { World as World$1 } from 'ecsy';
 
 import logger from './utils/logger';
-import { Connection } from './components/connection';
+import Messages from '../../shared/messages';
+import { Connection } from '../../shared/components/connection';
 import { NetworkEventSystem } from './systems/network-event-system';
-import { NetworkMessageSystem } from './systems/network-message-system';
+import { NetworkMessageSystem } from '../../shared/systems/network-message-system';
 
 export default class World {
   constructor(id, maxPlayers, server) {
@@ -52,7 +53,7 @@ export default class World {
       this.handlePlayerDisconnect(connection);
     });
 
-    connection.send('go');
+    connection.pushMessage(new Messages.Go());
   }
   
   handlePlayerDisconnect(connection) {

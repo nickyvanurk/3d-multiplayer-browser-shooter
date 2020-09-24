@@ -1,7 +1,8 @@
 export default {
   Messages: {
-    HELLO: 0,
-    WELCOME: 1,
-    SPAWN: 2
+    GO: 0,
+    HELLO: 1,
+    WELCOME: 2,
+    SPAWN: 3
   }
 };

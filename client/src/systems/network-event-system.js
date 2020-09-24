@@ -15,16 +15,17 @@ export class NetworkEventSystem extends System {
   execute() {
     this.queries.connections.results.forEach((entity) => {
       const connection = entity.getComponent(Connection).value;
-        
+
       while (connection.hasIncomingMessage()) {
         const message = connection.popMessage();
 
         switch (message.type) {
-          case Types.Messages.HELLO: {
-            let { name } = message.data;
-            name = Utils.sanitize(name); 
-            name = !name ? 'UNKNOWN' : name.substr(0, 15);  
-            connection.pushMessage(new Messages.Welcome(connection.id, name));
+          case Types.Messages.GO:
+            connection.pushMessage(new Messages.Hello('Nicky'));
+            break;
+          case Types.Messages.WELCOME: {
+            let { id, name } = message.data;
+            console.log(message.data);
             break;
           }
         }

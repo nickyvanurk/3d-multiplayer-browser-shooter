@@ -1,5 +1,15 @@
 import Types from './types';
 
+class Go {
+  constructor() {}
+
+  static deserialize(message) {}
+
+  serialize() {
+    return [Types.Messages.GO];
+  }
+}
+
 class Hello {
   constructor(name) {
     this.name = name;
@@ -33,4 +43,4 @@ class Welcome {
 }
 
 
-export default { Hello, Welcome };
+export default { Go, Hello, Welcome };

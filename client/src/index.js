@@ -10,16 +10,7 @@ function main() {
   
   connection.onConnection(() => {
     console.log('Connected to server');
-    
-    connection.onMessage((message) => {
-      console.log(message);
-      
-      switch (message) {
-        case 'go':
-          connection.send([0, 'Nicky']);
-          break;
-      }
-    });
+    game.handleConnect(connection);
   });
 
   connection.onDisconnect(() => {
