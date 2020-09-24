@@ -3,3 +3,12 @@
   margin: 0;
 }
 
+body {
+  overflow: hidden;
+}
+
+canvas {
+  width: 100vw;
+  height: 100vh;
+}
+
