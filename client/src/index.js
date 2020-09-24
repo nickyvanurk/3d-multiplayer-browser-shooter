@@ -16,7 +16,7 @@ function main() {
       
       switch (message) {
         case 'go':
-          connection.send([0, null, 'Nicky']);
+          connection.send([0, 'Nicky']);
           break;
       }
     });

@@ -3,8 +3,6 @@ import { World as World$1 } from 'ecsy';
 
 import logger from './utils/logger';
 import { Connection } from './components/connection';
-import { NetworkEvent } from './components/network-event';
-import { HelloMessage } from './components/messages/hello-message';
 import { NetworkEventSystem } from './systems/network-event-system';
 import { NetworkMessageSystem } from './systems/network-message-system';
 
@@ -22,8 +20,6 @@ export default class World {
 
     this.world = new World$1()
       .registerComponent(Connection)
-      .registerComponent(NetworkEvent)
-      .registerComponent(HelloMessage)
       .registerSystem(NetworkEventSystem)
       .registerSystem(NetworkMessageSystem);
     
@@ -52,11 +48,6 @@ export default class World {
       .addComponent(Connection, { value: connection });
     this.playerCount++;
     
-    connection.onMessage((message) => {
-      const type = message.shift();
-      this.players[connection.id].addComponent(NetworkEvent, { type, message });
-    });
-
     connection.onDisconnect(() => {
       this.handlePlayerDisconnect(connection);
     });
