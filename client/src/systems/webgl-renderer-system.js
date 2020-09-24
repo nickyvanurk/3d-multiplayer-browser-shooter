@@ -21,6 +21,7 @@ export class WebGlRendererSystem extends System {
       const camera = component.camera.getComponent(Object3d).value;
       const scene = component.scene.getComponent(Object3d).value;
       const renderer = component.renderer;
+      const composer = component.composer;
       
       if (this.needsResize) {
         const currentPixelRatio = renderer.getPixelRatio();
@@ -36,11 +37,12 @@ export class WebGlRendererSystem extends System {
         camera.aspect = width / height;
         camera.updateProjectionMatrix();
         renderer.setSize(width, height, false);
+        composer.setSize(width, height);
 
         this.needsResize = false;
       }
 
-      renderer.render(scene, camera);
+      composer.render(scene, camera);
     });
   }
 
