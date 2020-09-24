@@ -1,6 +1,5 @@
 import { System } from 'ecsy';
 
-import Utils from '../../../shared/utils';
 import Types from '../../../shared/types';
 import Messages from '../../../shared/messages';
 import { Connection } from '../../../shared/components/connection';
@@ -24,7 +23,6 @@ export class NetworkEventSystem extends System {
             connection.pushMessage(new Messages.Hello('Nicky'));
             break;
           case Types.Messages.WELCOME: {
-            let { id, name } = message.data;
             console.log(message.data);
             break;
           }

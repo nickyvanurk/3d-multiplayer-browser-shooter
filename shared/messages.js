@@ -3,7 +3,7 @@ import Types from './types';
 class Go {
   constructor() {}
 
-  static deserialize(message) {}
+  static deserialize() {}
 
   serialize() {
     return [Types.Messages.GO];
