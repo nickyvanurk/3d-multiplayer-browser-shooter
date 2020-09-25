@@ -27,10 +27,14 @@ export class NetworkEventSystem extends System {
             connection.pushMessage(new Messages.Hello('Nicky'));
             break;
           case Types.Messages.WELCOME: {
-            const { id, position, rotation } = message.data;
+            const { id, position, rotation, players } = message.data;
             const connection = entity.getMutableComponent(Connection).value;
             connection.id = id;
-            this.game.addPlayer(position, rotation);
+            this.game.addPlayer(position, rotation, true);
+
+            for (const { position, rotation } of players) {
+              this.game.addPlayer(position, rotation);
+            }
             break;
           }
         }

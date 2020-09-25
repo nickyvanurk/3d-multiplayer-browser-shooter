@@ -105,15 +105,22 @@ export default class Game {
       .addComponent(Connection, { value: connection });
   }
 
-  addPlayer(position, rotation) {
+  addPlayer(position, rotation, main = false) {
     const cube = new Mesh(
       new BoxGeometry(),
-      new MeshBasicMaterial({ color: 0xf07167 })
+      new MeshBasicMaterial({ color: main ? 0xf07167 : 0x767522 })
     );
 
-    this.player
-      .addComponent(Object3d, { value: cube })
-      .addComponent(Transform, { position, rotation });
+    if (main) {
+      this.player
+        .addComponent(Object3d, { value: cube })
+        .addComponent(Transform, { position, rotation });
+    } else {
+      this.world
+        .createEntity()
+        .addComponent(Object3d, { value: cube })
+        .addComponent(Transform, { position, rotation });
+    }
   }
 }
 

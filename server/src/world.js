@@ -58,7 +58,7 @@ export default class World {
     connection.onDisconnect(() => {
       this.handlePlayerDisconnect(connection);
     });
-
+    
     connection.pushMessage(new Messages.Go());
   }
   
