@@ -7,6 +7,10 @@ export class WebGlRendererSystem extends System {
   static queries = {
     renderers: {
       components: [WebGlRenderer]
+    },
+    object3ds: {
+      components: [Object3d],
+      listen: { added: true }
     }
   };
 
@@ -19,7 +23,7 @@ export class WebGlRendererSystem extends System {
     this.queries.renderers.results.forEach((entity) => {
       const component = entity.getComponent(WebGlRenderer);
       const camera = component.camera.getComponent(Object3d).value;
-      const scene = component.scene.getComponent(Object3d).value;
+      const scene = component.scene;
       const renderer = component.renderer;
       const composer = component.composer;
       
@@ -43,6 +47,15 @@ export class WebGlRendererSystem extends System {
       }
 
       composer.render(scene, camera);
+    });
+
+    this.queries.object3ds.added.forEach((entity) => {
+      const object3d = entity.getComponent(Object3d).value;
+
+      this.queries.renderers.results.forEach((rendererEntity) => {
+        const scene = rendererEntity.getComponent(WebGlRenderer).scene;
+        scene.add(object3d);
+      });
     });
   }
 

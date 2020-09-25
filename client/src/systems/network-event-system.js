@@ -11,6 +11,10 @@ export class NetworkEventSystem extends System {
     }
   };
 
+  init(game) {
+    this.game = game;
+  }
+
   execute() {
     this.queries.connections.results.forEach((entity) => {
       const connection = entity.getComponent(Connection).value;
@@ -23,7 +27,10 @@ export class NetworkEventSystem extends System {
             connection.pushMessage(new Messages.Hello('Nicky'));
             break;
           case Types.Messages.WELCOME: {
-            console.log(message.data);
+            const { id, position, rotation } = message.data;
+            const connection = entity.getMutableComponent(Connection).value;
+            connection.id = id;
+            this.game.addPlayer(position, rotation);
             break;
           }
         }

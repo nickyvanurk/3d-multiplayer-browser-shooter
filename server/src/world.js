@@ -36,7 +36,7 @@ export default class World {
   run() {
     setTimeout(this.run.bind(this), 1000/this.updatesPerSecond);
 
-    let time = performance.now();
+    const time = performance.now();
     let delta = time - this.lastTime;
 
     if (delta > 250) {
@@ -78,9 +78,9 @@ export default class World {
 
   getRandomPosition() {
     return new Vector3(
-      Utils.random(this.size.x + 1),
-      Utils.random(this.size.y + 1),
-      Utils.random(this.size.z + 1)
+      Utils.random(this.size.x + 1) - this.size.x/2,
+      Utils.random(this.size.y + 1) - this.size.y/2,
+      Utils.random(this.size.z + 1) - this.size.z/2
     );
   }
 }

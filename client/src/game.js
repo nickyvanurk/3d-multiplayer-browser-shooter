@@ -11,24 +11,30 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass';
 
+import { WebGlRenderer } from './components/webgl-renderer';
 import { Connection } from '../../shared/components/connection';
 import { Object3d } from './components/object3d';
-import { WebGlRenderer } from './components/webgl-renderer';
+import { Transform } from '../../shared/components/transform';
 import { WebGlRendererSystem } from './systems/webgl-renderer-system';
 import { NetworkEventSystem } from './systems/network-event-system';
 import { NetworkMessageSystem } from '../../shared/systems/network-message-system';
+import { TransformSystem } from './systems/transform-system';
 
 export default class Game {
   constructor() {
     this.lastTime = performance.now();
 
     this.world = new World()
-      .registerComponent(Object3d)
       .registerComponent(WebGlRenderer)
       .registerComponent(Connection)
+      .registerComponent(Object3d)
+      .registerComponent(Transform)
+      .registerSystem(NetworkEventSystem, this)
+      .registerSystem(TransformSystem)
       .registerSystem(WebGlRendererSystem)
-      .registerSystem(NetworkEventSystem)
       .registerSystem(NetworkMessageSystem);
+
+    this.player = undefined;
 
     const renderer = new WebGlRenderer$1({ antialias: true });
     renderer.setClearColor(0x020207);
@@ -36,9 +42,6 @@ export default class Game {
     document.body.appendChild(renderer.domElement);
 
     const scene = new Scene();
-    const sceneEntity = this.world
-      .createEntity()
-      .addComponent(Object3d, { value: scene });
 
     const camera = new PerspectiveCamera(
       99,
@@ -59,18 +62,18 @@ export default class Game {
     this.world
       .createEntity()
       .addComponent(WebGlRenderer, {
-        scene: sceneEntity,
+        scene: scene,
         camera: cameraEntity,
         renderer: renderer,
         composer: composer
       });
 
     const geometry = new BoxGeometry();
-    const material = new MeshBasicMaterial({ color: 0x00ff00 });
+    const material = new MeshBasicMaterial({ color: 0x767522 });
     this.cube = new Mesh( geometry, material );
-    scene.add( this.cube );
+    scene.add(this.cube);
 
-    camera.position.z = 5;
+    camera.position.z = 15;
 
     this.init();
   }
@@ -79,7 +82,7 @@ export default class Game {
   }
 
   run() {
-    let time = performance.now();
+    const time = performance.now();
     let delta = time - this.lastTime;
 
     if (delta > 250) {
@@ -97,9 +100,20 @@ export default class Game {
   }
 
   handleConnect(connection) {
-    this.world
+    this.player = this.world
       .createEntity()
       .addComponent(Connection, { value: connection });
+  }
+
+  addPlayer(position, rotation) {
+    const cube = new Mesh(
+      new BoxGeometry(),
+      new MeshBasicMaterial({ color: 0xf07167 })
+    );
+
+    this.player
+      .addComponent(Object3d, { value: cube })
+      .addComponent(Transform, { position, rotation });
   }
 }
 
