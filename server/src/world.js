@@ -1,9 +1,12 @@
 import { performance } from 'perf_hooks';
 import { World as World$1 } from 'ecsy';
+import { Vector3 } from 'three';
 
 import logger from './utils/logger';
+import Utils from '../../shared/utils';
 import Messages from '../../shared/messages';
 import { Connection } from '../../shared/components/connection';
+import { Transform } from '../../shared/components/transform';
 import { NetworkEventSystem } from './systems/network-event-system';
 import { NetworkMessageSystem } from '../../shared/systems/network-message-system';
 
@@ -21,8 +24,11 @@ export default class World {
 
     this.world = new World$1()
       .registerComponent(Connection)
-      .registerSystem(NetworkEventSystem)
+      .registerComponent(Transform)
+      .registerSystem(NetworkEventSystem, this)
       .registerSystem(NetworkMessageSystem);
+
+    this.size = new Vector3(10, 10, 10);
     
     logger.info(`${this.id} running`);
   }
@@ -61,5 +67,20 @@ export default class World {
     this.players[connection.id].remove();
     delete this.players[connection.id];
     this.playerCount--;
+  }
+
+  addPlayer(id) {
+    this.players[id].addComponent(Transform, {
+      position: this.getRandomPosition(), 
+      rotation: Utils.getRandomRotation()
+    });
+  }
+
+  getRandomPosition() {
+    return new Vector3(
+      Utils.random(this.size.x + 1),
+      Utils.random(this.size.y + 1),
+      Utils.random(this.size.z + 1)
+    );
   }
 }

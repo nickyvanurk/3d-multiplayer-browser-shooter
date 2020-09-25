@@ -4,6 +4,7 @@ import Utils from '../../../shared/utils';
 import Types from '../../../shared/types';
 import Messages from '../../../shared/messages';
 import { Connection } from '../../../shared/components/connection';
+import { Transform } from '../../../shared/components/transform';
 
 export class NetworkEventSystem extends System {
   static queries = {
@@ -11,6 +12,10 @@ export class NetworkEventSystem extends System {
       components: [Connection]
     }
   };
+
+  init(worldServer) {
+    this.server = worldServer;
+  }
 
   execute() {
     this.queries.connections.results.forEach((entity) => {
@@ -24,7 +29,16 @@ export class NetworkEventSystem extends System {
             let { name } = message.data;
             name = Utils.sanitize(name); 
             name = !name ? 'UNKNOWN' : name.substr(0, 15);  
-            connection.pushMessage(new Messages.Welcome(connection.id, name));
+
+            this.server.addPlayer(connection.id);
+            const { position, rotation } = entity.getComponent(Transform);
+
+            connection.pushMessage(new Messages.Welcome(
+              connection.id,
+              name,
+              position,
+              rotation
+            ));
             break;
           }
         }
