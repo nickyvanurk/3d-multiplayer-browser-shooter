@@ -51,7 +51,7 @@ export default class World {
   handlePlayerConnect(connection) {
     logger.debug(`Creating player ${connection.id}`);
     this.players[connection.id] = this.world
-      .createEntity()
+      .createEntity(connection.id)
       .addComponent(Connection, { value: connection });
     this.playerCount++;
     
@@ -67,6 +67,7 @@ export default class World {
     this.players[connection.id].remove();
     delete this.players[connection.id];
     this.playerCount--;
+    this.broadcast(new Messages.Despawn(connection.id));
   }
 
   addPlayer(id) {
@@ -82,5 +83,12 @@ export default class World {
       Utils.random(this.size.y + 1) - this.size.y/2,
       Utils.random(this.size.z + 1) - this.size.z/2
     );
+  }
+
+  broadcast(message) {
+    Object.values(this.players).forEach((player) => {
+      const connection = player.getComponent(Connection).value;
+      connection.pushMessage(message);
+    });
   }
 }

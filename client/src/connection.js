@@ -28,6 +28,7 @@ export default class Connection {
         case Types.Messages.GO: data = Messages.Go.deserialize(data); break;
         case Types.Messages.WELCOME: data = Messages.Welcome.deserialize(data); break;
         case Types.Messages.SPAWN: data = Messages.Spawn.deserialize(data); break;
+        case Types.Messages.DESPAWN: data = Messages.Despawn.deserialize(data); break;
       }
 
       this.incomingMessageQueue.push({ type, data });

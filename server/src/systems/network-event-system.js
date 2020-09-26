@@ -30,11 +30,6 @@ export class NetworkEventSystem extends System {
             name = Utils.sanitize(name); 
             name = !name ? 'UNKNOWN' : name.substr(0, 15);  
 
-            const players = Object.values(this.server.players).filter((entity) => {
-              return entity.hasComponent(Transform);
-            });
-
-
             this.server.addPlayer(connection.id);
             const { position, rotation } = entity.getComponent(Transform);
 
@@ -42,17 +37,31 @@ export class NetworkEventSystem extends System {
               connection.id,
               name,
               position,
-              rotation,
-              players
+              rotation
             ));
 
-            this.queries.connections.results.forEach((playerEntity) => {
-              if (entity === playerEntity) {
+            this.queries.connections.results.forEach((otherEntity) => {
+              if (entity === otherEntity) {
                 return;
               }
+              
+              if (otherEntity.hasComponent(Transform)) {
+                const { position, rotation } = otherEntity.getComponent(Transform);
+                connection.pushMessage(new Messages.Spawn(
+                  otherEntity.name,
+                  Types.Entities.CUBE,
+                  position,
+                  rotation
+                ));
+              }
 
-              const connection = playerEntity.getComponent(Connection).value;
-              connection.pushMessage(new Messages.Spawn(position, rotation));
+              const otherConnection = otherEntity.getComponent(Connection).value;
+              otherConnection.pushMessage(new Messages.Spawn(
+                entity.name,
+                Types.Entities.CUBE,
+                position,
+                rotation
+              ));
             });
             break;
           }

@@ -10,7 +10,10 @@ export class WebGlRendererSystem extends System {
     },
     object3ds: {
       components: [Object3d],
-      listen: { added: true }
+      listen: {
+        added: true,
+        removed: true
+      }
     }
   };
 
@@ -26,6 +29,15 @@ export class WebGlRendererSystem extends System {
       this.queries.renderers.results.forEach((rendererEntity) => {
         const scene = rendererEntity.getComponent(WebGlRenderer).scene;
         scene.add(object3d);
+      });
+    });
+
+    this.queries.object3ds.removed.forEach((entity) => {
+      const object3d = entity.getRemovedComponent(Object3d).value;
+
+      this.queries.renderers.results.forEach((rendererEntity) => {
+        const scene = rendererEntity.getComponent(WebGlRenderer).scene;
+        scene.remove(object3d);
       });
     });
 

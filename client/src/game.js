@@ -11,6 +11,7 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass';
 
+import Types from '../../shared/types';
 import { WebGlRenderer } from './components/webgl-renderer';
 import { Connection } from '../../shared/components/connection';
 import { Object3d } from './components/object3d';
@@ -105,22 +106,34 @@ export default class Game {
       .addComponent(Connection, { value: connection });
   }
 
-  addPlayer(position, rotation, main = false) {
+  addPlayer(position, rotation) {
     const cube = new Mesh(
       new BoxGeometry(),
-      new MeshBasicMaterial({ color: main ? 0xf07167 : 0x767522 })
+      new MeshBasicMaterial({ color: 0xf07167 })
     );
 
-    if (main) {
-      this.player
-        .addComponent(Object3d, { value: cube })
-        .addComponent(Transform, { position, rotation });
-    } else {
-      this.world
-        .createEntity()
-        .addComponent(Object3d, { value: cube })
-        .addComponent(Transform, { position, rotation });
+    this.player
+      .addComponent(Object3d, { value: cube })
+      .addComponent(Transform, { position, rotation });
+  }
+
+  addEntity(id, kind, position, rotation) {
+    switch (kind) {
+      case Types.Entities.CUBE: {
+        const cube = new Mesh(
+          new BoxGeometry(),
+          new MeshBasicMaterial({ color: 0x767522 })
+        );
+      
+        this.world
+          .createEntity(id)
+          .addComponent(Object3d, { value: cube })
+          .addComponent(Transform, { position, rotation });
+      }
     }
   }
-}
 
+  removeEntity(id) {
+    this.world.entityManager.getEntityByName(id).remove();
+  }
+}
