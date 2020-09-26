@@ -87,5 +87,30 @@ class Welcome {
   }
 }
 
+export class Spawn {
+  constructor(position, rotation) {
+    this.position = position;
+    this.rotation = rotation;
+  }
 
-export default { Go, Hello, Welcome };
+  static deserialize(message) {
+    return {
+      position: new Vector3(message[0], message[1], message[2]),
+      rotation: new Vector3(message[3], message[4], message[5])
+    };
+  }
+
+  serialize() {
+    return [
+      Types.Messages.SPAWN,
+      this.position.x,
+      this.position.y,
+      this.position.z,
+      this.rotation.x,
+      this.rotation.y,
+      this.rotation.z
+    ];
+  }
+}
+
+export default { Go, Hello, Welcome, Spawn };

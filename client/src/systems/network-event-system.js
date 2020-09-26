@@ -37,6 +37,11 @@ export class NetworkEventSystem extends System {
             }
             break;
           }
+          case Types.Messages.SPAWN: {
+            const { position, rotation } = message.data;
+            this.game.addPlayer(position, rotation);
+            break;
+          }
         }
       }
     });

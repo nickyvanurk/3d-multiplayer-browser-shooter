@@ -45,6 +45,15 @@ export class NetworkEventSystem extends System {
               rotation,
               players
             ));
+
+            this.queries.connections.results.forEach((playerEntity) => {
+              if (entity === playerEntity) {
+                return;
+              }
+
+              const connection = playerEntity.getComponent(Connection).value;
+              connection.pushMessage(new Messages.Spawn(position, rotation));
+            });
             break;
           }
         }
