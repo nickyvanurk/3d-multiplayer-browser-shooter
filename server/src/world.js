@@ -66,10 +66,16 @@ export default class World {
   
   handlePlayerDisconnect(connection) {
     logger.debug(`Deleting player ${connection.id}`);
-    this.players[connection.id].remove();
+
+    const entity = this.players[connection.id];
+
+    if (entity.hasComponent(Playing)) {
+      this.broadcast(new Messages.Despawn(connection.id));
+    }
+
+    entity.remove();
     delete this.players[connection.id];
     this.playerCount--;
-    this.broadcast(new Messages.Despawn(connection.id));
   }
 
   addPlayer(id) {
