@@ -4,17 +4,21 @@ import Utils from '../../../shared/utils';
 import Types from '../../../shared/types';
 import Messages from '../../../shared/messages';
 import { Connection } from '../../../shared/components/connection';
+import { Playing } from '../../../shared/components/playing';
 import { Transform } from '../../../shared/components/transform';
 
 export class NetworkEventSystem extends System {
   static queries = {
     connections: {
       components: [Connection]
+    },
+    players: {
+      components: [Connection, Playing]
     }
   };
 
   init(worldServer) {
-    this.server = worldServer;
+    this.worldServer = worldServer;
   }
 
   execute() {
@@ -30,9 +34,9 @@ export class NetworkEventSystem extends System {
             name = Utils.sanitize(name); 
             name = !name ? 'UNKNOWN' : name.substr(0, 15);  
 
-            this.server.addPlayer(connection.id);
-            const { position, rotation } = entity.getComponent(Transform);
+            this.worldServer.addPlayer(connection.id);
 
+            const { position, rotation } = entity.getComponent(Transform);
             connection.pushMessage(new Messages.Welcome(
               connection.id,
               name,
@@ -40,29 +44,26 @@ export class NetworkEventSystem extends System {
               rotation
             ));
 
-            this.queries.connections.results.forEach((otherEntity) => {
+            this.queries.players.results.forEach((otherEntity) => {
               if (entity === otherEntity) {
                 return;
               }
               
-              if (otherEntity.hasComponent(Transform)) {
-                const { position, rotation } = otherEntity.getComponent(Transform);
-                connection.pushMessage(new Messages.Spawn(
-                  otherEntity.name,
-                  Types.Entities.CUBE,
-                  position,
-                  rotation
-                ));
-              }
-
-              const otherConnection = otherEntity.getComponent(Connection).value;
-              otherConnection.pushMessage(new Messages.Spawn(
-                entity.name,
+              const { position, rotation } = otherEntity.getComponent(Transform);
+              connection.pushMessage(new Messages.Spawn(
+                otherEntity.name,
                 Types.Entities.CUBE,
                 position,
                 rotation
               ));
             });
+
+            this.worldServer.broadcast(new Messages.Spawn(
+              entity.name,
+              Types.Entities.CUBE,
+              position,
+              rotation
+            ), connection.id);
             break;
           }
         }

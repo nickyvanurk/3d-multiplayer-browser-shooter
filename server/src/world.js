@@ -6,6 +6,7 @@ import logger from './utils/logger';
 import Utils from '../../shared/utils';
 import Messages from '../../shared/messages';
 import { Connection } from '../../shared/components/connection';
+import { Playing } from '../../shared/components/playing';
 import { Transform } from '../../shared/components/transform';
 import { NetworkEventSystem } from './systems/network-event-system';
 import { NetworkMessageSystem } from '../../shared/systems/network-message-system';
@@ -24,6 +25,7 @@ export default class World {
 
     this.world = new World$1()
       .registerComponent(Connection)
+      .registerComponent(Playing)
       .registerComponent(Transform)
       .registerSystem(NetworkEventSystem, this)
       .registerSystem(NetworkMessageSystem);
@@ -71,10 +73,12 @@ export default class World {
   }
 
   addPlayer(id) {
-    this.players[id].addComponent(Transform, {
-      position: this.getRandomPosition(), 
-      rotation: Utils.getRandomRotation()
-    });
+    this.players[id]
+      .addComponent(Playing)
+      .addComponent(Transform, {
+        position: this.getRandomPosition(), 
+        rotation: Utils.getRandomRotation()
+      });
   }
 
   getRandomPosition() {
@@ -85,10 +89,14 @@ export default class World {
     );
   }
 
-  broadcast(message) {
-    Object.values(this.players).forEach((player) => {
-      const connection = player.getComponent(Connection).value;
+  broadcast(message, ignoredPlayerId = null) {
+    for (const [id, entity] of Object.entries(this.players)) {
+      if (id == ignoredPlayerId) {
+        continue;
+      }
+      
+      const connection = entity.getComponent(Connection).value;
       connection.pushMessage(message);
-    });
+    }
   }
 }
