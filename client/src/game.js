@@ -16,10 +16,12 @@ import { WebGlRenderer } from './components/webgl-renderer';
 import { Connection } from '../../shared/components/connection';
 import { Object3d } from './components/object3d';
 import { Transform } from '../../shared/components/transform';
+import { InputState } from './components/input-state';
 import { WebGlRendererSystem } from './systems/webgl-renderer-system';
 import { NetworkEventSystem } from './systems/network-event-system';
 import { NetworkMessageSystem } from '../../shared/systems/network-message-system';
 import { TransformSystem } from './systems/transform-system';
+import { InputSystem } from './systems/input-system';
 
 export default class Game {
   constructor() {
@@ -30,7 +32,9 @@ export default class Game {
       .registerComponent(Connection)
       .registerComponent(Object3d)
       .registerComponent(Transform)
+      .registerComponent(InputState)
       .registerSystem(NetworkEventSystem, this)
+      .registerSystem(InputSystem)
       .registerSystem(TransformSystem)
       .registerSystem(WebGlRendererSystem)
       .registerSystem(NetworkMessageSystem);
@@ -75,6 +79,7 @@ export default class Game {
     scene.add(this.cube);
 
     camera.position.z = 15;
+
 
     this.init();
   }
