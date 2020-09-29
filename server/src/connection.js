@@ -17,6 +17,7 @@ export default class Connection {
       
       switch (type) {
         case Types.Messages.HELLO: data = Messages.Hello.deserialize(data); break;
+        case Types.Messages.INPUT: data = Messages.Input.deserialize(data); break;
       }
 
       this.incomingMessageQueue.push({ type, data });

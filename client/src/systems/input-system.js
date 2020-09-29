@@ -54,8 +54,8 @@ export class InputSystem extends System {
 
       document.addEventListener('mousemove', (event) => {
         component.mousePosition = {
-          x: (event.clientX/window.innerWidth)*2 - 1,
-          y: -(event.clientY/window.innerHeight)*2 + 1
+          x: ((event.clientX/window.innerWidth)*2 - 1).toFixed(3),
+          y: (-(event.clientY/window.innerHeight)*2 + 1).toFixed(3)
         };
 
         // document.querySelector('.crosshair').setAttribute('style',`

@@ -66,6 +66,8 @@ export class NetworkEventSystem extends System {
             ), connection.id);
             break;
           }
+          case Types.Messages.INPUT:
+            break;
         }
       }
     });

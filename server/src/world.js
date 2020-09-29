@@ -9,7 +9,7 @@ import { Connection } from '../../shared/components/connection';
 import { Playing } from '../../shared/components/playing';
 import { Transform } from '../../shared/components/transform';
 import { NetworkEventSystem } from './systems/network-event-system';
-import { NetworkMessageSystem } from '../../shared/systems/network-message-system';
+import { NetworkMessageSystem } from './systems/network-message-system';
 
 export default class World {
   constructor(id, maxPlayers, server) {

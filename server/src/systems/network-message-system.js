@@ -1,6 +1,6 @@
 import { System } from 'ecsy';
 
-import { Connection } from '../components/connection';
+import { Connection } from '../../../shared/components/connection';
 
 export class NetworkMessageSystem extends System {
   static queries = {

@@ -104,4 +104,41 @@ export class Despawn {
   }
 }
 
-export default { Go, Hello, Welcome, Spawn, Despawn };
+export class Input {
+  constructor({ movementX, movementY, movementZ, roll, yaw, pitch, boost }) {
+    this.movementX = movementX;
+    this.movementY = movementY;
+    this.movementZ = movementZ;
+    this.roll = roll;
+    this.yaw = yaw;
+    this.pitch = pitch;
+    this.boost = boost;
+  }
+  
+  static deserialize(message) {
+    return {
+      movementX: message[0],
+      movementY: message[1],
+      movementZ: message[2],
+      roll: message[3],
+      yaw: message[4],
+      pitch: message[5],
+      boost: message[6],
+    };
+  }
+  
+  serialize() {
+    return [
+      Types.Messages.INPUT,
+      this.movementX,
+      this.movementY,
+      this.movementZ,
+      this.roll,
+      this.yaw,
+      this.pitch,
+      this.boost
+    ];
+  }
+}
+
+export default { Go, Hello, Welcome, Spawn, Despawn, Input };

@@ -21,7 +21,7 @@ import { PlayerInputState } from './components/player-input-state';
 import { PlayerController } from './components/player-controller';
 import { WebGlRendererSystem } from './systems/webgl-renderer-system';
 import { NetworkEventSystem } from './systems/network-event-system';
-import { NetworkMessageSystem } from '../../shared/systems/network-message-system';
+import { NetworkMessageSystem } from './systems/network-message-system';
 import { TransformSystem } from './systems/transform-system';
 import { InputSystem } from './systems/input-system';
 import { PlayerInputSystem } from './systems/player-input-system';

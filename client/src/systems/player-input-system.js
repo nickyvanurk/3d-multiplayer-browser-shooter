@@ -52,8 +52,8 @@ export class PlayerInputSystem extends System {
     playerInputState.movementY = keysDown.includes(strafeUp) ? 1 : keysDown.includes(strafeDown) ? -1 : 0;
     playerInputState.movementZ = keysDown.includes(forward) ? -1 : keysDown.includes(backward) ? 1 : 0;
     playerInputState.roll = keysDown.includes(rollLeft) ? -1 : keysDown.includes(rollRight) ? 1 : 0;
-    playerInputState.yaw = mousePosition.x;
-    playerInputState.pitch = mousePosition.y;
-    playerInputState.roll = keysDown.includes(boost);
+    playerInputState.yaw = parseFloat(mousePosition.x);
+    playerInputState.pitch = parseFloat(mousePosition.y);
+    playerInputState.boost = keysDown.includes(boost);
   }
 }

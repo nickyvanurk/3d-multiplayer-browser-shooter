@@ -4,7 +4,8 @@ export default {
     HELLO: 1,
     WELCOME: 2,
     SPAWN: 3,
-    DESPAWN: 4
+    DESPAWN: 4,
+    INPUT: 5
   },
   Entities: {
     CUBE: 0
