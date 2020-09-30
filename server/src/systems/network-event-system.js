@@ -38,7 +38,7 @@ export class NetworkEventSystem extends System {
 
             const { position, rotation } = entity.getComponent(Transform);
             connection.pushMessage(new Messages.Welcome(
-              connection.id,
+              entity.name,
               name,
               position,
               rotation

@@ -3,6 +3,7 @@ import { System } from 'ecsy';
 import Types from '../../../shared/types';
 import Messages from '../../../shared/messages';
 import { Connection } from '../../../shared/components/connection';
+import { Transform } from '../../../shared/components/transform';
 
 export class NetworkEventSystem extends System {
   static queries = {
@@ -30,7 +31,7 @@ export class NetworkEventSystem extends System {
             const { id, position, rotation } = message.data;
             const connection = entity.getMutableComponent(Connection).value;
             connection.id = id;
-            this.game.addPlayer(position, rotation);
+            this.game.addPlayer(id, position, rotation);
             break;
           }
           case Types.Messages.SPAWN: {
@@ -43,8 +44,23 @@ export class NetworkEventSystem extends System {
             this.game.removeEntity(id);
             break;
           }
-          case Types.Messages.WORLD:
+          case Types.Messages.WORLD: {
+            const entities = message.data;
+            
+            for (let i = 0; i < entities.length; ++i) {
+              const entity = this.game.entities[i];
+
+              if (!entity) {
+                console.error(`Entity${i} doesn't exist on client`);
+                continue;
+              }
+
+              const transform = entity.getMutableComponent(Transform);
+              transform.position.copy(entities[i].position);
+              transform.rotation.copy(entities[i].rotation);
+            }
             break;
+          }
         }
       }
     });

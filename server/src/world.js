@@ -20,7 +20,7 @@ export default class World {
     this.id = id;
     this.maxPlayers = maxPlayers;
     this.server = server;
-    this.updatesPerSecond = 10;
+    this.updatesPerSecond = 60;
     this.lastTime = performance.now();
 
     this.players = {};
@@ -79,7 +79,7 @@ export default class World {
     const entity = this.players[connection.id];
 
     if (entity.hasComponent(Playing)) {
-      this.broadcast(new Messages.Despawn(connection.id));
+      this.broadcast(new Messages.Despawn(entity.name));
     }
 
     entity.remove();
@@ -88,9 +88,11 @@ export default class World {
     this.playerCount--;
   }
 
-  addPlayer(id) {
-    const playerEntity = this.players[id];
-    this.entities[this.getEntityId()] = playerEntity
+  addPlayer(connectionId) {
+    const playerEntity = this.players[connectionId];
+    const id = this.getEntityId();
+    playerEntity.name = id;
+    this.entities[id] = playerEntity
       .addComponent(Playing)
       .addComponent(Transform, {
         position: this.getRandomPosition(), 
@@ -99,7 +101,8 @@ export default class World {
       .addComponent(PlayerInputState)
       .addComponent(RigidBody, {
         acceleration: 0.00002,
-        damping: 0.3
+        damping: 0.3,
+        velocity: new Vector3()
       });
   }
 

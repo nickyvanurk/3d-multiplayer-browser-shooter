@@ -46,6 +46,7 @@ export default class Game {
       .registerSystem(NetworkMessageSystem);
 
     this.player = undefined;
+    this.entities = [];
 
     const renderer = new WebGlRenderer$1({ antialias: true });
     renderer.setClearColor(0x020207);
@@ -117,13 +118,13 @@ export default class Game {
       .addComponent(Connection, { value: connection });
   }
 
-  addPlayer(position, rotation) {
+  addPlayer(id, position, rotation) {
     const cube = new Mesh(
       new BoxGeometry(),
       new MeshBasicMaterial({ color: 0xf07167 })
     );
 
-    this.player
+    this.entities[id] = this.player
       .addComponent(Object3d, { value: cube })
       .addComponent(Transform, { position, rotation })
       .addComponent(PlayerController, {
@@ -147,7 +148,7 @@ export default class Game {
           new MeshBasicMaterial({ color: 0x767522 })
         );
       
-        this.world
+        this.entities[id] = this.world
           .createEntity(id)
           .addComponent(Object3d, { value: cube })
           .addComponent(Transform, { position, rotation });
@@ -156,6 +157,7 @@ export default class Game {
   }
 
   removeEntity(id) {
-    this.world.entityManager.getEntityByName(id).remove();
+    this.entities[id].remove();
+    delete this.entities[id];
   }
 }

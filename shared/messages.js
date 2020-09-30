@@ -154,8 +154,8 @@ class World {
       const index = i*6; 
 
       data.push({
-        position: new Vector3(message[index + 1], message[index + 1], message[index + 2]),
-        rotation: new Vector3(message[index + 3], message[index + 4], message[index + 6]) 
+        position: new Vector3(message[index + 1], message[index + 2], message[index + 3]),
+        rotation: new Vector3(message[index + 4], message[index + 5], message[index + 6]) 
       });
     }
 
