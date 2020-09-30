@@ -43,6 +43,8 @@ export class NetworkEventSystem extends System {
             this.game.removeEntity(id);
             break;
           }
+          case Types.Messages.WORLD:
+            break;
         }
       }
     });

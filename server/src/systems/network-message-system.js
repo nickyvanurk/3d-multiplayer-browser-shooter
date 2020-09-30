@@ -1,6 +1,7 @@
 import { System } from 'ecsy';
 
 import { Connection } from '../../../shared/components/connection';
+import Messages from '../../../shared/messages';
 
 export class NetworkMessageSystem extends System {
   static queries = {
@@ -9,9 +10,14 @@ export class NetworkMessageSystem extends System {
     }
   };
 
+  init(worldServer) {
+    this.worldServer = worldServer;
+  }
+
   execute() {
     this.queries.connections.results.forEach((entity) => {
       const connection = entity.getComponent(Connection).value;
+      connection.pushMessage(new Messages.World(this.worldServer.entities));
       connection.sendOutgoingMessages();
     });
   }

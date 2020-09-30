@@ -1,6 +1,7 @@
 import { Vector3 } from 'three';
 
 import Types from './types';
+import { Transform } from './components/transform';
 
 class Go {
   constructor() {}
@@ -141,4 +142,42 @@ export class Input {
   }
 }
 
-export default { Go, Hello, Welcome, Spawn, Despawn, Input };
+class World {
+  constructor(entities) {
+    this.entities = entities;
+  }
+
+  static deserialize(message) {
+    const data = [];
+
+    for (let i = 0; i < message[0]; ++i) {
+      const index = i*6; 
+
+      data.push({
+        position: new Vector3(message[index + 1], message[index + 1], message[index + 2]),
+        rotation: new Vector3(message[index + 3], message[index + 4], message[index + 6]) 
+      });
+    }
+
+    return data;
+  }
+  
+  serialize() {
+    const data = [Types.Messages.WORLD, this.entities.length];
+
+    for (let i = 0; i < this.entities.length; ++i) {
+      const transform = this.entities[i].getComponent(Transform);
+
+      data.push(transform.position.x); 
+      data.push(transform.position.y); 
+      data.push(transform.position.z); 
+      data.push(transform.rotation.x); 
+      data.push(transform.rotation.y); 
+      data.push(transform.rotation.z); 
+    }
+
+    return data;
+  }
+}
+
+export default { Go, Hello, Welcome, Spawn, Despawn, Input, World };

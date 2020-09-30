@@ -24,6 +24,7 @@ export default class World {
     this.lastTime = performance.now();
 
     this.players = {};
+    this.entities = [];
 
     this.playerCount = 0;
 
@@ -36,7 +37,7 @@ export default class World {
       .registerSystem(NetworkEventSystem, this)
       .registerSystem(PlayerInputSystem)
       .registerSystem(PhysicsSystem)
-      .registerSystem(NetworkMessageSystem);
+      .registerSystem(NetworkMessageSystem, this);
 
     this.size = new Vector3(10, 10, 10);
     
@@ -83,11 +84,13 @@ export default class World {
 
     entity.remove();
     delete this.players[connection.id];
+    this.entities.pop();
     this.playerCount--;
   }
 
   addPlayer(id) {
-    this.players[id]
+    const playerEntity = this.players[id];
+    this.entities[this.getEntityId()] = playerEntity
       .addComponent(Playing)
       .addComponent(Transform, {
         position: this.getRandomPosition(), 
@@ -117,5 +120,15 @@ export default class World {
       const connection = entity.getComponent(Connection).value;
       connection.pushMessage(message);
     }
+  }
+
+  getEntityId() {
+    for (let i = 0; i < this.entities.length; ++i) {
+      if (!this.entities[i]) {
+        return i;
+      }
+    }
+
+    return this.entities.length;
   }
 }
