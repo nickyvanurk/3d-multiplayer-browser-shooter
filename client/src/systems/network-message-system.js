@@ -3,7 +3,7 @@ import { System } from 'ecsy';
 import Utils from '../../../shared/utils';
 import Messages from '../../../shared/messages';
 import { Connection } from '../../../shared/components/connection';
-import { PlayerInputState } from '../components/player-input-state';
+import { PlayerInputState } from '../../../shared/components/player-input-state';
 
 export class NetworkMessageSystem extends System {
   static queries = {

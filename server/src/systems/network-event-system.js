@@ -1,19 +1,19 @@
-import { System } from 'ecsy';
+import { System, Not } from 'ecsy';
 
 import Utils from '../../../shared/utils';
 import Types from '../../../shared/types';
 import Messages from '../../../shared/messages';
 import { Connection } from '../../../shared/components/connection';
-import { Playing } from '../../../shared/components/playing';
 import { Transform } from '../../../shared/components/transform';
+import { PlayerInputState } from '../../../shared/components/player-input-state';
 
 export class NetworkEventSystem extends System {
   static queries = {
     connections: {
-      components: [Connection]
+      components: [Connection, Not(PlayerInputState)]
     },
     players: {
-      components: [Connection, Playing]
+      components: [Connection, PlayerInputState]
     }
   };
 
@@ -66,8 +66,38 @@ export class NetworkEventSystem extends System {
             ), connection.id);
             break;
           }
-          case Types.Messages.INPUT:
+        }
+      }
+    });
+
+    this.queries.players.results.forEach((entity) => {
+      const connection = entity.getComponent(Connection).value;
+        
+      while (connection.hasIncomingMessage()) {
+        const message = connection.popMessage();
+
+        switch (message.type) {
+          case Types.Messages.INPUT: {
+            const {
+              movementX,
+              movementY,
+              movementZ,
+              roll,
+              yaw,
+              pitch,
+              boost
+            } = message.data;
+            const component = entity.getMutableComponent(PlayerInputState);
+
+            component.movementX = movementX;
+            component.movementY = movementY;
+            component.movementZ = movementZ;
+            component.roll = roll;
+            component.yaw = yaw;
+            component.pitch = pitch;
+            component.boost = boost;
             break;
+          }
         }
       }
     });

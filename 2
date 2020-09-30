@@ -12,8 +12,6 @@ import { RigidBody } from './components/rigidbody';
 import { PlayerInputState } from '../../shared/components/player-input-state';
 import { NetworkEventSystem } from './systems/network-event-system';
 import { NetworkMessageSystem } from './systems/network-message-system';
-import { PlayerInputSystem } from './systems/player-input-system';
-import { PhysicsSystem } from './systems/physics-system';
 
 export default class World {
   constructor(id, maxPlayers, server) {
@@ -34,8 +32,6 @@ export default class World {
       .registerComponent(RigidBody)
       .registerComponent(PlayerInputState)
       .registerSystem(NetworkEventSystem, this)
-      .registerSystem(PlayerInputSystem)
-      .registerSystem(PhysicsSystem)
       .registerSystem(NetworkMessageSystem);
 
     this.size = new Vector3(10, 10, 10);
@@ -93,11 +89,7 @@ export default class World {
         position: this.getRandomPosition(), 
         rotation: Utils.getRandomRotation()
       })
-      .addComponent(PlayerInputState)
-      .addComponent(RigidBody, {
-        acceleration: 0.00002,
-        damping: 0.3
-      });
+      .addComponent(PlayerInputState);
   }
 
   getRandomPosition() {

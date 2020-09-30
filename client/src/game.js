@@ -17,7 +17,7 @@ import { Connection } from '../../shared/components/connection';
 import { Object3d } from './components/object3d';
 import { Transform } from '../../shared/components/transform';
 import { InputState } from './components/input-state';
-import { PlayerInputState } from './components/player-input-state';
+import { PlayerInputState } from '../../shared/components/player-input-state';
 import { PlayerController } from './components/player-controller';
 import { WebGlRendererSystem } from './systems/webgl-renderer-system';
 import { NetworkEventSystem } from './systems/network-event-system';

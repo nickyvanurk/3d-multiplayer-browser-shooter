@@ -3,7 +3,7 @@ import { System } from 'ecsy';
 import { Connection } from '../../../shared/components/connection';
 import { InputState } from '../components/input-state';
 import { PlayerController } from '../components/player-controller';
-import { PlayerInputState } from '../components/player-input-state';
+import { PlayerInputState } from '../../../shared/components/player-input-state';
 
 export class PlayerInputSystem extends System {
   static queries = {
