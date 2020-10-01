@@ -1,6 +1,6 @@
 import { System } from 'ecsy';
 
-import { Transform } from '../../../shared/components/transform';
+import { Transform } from '../components/transform';
 import { RigidBody } from '../components/rigidbody';
 
 export class PhysicsSystem extends System {

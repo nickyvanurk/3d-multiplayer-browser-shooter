@@ -17,7 +17,7 @@ import Types from '../../shared/types';
 import { WebGlRenderer } from './components/webgl-renderer';
 import { Connection } from '../../shared/components/connection';
 import { Object3d } from './components/object3d';
-import { Transform } from '../../shared/components/transform';
+import { Transform } from './components/transform';
 import { InputState } from './components/input-state';
 import { PlayerInputState } from '../../shared/components/player-input-state';
 import { PlayerController } from './components/player-controller';

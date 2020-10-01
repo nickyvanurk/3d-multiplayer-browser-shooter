@@ -1,7 +1,7 @@
 import { Component } from 'ecsy';
 import { Vector3 } from 'three';
 
-import ThreeTypes from '../three-types';
+import ThreeTypes from '../../../shared/three-types';
 
 export class Transform extends Component {
   static schema = {

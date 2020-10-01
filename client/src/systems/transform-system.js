@@ -1,7 +1,7 @@
 import { System } from 'ecsy';
 import { Euler } from 'three';
 
-import { Transform } from '../../../shared/components/transform';
+import { Transform } from '../components/transform';
 import { Object3d } from '../components/object3d';
 
 export class TransformSystem extends System {

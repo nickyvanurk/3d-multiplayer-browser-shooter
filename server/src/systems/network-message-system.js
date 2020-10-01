@@ -4,7 +4,7 @@ import Types from '../../../shared/types';
 import Messages from '../../../shared/messages';
 import { Connection } from '../../../shared/components/connection';
 import { PlayerInputState } from '../../../shared/components/player-input-state';
-import { Transform } from '../../../shared/components/transform';
+import { Transform } from '../components/transform';
 
 export class NetworkMessageSystem extends System {
   static queries = {

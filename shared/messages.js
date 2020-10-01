@@ -1,7 +1,7 @@
 import { Vector3 } from 'three';
 
 import Types from './types';
-import { Transform } from './components/transform';
+import { Transform } from '../server/src/components/transform';
 
 class Go {
   constructor() {}

@@ -7,7 +7,7 @@ import Utils from '../../shared/utils';
 import Messages from '../../shared/messages';
 import { Connection } from '../../shared/components/connection';
 import { Playing } from '../../shared/components/playing';
-import { Transform } from '../../shared/components/transform';
+import { Transform } from './components/transform';
 import { RigidBody } from './components/rigidbody';
 import { PlayerInputState } from '../../shared/components/player-input-state';
 import { NetworkEventSystem } from './systems/network-event-system';
@@ -20,7 +20,7 @@ export default class World {
     this.id = id;
     this.maxPlayers = maxPlayers;
     this.server = server;
-    this.updatesPerSecond = 60;
+    this.updatesPerSecond = 5;
     this.lastTime = performance.now();
 
     this.players = {};

@@ -3,7 +3,7 @@ import { System } from 'ecsy';
 import Types from '../../../shared/types';
 import Messages from '../../../shared/messages';
 import { Connection } from '../../../shared/components/connection';
-import { Transform } from '../../../shared/components/transform';
+import { Transform } from '../components/transform';
 
 export class NetworkEventSystem extends System {
   static queries = {
