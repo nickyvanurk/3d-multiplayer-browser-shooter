@@ -10,7 +10,9 @@ import {
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass';
+import * as workerInterval from 'worker-interval';
 
+import Utils from '../../shared/utils';
 import Types from '../../shared/types';
 import { WebGlRenderer } from './components/webgl-renderer';
 import { Connection } from '../../shared/components/connection';
@@ -29,6 +31,7 @@ import { PlayerInputSystem } from './systems/player-input-system';
 export default class Game {
   constructor() {
     this.lastTime = performance.now();
+    this.updatesPerSecond = 60;
 
     this.world = new World()
       .registerComponent(WebGlRenderer)
@@ -44,6 +47,13 @@ export default class Game {
       .registerSystem(TransformSystem)
       .registerSystem(WebGlRendererSystem)
       .registerSystem(NetworkMessageSystem);
+
+    this.inputSystem = this.world.getSystem(InputSystem);
+    this.updateSystems = this.world.getSystems().filter((system) => {
+      return !(system instanceof InputSystem) &&
+             !(system instanceof WebGlRendererSystem);
+    });
+    this.renderSystem = this.world.getSystem(WebGlRendererSystem);
 
     this.player = undefined;
     this.entities = [];
@@ -86,30 +96,51 @@ export default class Game {
     scene.add(this.cube);
 
     camera.position.z = 15;
-
-
-    this.init();
   }
 
   init() {
+    this.world.systemManager.executeSystem(this.inputSystem);
+
+    this.fixedUpdate = Utils.createFixedTimestep(
+      1000/this.updatesPerSecond,
+      this.handleFixedUpdate.bind(this)
+    ); 
+    
+    workerInterval.setInterval(this.update.bind(this), 1000/this.updatesPerSecond);
+    requestAnimationFrame(this.render.bind(this));
   }
 
-  run() {
+  update() {
     const time = performance.now();
     let delta = time - this.lastTime;
 
     if (delta > 250) {
       delta = 250;
     }
+    
+    this.fixedUpdate(delta, time);
+    this.lastTime = time;
+  }
 
-    this.world.execute(delta, time);
+  render() {
+    requestAnimationFrame(this.render.bind(this));
+    this.world.systemManager.executeSystem(this.renderSystem);
+    this.world.entityManager.processDeferredRemoval();
+  }
+
+  handleFixedUpdate(delta, time) {
+    if (this.world.enabled) {
+      this.updateSystems.forEach((system) => {
+        if (system.enabled) {
+          this.world.systemManager.executeSystem(system, delta, time);
+        }
+      });
+    }
+
+    this.world.entityManager.processDeferredRemoval();
 
     this.cube.rotation.x += 0.01;
     this.cube.rotation.y += 0.01;
-
-    this.lastTime = time;
-
-    requestAnimationFrame(this.run.bind(this));
   }
 
   handleConnect(connection) {

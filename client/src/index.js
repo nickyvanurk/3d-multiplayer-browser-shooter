@@ -6,7 +6,7 @@ function main() {
   const connection = new Connection(process.env.SERVER_URL, +process.env.PORT || 1337);
   const game = new Game();
 
-  game.run();
+  game.init();
   
   connection.onConnection(() => {
     console.log('Connected to server');

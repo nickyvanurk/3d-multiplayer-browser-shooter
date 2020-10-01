@@ -21,6 +21,10 @@ export class TransformSystem extends System {
 
   execute() {
     this.queries.objects.added.forEach((entity) => {
+      if (!entity.alive) {
+        return;
+      }
+
       this.updateTransform(entity);
     });
       

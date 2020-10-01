@@ -74,7 +74,7 @@ export class NetworkEventSystem extends System {
               boost
             } = message.data;
             const component = entity.getMutableComponent(PlayerInputState);
-
+            
             component.movementX = movementX;
             component.movementY = movementY;
             component.movementZ = movementZ;
