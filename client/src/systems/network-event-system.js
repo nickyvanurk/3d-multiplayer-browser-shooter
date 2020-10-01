@@ -31,16 +31,19 @@ export class NetworkEventSystem extends System {
             const { id, position, rotation } = message.data;
             const connection = entity.getMutableComponent(Connection).value;
             connection.id = id;
+            console.log(`my id: ${id}`);
             this.game.addPlayer(id, position, rotation);
             break;
           }
           case Types.Messages.SPAWN: {
             const { id, kind, position, rotation } = message.data;
+            console.log(`spawn id ${id}`);
             this.game.addEntity(id, kind, position, rotation);
             break;
           }
           case Types.Messages.DESPAWN: {
             const { id } = message.data;
+            console.log(`despawn id ${id}`);
             this.game.removeEntity(id);
             break;
           }
@@ -48,7 +51,7 @@ export class NetworkEventSystem extends System {
             const entities = message.data;
             
             for (let i = 0; i < entities.length; ++i) {
-              const entity = this.game.entities[i];
+              const entity = this.game.entities[entities[i].id];
 
               if (!entity) {
                 console.error(`Entity${i} doesn't exist on client`);

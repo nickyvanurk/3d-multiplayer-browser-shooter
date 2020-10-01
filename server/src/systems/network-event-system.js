@@ -38,7 +38,7 @@ export class NetworkEventSystem extends System {
 
             const { position, rotation } = entity.getComponent(Transform);
             connection.pushMessage(new Messages.Welcome(
-              entity.name,
+              entity.worldId,
               name,
               position,
               rotation
@@ -51,7 +51,7 @@ export class NetworkEventSystem extends System {
               
               const { position, rotation } = otherEntity.getComponent(Transform);
               connection.pushMessage(new Messages.Spawn(
-                otherEntity.name,
+                otherEntity.worldId,
                 Types.Entities.CUBE,
                 position,
                 rotation
@@ -59,7 +59,7 @@ export class NetworkEventSystem extends System {
             });
 
             this.worldServer.broadcast(new Messages.Spawn(
-              entity.name,
+              entity.worldId,
               Types.Entities.CUBE,
               position,
               rotation

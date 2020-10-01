@@ -149,7 +149,7 @@ export default class Game {
         );
       
         this.entities[id] = this.world
-          .createEntity(id)
+          .createEntity()
           .addComponent(Object3d, { value: cube })
           .addComponent(Transform, { position, rotation });
       }

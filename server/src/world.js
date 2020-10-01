@@ -62,7 +62,7 @@ export default class World {
   handlePlayerConnect(connection) {
     logger.debug(`Creating player ${connection.id}`);
     this.players[connection.id] = this.world
-      .createEntity(connection.id)
+      .createEntity()
       .addComponent(Connection, { value: connection });
     this.playerCount++;
     
@@ -79,20 +79,21 @@ export default class World {
     const entity = this.players[connection.id];
 
     if (entity.hasComponent(Playing)) {
-      this.broadcast(new Messages.Despawn(entity.name));
+      this.broadcast(new Messages.Despawn(entity.worldId));
     }
 
     entity.remove();
     delete this.players[connection.id];
-    this.entities.pop();
+    delete this.entities[entity.worldId];
     this.playerCount--;
   }
 
   addPlayer(connectionId) {
     const playerEntity = this.players[connectionId];
-    const id = this.getEntityId();
-    playerEntity.name = id;
-    this.entities[id] = playerEntity
+
+    playerEntity.worldId = this.getEntityId();
+
+    this.entities[playerEntity.worldId] = playerEntity
       .addComponent(Playing)
       .addComponent(Transform, {
         position: this.getRandomPosition(), 

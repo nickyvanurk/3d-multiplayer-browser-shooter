@@ -150,12 +150,11 @@ class World {
   static deserialize(message) {
     const data = [];
 
-    for (let i = 0; i < message[0]; ++i) {
-      const index = i*6; 
-
+    for (let i = 0; i < message.length; i += 7) {
       data.push({
-        position: new Vector3(message[index + 1], message[index + 2], message[index + 3]),
-        rotation: new Vector3(message[index + 4], message[index + 5], message[index + 6]) 
+        id: message[i],
+        position: new Vector3(message[i + 1], message[i + 2], message[i + 3]),
+        rotation: new Vector3(message[i + 4], message[i + 5], message[i + 6]) 
       });
     }
 
@@ -163,9 +162,15 @@ class World {
   }
   
   serialize() {
-    const data = [Types.Messages.WORLD, this.entities.length];
+    const data = [Types.Messages.WORLD];
 
     for (let i = 0; i < this.entities.length; ++i) {
+      if (!this.entities[i]) {
+        continue;
+      }
+
+      data.push(this.entities[i].worldId);
+
       const transform = this.entities[i].getComponent(Transform);
 
       data.push(transform.position.x); 
