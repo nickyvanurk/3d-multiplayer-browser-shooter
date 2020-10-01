@@ -15,31 +15,31 @@ process.stdin.resume();
 
   const randomTime = () => {
     return Math.random() * 200 + 100;
-  }
+  };
 
   const goRight = async page => {
     await page.keyboard.up('KeyS');
     await page.keyboard.down('KeyF');
     await page.waitForTimeout(randomTime());
-  }
+  };
 
   const goLeft = async page => {
     await page.keyboard.up('KeyF');
     await page.keyboard.down('KeyS');
     await page.waitForTimeout(randomTime());
-  }
+  };
   
   const goUp = async page => {
     await page.keyboard.up('Delete');
     await page.keyboard.down('Backspace');
     await page.waitForTimeout(randomTime());
-  }
+  };
 
   const goDown = async page => {
     await page.keyboard.up('Backspace');
     await page.keyboard.down('Delete');
     await page.waitForTimeout(randomTime());
-  }
+  };
 
   const newPage = async () => {
     try {
@@ -65,9 +65,9 @@ process.stdin.resume();
       console.error(error.message);
     }
     process.exit();
-  }
+  };
 
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < playerCount; i++) {
     newPage();
   }
 })();
