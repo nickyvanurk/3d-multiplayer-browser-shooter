@@ -45,7 +45,7 @@ export class NetworkEventSystem extends System {
             ));
 
             this.queries.players.results.forEach((otherEntity) => {
-              if (entity === otherEntity) {
+              if (entity.worldId === otherEntity.worldId) {
                 return;
               }
               
