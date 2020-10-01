@@ -1,5 +1,5 @@
 import { System } from 'ecsy';
-import { Euler } from 'three';
+import { Vector3, Euler } from 'three';
 
 import { Transform } from '../components/transform';
 import { Object3d } from '../components/object3d';
@@ -41,7 +41,12 @@ export class TransformSystem extends System {
     const component = entity.getComponent(Transform);
     const object3d = entity.getMutableComponent(Object3d).value;
 
-    object3d.position.copy(component.position);
+    const renderPosition = new Vector3()
+      .copy(component.position)
+      .multiplyScalar(this.game.alpha)
+      .add(new Vector3().copy(component.prevPosition).multiplyScalar(1 - this.game.alpha));
+
+    object3d.position.copy(renderPosition);
     object3d.quaternion.setFromEuler(new Euler(
       component.rotation.x,
       component.rotation.y,

@@ -20,7 +20,7 @@ export default class World {
     this.id = id;
     this.maxPlayers = maxPlayers;
     this.server = server;
-    this.updatesPerSecond = 5;
+    this.updatesPerSecond = 60;
     this.lastTime = performance.now();
 
     this.players = {};

@@ -31,7 +31,7 @@ import { PlayerInputSystem } from './systems/player-input-system';
 export default class Game {
   constructor() {
     this.lastTime = performance.now();
-    this.updatesPerSecond = 60;
+    this.updatesPerSecond = 30;
 
     this.world = new World()
       .registerComponent(WebGlRenderer)
@@ -44,16 +44,20 @@ export default class Game {
       .registerSystem(NetworkEventSystem, this)
       .registerSystem(InputSystem)
       .registerSystem(PlayerInputSystem)
-      .registerSystem(TransformSystem)
+      .registerSystem(TransformSystem, this)
       .registerSystem(WebGlRendererSystem)
       .registerSystem(NetworkMessageSystem);
 
     this.inputSystem = this.world.getSystem(InputSystem);
     this.updateSystems = this.world.getSystems().filter((system) => {
       return !(system instanceof InputSystem) &&
-             !(system instanceof WebGlRendererSystem);
+             !(system instanceof WebGlRendererSystem) &&
+             !(system instanceof TransformSystem);
     });
+    this.transformSystem = this.world.getSystem(TransformSystem);
     this.renderSystem = this.world.getSystem(WebGlRendererSystem);
+
+    this.alpha = 1;
 
     this.player = undefined;
     this.entities = [];
@@ -119,6 +123,8 @@ export default class Game {
     }
     
     this.fixedUpdate(delta, time);
+    this.world.systemManager.executeSystem(this.transformSystem);
+
     this.lastTime = time;
   }
 

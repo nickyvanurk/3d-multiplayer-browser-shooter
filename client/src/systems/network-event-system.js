@@ -57,7 +57,7 @@ export class NetworkEventSystem extends System {
                 console.error(`Entity${i} doesn't exist on client`);
                 continue;
               }
-
+              
               const transform = entity.getMutableComponent(Transform);
               transform.position.copy(entities[i].position);
               transform.rotation.copy(entities[i].rotation);
