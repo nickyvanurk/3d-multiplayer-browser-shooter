@@ -44,20 +44,6 @@ export class NetworkEventSystem extends System {
               rotation
             ));
 
-            this.queries.players.results.forEach((otherEntity) => {
-              if (entity.worldId === otherEntity.worldId) {
-                return;
-              }
-              
-              const { position, rotation } = otherEntity.getComponent(Transform);
-              connection.pushMessage(new Messages.Spawn(
-                otherEntity.worldId,
-                Types.Entities.CUBE,
-                position,
-                rotation
-              ));
-            });
-
             this.worldServer.broadcast(new Messages.Spawn(
               entity.worldId,
               Types.Entities.CUBE,
