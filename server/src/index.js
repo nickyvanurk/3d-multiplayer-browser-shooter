@@ -27,7 +27,7 @@ function main() {
 
   for (let i = 0; i < process.env.WORLDS; ++i) {
     const world = new World(`world${i}`, process.env.PLAYERS_PER_WORLD, server);
-    world.run();
+    world.init();
     worlds.push(world);
   }
 }

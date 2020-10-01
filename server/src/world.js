@@ -43,10 +43,16 @@ export default class World {
     
     logger.info(`${this.id} running`);
   }
-  
-  run() {
-    setTimeout(this.run.bind(this), 1000/this.updatesPerSecond);
 
+  init() {
+    this.fixedUpdate = Utils.createFixedTimestep(
+      1000/this.updatesPerSecond,
+      this.handleFixedUpdate.bind(this)
+    );
+    setInterval(this.update.bind(this), 1000/this.updatesPerSecond);
+  }
+  
+  update() {
     const time = performance.now();
     let delta = time - this.lastTime;
 
@@ -54,9 +60,12 @@ export default class World {
       delta = 250;
     }
 
-    this.world.execute(delta, time);
-    
+    this.fixedUpdate(delta, time);
     this.lastTime = time;
+  }
+
+  handleFixedUpdate(delta, time) {
+    this.world.execute(delta, time);
   }
 
   handlePlayerConnect(connection) {
