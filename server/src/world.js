@@ -101,8 +101,7 @@ export default class World {
       .addComponent(PlayerInputState)
       .addComponent(RigidBody, {
         acceleration: 0.00002,
-        damping: 0.3,
-        velocity: new Vector3()
+        damping: 0.3
       });
   }
 
