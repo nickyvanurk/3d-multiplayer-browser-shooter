@@ -1,7 +1,9 @@
 import { System } from 'ecsy';
+import { Vector3, Euler } from 'three';
 
 import { WebGlRenderer } from '../components/webgl-renderer';
 import { Object3d } from '../components/object3d';
+import { Transform } from '../components/transform';
 
 export class WebGlRendererSystem extends System {
   static queries = {
@@ -9,7 +11,7 @@ export class WebGlRendererSystem extends System {
       components: [WebGlRenderer]
     },
     object3ds: {
-      components: [Object3d],
+      components: [Object3d, Transform],
       listen: {
         added: true,
         removed: true
@@ -17,7 +19,8 @@ export class WebGlRendererSystem extends System {
     }
   };
 
-  init() {
+  init(game) {
+    this.game = game;
     this.needsResize = true;
     window.onresize = this.onResize.bind(this);
   }
@@ -39,6 +42,23 @@ export class WebGlRendererSystem extends System {
         const scene = rendererEntity.getComponent(WebGlRenderer).scene;
         scene.remove(object3d);
       });
+    });
+
+    this.queries.object3ds.results.forEach((entity) => {
+      const transform = entity.getComponent(Transform);
+      const object3d = entity.getMutableComponent(Object3d).value;
+
+      const renderPosition = new Vector3()
+        .copy(transform.position)
+        .multiplyScalar(this.game.alpha)
+        .add(new Vector3().copy(transform.prevPosition).multiplyScalar(1 - this.game.alpha));
+
+      object3d.position.copy(renderPosition);
+      object3d.quaternion.setFromEuler(new Euler(
+        transform.rotation.x,
+        transform.rotation.y,
+        transform.rotation.z
+      ));
     });
 
     this.queries.renderers.results.forEach((entity) => {

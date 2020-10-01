@@ -31,7 +31,7 @@ import { PlayerInputSystem } from './systems/player-input-system';
 export default class Game {
   constructor() {
     this.lastTime = performance.now();
-    this.updatesPerSecond = 30;
+    this.updatesPerSecond = 60;
 
     this.world = new World()
       .registerComponent(WebGlRenderer)
@@ -41,20 +41,18 @@ export default class Game {
       .registerComponent(InputState)
       .registerComponent(PlayerInputState)
       .registerComponent(PlayerController)
+      .registerSystem(TransformSystem)
       .registerSystem(NetworkEventSystem, this)
       .registerSystem(InputSystem)
       .registerSystem(PlayerInputSystem)
-      .registerSystem(TransformSystem, this)
-      .registerSystem(WebGlRendererSystem)
+      .registerSystem(WebGlRendererSystem, this)
       .registerSystem(NetworkMessageSystem);
 
     this.inputSystem = this.world.getSystem(InputSystem);
     this.updateSystems = this.world.getSystems().filter((system) => {
       return !(system instanceof InputSystem) &&
-             !(system instanceof WebGlRendererSystem) &&
-             !(system instanceof TransformSystem);
+             !(system instanceof WebGlRendererSystem);
     });
-    this.transformSystem = this.world.getSystem(TransformSystem);
     this.renderSystem = this.world.getSystem(WebGlRendererSystem);
 
     this.alpha = 1;
@@ -110,7 +108,7 @@ export default class Game {
       this.handleFixedUpdate.bind(this)
     ); 
     
-    workerInterval.setInterval(this.update.bind(this), 1000/this.updatesPerSecond);
+    workerInterval.setInterval(this.update.bind(this), 1000/60);
     requestAnimationFrame(this.render.bind(this));
   }
 
@@ -122,16 +120,22 @@ export default class Game {
       delta = 250;
     }
     
-    this.fixedUpdate(delta, time);
-    this.world.systemManager.executeSystem(this.transformSystem);
+    this.alpha = this.fixedUpdate(delta, time);
+   
+    if (document.hidden) {
+      this.world.entityManager.processDeferredRemoval();
+    }
 
     this.lastTime = time;
   }
 
   render() {
     requestAnimationFrame(this.render.bind(this));
-    this.world.systemManager.executeSystem(this.renderSystem);
-    this.world.entityManager.processDeferredRemoval();
+
+    if (!document.hidden) {
+      this.world.systemManager.executeSystem(this.renderSystem);
+      this.world.entityManager.processDeferredRemoval();
+    }
   }
 
   handleFixedUpdate(delta, time) {
@@ -142,8 +146,6 @@ export default class Game {
         }
       });
     }
-
-    this.world.entityManager.processDeferredRemoval();
 
     this.cube.rotation.x += 0.01;
     this.cube.rotation.y += 0.01;
@@ -163,7 +165,7 @@ export default class Game {
 
     this.entities[id] = this.player
       .addComponent(Object3d, { value: cube })
-      .addComponent(Transform, { position, rotation })
+      .addComponent(Transform, { prevPosition: position, position, rotation })
       .addComponent(PlayerController, {
         forward: 'KeyE',
         backward: 'KeyD',
@@ -188,7 +190,7 @@ export default class Game {
         this.entities[id] = this.world
           .createEntity()
           .addComponent(Object3d, { value: cube })
-          .addComponent(Transform, { position, rotation });
+          .addComponent(Transform, { prevPosition: position, position, rotation });
       }
     }
   }
