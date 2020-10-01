@@ -28,6 +28,7 @@
     "html-webpack-plugin": "^4.5.0",
     "mini-css-extract-plugin": "^0.11.2",
     "nodemon": "^2.0.4",
+    "puppeteer": "^5.3.1",
     "style-loader": "^1.2.1",
     "webpack": "^4.44.2",
     "webpack-cli": "^3.3.12",
