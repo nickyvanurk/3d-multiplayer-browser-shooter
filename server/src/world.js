@@ -1,6 +1,6 @@
 import { performance } from 'perf_hooks';
 import { World as World$1 } from 'ecsy';
-import { Vector3 } from 'three';
+import { Vector3, Euler } from 'three';
 
 import logger from './utils/logger';
 import Utils from '../../shared/utils';
@@ -113,12 +113,14 @@ export default class World {
       .addComponent(Playing)
       .addComponent(Transform, {
         position: this.getRandomPosition(), 
-        rotation: Utils.getRandomRotation()
+        rotation: new Vector3()
       })
       .addComponent(PlayerInputState)
       .addComponent(RigidBody, {
         acceleration: 0.00002,
-        damping: 0.3
+        angularAcceleration: new Euler(0.0000625, 0.0000625, 0.000003),
+        damping: 0.3,
+        angularDamping: 0.1
       });
   }
 
