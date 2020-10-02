@@ -112,8 +112,7 @@ export default class World {
     this.entities[entityId] = clientEntity
       .addComponent(Playing)
       .addComponent(Transform, {
-        position: this.getRandomPosition(), 
-        rotation: new Vector3()
+        position: this.getRandomPosition()
       })
       .addComponent(PlayerInputState)
       .addComponent(RigidBody, {

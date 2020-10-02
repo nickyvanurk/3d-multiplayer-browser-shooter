@@ -1,5 +1,5 @@
 import { System } from 'ecsy';
-import { Vector3, Euler } from 'three';
+import { Vector3, Quaternion } from 'three';
 
 import { WebGlRenderer } from '../components/webgl-renderer';
 import { Object3d } from '../components/object3d';
@@ -52,13 +52,12 @@ export class WebGlRendererSystem extends System {
         .copy(transform.position)
         .multiplyScalar(this.game.alpha)
         .add(new Vector3().copy(transform.prevPosition).multiplyScalar(1 - this.game.alpha));
+      const renderRotation = new Quaternion()
+        .copy(transform.prevRotation)
+        .slerp(transform.rotation, this.game.alpha);
 
       object3d.position.copy(renderPosition);
-      object3d.quaternion.setFromEuler(new Euler(
-        transform.rotation.x,
-        transform.rotation.y,
-        transform.rotation.z
-      ));
+      object3d.quaternion.copy(renderRotation);
     });
 
     this.queries.renderers.results.forEach((entity) => {

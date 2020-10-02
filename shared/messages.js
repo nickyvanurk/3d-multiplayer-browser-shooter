@@ -1,4 +1,4 @@
-import { Vector3 } from 'three';
+import { Vector3, Quaternion } from 'three';
 
 import Types from './types';
 import { Transform } from '../server/src/components/transform';
@@ -150,11 +150,11 @@ class World {
   static deserialize(message) {
     const data = [];
 
-    for (let i = 0; i < message.length; i += 7) {
+    for (let i = 0; i < message.length; i += 8) {
       data.push({
         id: message[i],
         position: new Vector3(message[i + 1], message[i + 2], message[i + 3]),
-        rotation: new Vector3(message[i + 4], message[i + 5], message[i + 6]) 
+        rotation: new Quaternion(message[i + 4], message[i + 5], message[i + 6], message[i + 7]) 
       });
     }
 
@@ -179,6 +179,7 @@ class World {
       data.push(transform.rotation.x); 
       data.push(transform.rotation.y); 
       data.push(transform.rotation.z); 
+      data.push(transform.rotation.w); 
     }
 
     return data;

@@ -1,14 +1,14 @@
 import { Component } from 'ecsy';
-import { Vector3 } from 'three';
+import { Vector3, Quaternion } from 'three';
 
 import ThreeTypes from '../../../shared/three-types';
 
 export class Transform extends Component {
   static schema = {
     prevPosition: { type: ThreeTypes.Vector3, default: new Vector3() },
-    prevRotation: { type: ThreeTypes.Vector3, default: new Vector3() },
+    prevRotation: { type: ThreeTypes.Quaternion, default: new Quaternion() },
     position: { type: ThreeTypes.Vector3, default: new Vector3() },
-    rotation: { type: ThreeTypes.Vector3, default: new Vector3() }
+    rotation: { type: ThreeTypes.Quaternion, default: new Quaternion() }
   };
 }
 

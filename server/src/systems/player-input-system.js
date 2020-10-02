@@ -1,5 +1,5 @@
 import { System } from 'ecsy';
-import { Vector3, Euler } from 'three';
+import { Vector3 } from 'three';
 
 import { Connection } from '../../../shared/components/connection';
 import { PlayerInputState } from '../../../shared/components/player-input-state';
@@ -27,11 +27,10 @@ export class PlayerInputSystem extends System {
       const rigidBody = entity.getMutableComponent(RigidBody);
       const transform = entity.getMutableComponent(Transform);
 
-      const rotation = new Euler().setFromVector3(transform.rotation);
       const direction = {
-        x: new Vector3(1, 0, 0).applyEuler(rotation).normalize(),
-        y: new Vector3(0, 1, 0).applyEuler(rotation).normalize(),
-        z: new Vector3(0, 0, 1).applyEuler(rotation).normalize()
+        x: new Vector3(1, 0, 0).applyQuaternion(transform.rotation).normalize(),
+        y: new Vector3(0, 1, 0).applyQuaternion(transform.rotation).normalize(),
+        z: new Vector3(0, 0, 1).applyQuaternion(transform.rotation).normalize()
       };
       const movement = {
         x: boost ? movementX * 2 : movementX,
@@ -42,10 +41,20 @@ export class PlayerInputSystem extends System {
       rigidBody.velocity.add(direction.x.multiplyScalar(rigidBody.acceleration*delta * movement.x));
       rigidBody.velocity.add(direction.y.multiplyScalar(rigidBody.acceleration*delta * movement.y));
       rigidBody.velocity.add(direction.z.multiplyScalar(rigidBody.acceleration*delta * movement.z));
+      rigidBody.velocity.multiplyScalar(Math.pow(rigidBody.damping, delta/1000));
+
+      if (rigidBody.velocity.length() < 0.0001) {
+        rigidBody.velocity.setLength(0);
+      }
       
       rigidBody.angularVelocity.x = rigidBody.angularAcceleration.x*delta * pitch;
       rigidBody.angularVelocity.y = rigidBody.angularAcceleration.y*delta * -yaw;
       rigidBody.angularVelocity.z += rigidBody.angularAcceleration.z*delta * -roll;
+      rigidBody.angularVelocity.z *= Math.pow(rigidBody.angularDamping, delta/1000);
+      
+      if (Math.abs(rigidBody.angularVelocity.z) < 0.000001) {
+        rigidBody.angularVelocity.z = 0;
+      }
     });
   }
 }
