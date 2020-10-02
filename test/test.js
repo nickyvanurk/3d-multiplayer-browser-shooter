@@ -3,7 +3,7 @@
  */
 
 const puppeteer = require('puppeteer');
-const playerCount = 15;
+const playerCount = 5;
 
 process.stdin.setRawMode(true);
 process.stdin.resume();

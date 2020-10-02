@@ -1,19 +1,25 @@
 import WebSocket from 'ws';
 
-import Utils from '../../shared/utils';
 import Connection from './connection';
 
 export default class Server {
-  constructor(port) {
-    this.connections = {};
-    this.counter = 0;
+  constructor(port, maxClients) {
+    this.maxClients = maxClients;
+    this.connectedClients = 0;
+    this.clients = new Array(this.maxClients).fill();
 
     this.wss = new WebSocket.Server({ port });
 
     this.wss.on('connection', (connection, req) => {
+      const clientId = this.findFreeClientIndex();
+      
+      if (clientId === -1) {
+        connection.close();
+        return;
+      }
+      
       connection.remoteAddress = req.socket.remoteAddress;
-
-      const con = new Connection(this.createId(), connection, this);
+      const con = new Connection(clientId, connection, this);
 
       if (this.onConnectionCallback) {
         this.onConnectionCallback(con);
@@ -38,19 +44,27 @@ export default class Server {
   }
 
   addConnection(connection) {
-    this.connections[connection.id] = connection;
+    this.clients[connection.id] = connection;
+    this.connectedClients++;
   }
 
   removeConnection(id) {
-    delete this.connections[id];
+    delete this.clients[id];
+    this.connectedClients--;
   }
   
   getConnection(id) {
-    return this.connections[id];
+    return this.clients[id];
   }
 
-  createId() {
-    return +('5' + Utils.random(99) + '' + (this.counter++));
+  findFreeClientIndex() {
+    for (let i = 0; i < this.maxClients; ++i) {
+      if (!this.clients[i]) {
+        return i;
+      }
+    }
+
+    return -1;
   }
 }
 

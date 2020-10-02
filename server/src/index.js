@@ -7,14 +7,14 @@ import World from './world';
 dotenv.config();
 
 function main() {
-  const server = new Server(+process.env.PORT || 1337);
+  const server = new Server(+process.env.PORT || 1337, process.env.MAX_PLAYERS);
   const worlds = [];
 
   server.onConnection((connection) => {
     logger.debug('New connection');
     
     for (const world of worlds) {
-      if (world.playerCount < world.maxPlayers) {
+      if (world.connectedClients < world.maxClients) {
         world.handlePlayerConnect(connection);
         return;
       }

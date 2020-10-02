@@ -16,17 +16,17 @@ import { PlayerInputSystem } from './systems/player-input-system';
 import { PhysicsSystem } from './systems/physics-system';
 
 export default class World {
-  constructor(id, maxPlayers, server) {
+  constructor(id, maxClients, server) {
     this.id = id;
-    this.maxPlayers = maxPlayers;
+    this.maxClients = maxClients;
     this.server = server;
     this.updatesPerSecond = 60;
     this.lastTime = performance.now();
 
-    this.players = {};
+    this.clients = [];
     this.entities = [];
 
-    this.playerCount = 0;
+    this.connectedClients = 0;
 
     this.world = new World$1()
       .registerComponent(Connection)
@@ -69,15 +69,20 @@ export default class World {
   }
 
   handlePlayerConnect(connection) {
-    logger.debug(`Creating player ${connection.id}`);
-    this.players[connection.id] = this.world
-      .createEntity()
-      .addComponent(Connection, { value: connection });
-    this.playerCount++;
+    logger.debug(`Adding client${connection.id} to ${this.id}`);
     
     connection.onDisconnect(() => {
       this.handlePlayerDisconnect(connection);
     });
+
+    const clientId = this.getClientId();
+    connection.id = clientId;
+
+    this.clients[clientId] = this.world
+      .createEntity()
+      .addComponent(Connection, { value: connection });
+
+    this.connectedClients++;
     
     connection.pushMessage(new Messages.Go());
   }
@@ -85,24 +90,26 @@ export default class World {
   handlePlayerDisconnect(connection) {
     logger.debug(`Deleting player ${connection.id}`);
 
-    const entity = this.players[connection.id];
+    const entity = this.clients[connection.id];
 
     if (entity.hasComponent(Playing)) {
       this.broadcast(new Messages.Despawn(entity.worldId));
     }
 
     entity.remove();
-    delete this.players[connection.id];
+    delete this.clients[connection.id];
     delete this.entities[entity.worldId];
-    this.playerCount--;
+    this.connectedClients--;
   }
 
-  addPlayer(connectionId) {
-    const playerEntity = this.players[connectionId];
+  addPlayer(clientId) {
+    logger.debug(`Creating player ${clientId}`);
+    const clientEntity = this.clients[clientId];
+    const entityId = this.getEntityId();
 
-    playerEntity.worldId = this.getEntityId();
+    clientEntity.worldId = entityId;
 
-    this.entities[playerEntity.worldId] = playerEntity
+    this.entities[entityId] = clientEntity
       .addComponent(Playing)
       .addComponent(Transform, {
         position: this.getRandomPosition(), 
@@ -124,14 +131,24 @@ export default class World {
   }
 
   broadcast(message, ignoredPlayerId = null) {
-    for (const [id, entity] of Object.entries(this.players)) {
-      if (id == ignoredPlayerId) {
+    for (const [id, entity] of this.clients.entries()) {
+      if (id == ignoredPlayerId || !entity) {
         continue;
       }
       
       const connection = entity.getComponent(Connection).value;
       connection.pushMessage(message);
     }
+  }
+
+  getClientId() {
+    for (let i = 0; i < this.clients.length; ++i) {
+      if (!this.clients[i]) {
+        return i;
+      }
+    }
+
+    return this.clients.length;
   }
 
   getEntityId() {
