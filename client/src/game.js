@@ -92,11 +92,6 @@ export default class Game {
         composer: composer
       });
 
-    const geometry = new BoxGeometry();
-    const material = new MeshBasicMaterial({ color: 0x767522 });
-    this.cube = new Mesh( geometry, material );
-    scene.add(this.cube);
-
     camera.position.z = 15;
   }
 
@@ -146,9 +141,6 @@ export default class Game {
         }
       });
     }
-
-    this.cube.rotation.x += 0.01;
-    this.cube.rotation.y += 0.01;
   }
 
   handleConnect(connection) {
