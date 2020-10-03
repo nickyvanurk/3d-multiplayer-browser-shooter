@@ -3,14 +3,21 @@ import {
   PerspectiveCamera,
   Scene, 
   WebGLRenderer as WebGlRenderer$1,
-  BoxGeometry,
-  MeshBasicMaterial,
-  Mesh
+  LoadingManager,
+  AmbientLight,
+  DirectionalLight,
+  Fog,
+  BufferGeometry,
+  BufferAttribute,
+  PointsMaterial,
+  Points
 } from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass';
 import * as workerInterval from 'worker-interval';
+
+import { AssetManager } from '../../shared/asset-manager';
 
 import Utils from '../../shared/utils';
 import Types from '../../shared/types';
@@ -72,10 +79,10 @@ export default class Game {
     const scene = new Scene();
 
     const camera = new PerspectiveCamera(
-      99,
+      70,
       window.innerWidth / window.innerHeight,
       0.1,
-      1000
+      4100
     );
     const cameraEntity = this.world
       .createEntity()
@@ -84,6 +91,18 @@ export default class Game {
       .addComponent(Transform);
 
     scene.add(camera);
+
+    scene.add(new AmbientLight(0x222222));
+
+    let light = new DirectionalLight(0xffffff);
+    light.position.set(1, 1, 1);
+    scene.add(light);
+
+    light = new DirectionalLight(0x002288);
+    light.position.set(-1, -1, -1);
+    scene.add(light);
+
+    scene.fog = new Fog(0x020207, 0.04);
 
     const composer = new EffectComposer(renderer);
     composer.addPass(new RenderPass(scene, camera));
@@ -97,8 +116,17 @@ export default class Game {
         renderer: renderer,
         composer: composer
       });
+    this.world.stop();
 
     camera.position.z = 15;
+  
+    const loadingManager = new LoadingManager();
+    loadingManager.onLoad = this.handleLoad.bind(this);
+
+    this.assetManager = new AssetManager(loadingManager);
+    this.assetManager.loadModel({name: 'spaceship', url: 'models/spaceship.gltf'});
+    
+    this.addStars(scene, 1000, 4000);
   }
 
   init() {
@@ -111,6 +139,10 @@ export default class Game {
     
     workerInterval.setInterval(this.update.bind(this), 1000/60);
     requestAnimationFrame(this.render.bind(this));
+  }
+
+  handleLoad() {
+    this.world.play();
   }
 
   update() {
@@ -161,13 +193,8 @@ export default class Game {
   }
 
   addPlayer(id, position, rotation) {
-    const cube = new Mesh(
-      new BoxGeometry(),
-      new MeshBasicMaterial({ color: 0xf07167 })
-    );
-
     this.entities[id] = this.player
-      .addComponent(Object3d, { value: cube })
+      .addComponent(Object3d, { value: this.assetManager.getModel('spaceship') })
       .addComponent(Transform, { prevPosition: position, position, rotation })
       .addComponent(PlayerController, {
         forward: 'KeyE',
@@ -185,14 +212,9 @@ export default class Game {
   addEntity(id, kind, position, rotation) {
     switch (kind) {
       case Types.Entities.CUBE: {
-        const cube = new Mesh(
-          new BoxGeometry(),
-          new MeshBasicMaterial({ color: 0x767522 })
-        );
-      
         this.entities[id] = this.world
           .createEntity()
-          .addComponent(Object3d, { value: cube })
+          .addComponent(Object3d, { value: this.assetManager.getModel('spaceship') })
           .addComponent(Transform, { prevPosition: position, position, rotation });
       }
     }
@@ -201,5 +223,28 @@ export default class Game {
   removeEntity(id) {
     this.entities[id].remove();
     delete this.entities[id];
+  }
+
+  addStars(scene, count, radius) {
+    const positions = [];
+
+    for (let i = 0; i < count; i++) {
+      const r = radius;
+      const theta = 2 * Math.PI * Math.random();
+      const phi = Math.acos(2 * Math.random() - 1);
+      const x = r * Math.cos(theta) * Math.sin(phi) + (-2000 + Math.random() * 4000);
+      const y = r * Math.sin(theta) * Math.sin(phi) + (-2000 + Math.random() * 4000);
+      const z = r * Math.cos(phi) + (-1000 + Math.random() * 2000);
+      positions.push(x);
+      positions.push(y);
+      positions.push(z);
+    }
+
+    var geometry = new BufferGeometry();
+    var vertices = new Float32Array(positions);
+    geometry.setAttribute('position', new BufferAttribute(vertices, 3));
+    var material = new PointsMaterial({color: 0xffffff, size: 12.5, fog: false});
+    var mesh = new Points(geometry, material);
+    scene.add(mesh);
   }
 }

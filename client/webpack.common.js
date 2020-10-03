@@ -6,7 +6,7 @@ const Dotenv = require('dotenv-webpack');
 
 module.exports = {
   entry: {
-    app: './client/src/index.js'
+    app: path.resolve(__dirname, 'src/index.js')
   },
   module: {
     rules: [
@@ -28,7 +28,7 @@ module.exports = {
     }),
     new HtmlWebpackPlugin({
       title: 'Void',
-      template: './client/src/index.html'
+      template: path.resolve(__dirname, 'src/index.html')
     }),
     new Dotenv()
   ],

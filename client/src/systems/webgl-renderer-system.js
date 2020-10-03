@@ -27,6 +27,10 @@ export class WebGlRendererSystem extends System {
 
   execute() {
     this.queries.object3ds.added.forEach((entity) => {
+      if (!entity.alive) {
+        return;
+      }
+
       const object3d = entity.getComponent(Object3d).value;
 
       this.queries.renderers.results.forEach((rendererEntity) => {
