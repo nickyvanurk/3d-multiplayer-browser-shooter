@@ -3,14 +3,14 @@
  */
 
 const puppeteer = require('puppeteer');
-const playerCount = 5;
+const playerCount = 10;
 
 process.stdin.setRawMode(true);
 process.stdin.resume();
 
 (async () => {
   const browser = await puppeteer.launch({
-    defaultViewport: { width: 896, height: 504 }
+    defaultViewport: { width: 400, height: 300 }
   });
 
   const randomTime = () => {
@@ -52,10 +52,14 @@ process.stdin.resume();
       let run = true;
 
       while (run) {
-        await goUp(page);
-        await goLeft(page);
-        await goDown(page);
-        await goRight(page);
+        await page.keyboard.down('KeyE');
+        await page.mouse.move(200, 275);
+        await page.waitForTimeout(2000);
+        await page.mouse.move(100, 275);
+        await page.waitForTimeout(2000);
+        await page.mouse.move(200, 275);
+        await page.waitForTimeout(2000);
+        await page.mouse.move(300, 275);
 
         process.stdin.on('data', () => run = false);
       }
