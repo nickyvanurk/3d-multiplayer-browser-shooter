@@ -10,7 +10,8 @@ export class RigidBody extends Component {
     velocity: { type: ThreeTypes.Vector3, default: new Vector3() },
     angularVelocity: { type: ThreeTypes.Vector3, default: new Vector3() },
     damping: { type: Types.Number },
-    angularDamping: { type: Types.Number }
+    angularDamping: { type: Types.Number },
+    weight: { type: Types.Number, default: 1.0 }
   };
 }
 

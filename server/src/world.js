@@ -1,6 +1,7 @@
 import { performance } from 'perf_hooks';
 import { World as World$1 } from 'ecsy';
 import { Vector3, Euler } from 'three';
+import Ammo from 'ammo.js';
 
 import logger from './utils/logger';
 import Utils from '../../shared/utils';
@@ -33,11 +34,15 @@ export default class World {
       .registerComponent(Playing)
       .registerComponent(Transform)
       .registerComponent(RigidBody)
-      .registerComponent(PlayerInputState)
-      .registerSystem(NetworkEventSystem, this)
-      .registerSystem(PlayerInputSystem)
-      .registerSystem(PhysicsSystem)
-      .registerSystem(NetworkMessageSystem, this);
+      .registerComponent(PlayerInputState);
+
+    Ammo().then((Ammo) => {
+      this.world
+        .registerSystem(NetworkEventSystem, this)
+        .registerSystem(PlayerInputSystem)
+        .registerSystem(PhysicsSystem, Ammo)
+        .registerSystem(NetworkMessageSystem, this);
+    });
 
     this.size = new Vector3(10, 10, 10);
     
@@ -116,9 +121,9 @@ export default class World {
       })
       .addComponent(PlayerInputState)
       .addComponent(RigidBody, {
-        acceleration: 0.00002,
-        angularAcceleration: new Euler(0.0000625, 0.0000625, 0.000003),
-        damping: 0.3,
+        acceleration: 0.000001,
+        angularAcceleration: new Euler(0.000003, 0.000003, 0.0000002),
+        damping: 0.001,
         angularDamping: 0.1
       });
   }

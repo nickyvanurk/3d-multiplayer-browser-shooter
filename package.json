@@ -36,6 +36,7 @@
     "webpack-merge": "^5.1.4"
   },
   "dependencies": {
+    "ammo.js": "github:kripken/ammo.js",
     "dotenv": "^8.2.0",
     "ecsy": "^0.4.2",
     "sanitize-html": "^1.27.4",
