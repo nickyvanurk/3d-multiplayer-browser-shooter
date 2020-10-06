@@ -6,6 +6,7 @@ import Messages from '../../../shared/messages';
 import { Connection } from '../../../shared/components/connection';
 import { Transform } from '../components/transform';
 import { PlayerInputState } from '../../../shared/components/player-input-state';
+import { Kind } from '../../../shared/components/kind';
 
 export class NetworkEventSystem extends System {
   static queries = {
@@ -37,16 +38,18 @@ export class NetworkEventSystem extends System {
             this.worldServer.addPlayer(connection.id);
 
             const { position, rotation } = entity.getComponent(Transform);
+            const kind = entity.getComponent(Kind).value;
             connection.pushMessage(new Messages.Welcome(
               entity.worldId,
               name,
+              kind,
               position,
-              rotation
+              rotation,
             ));
 
             this.worldServer.broadcast(new Messages.Spawn(
               entity.worldId,
-              Types.Entities.CUBE,
+              kind,
               position,
               rotation
             ), connection.id);

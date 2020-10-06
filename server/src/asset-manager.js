@@ -18,13 +18,14 @@ export class AssetManager {
     }
 
     const content = fs.readFileSync(params.url);
-    
+
     this.loadingManager.itemStart(params.url);
   
     this.loader.parse(trimBuffer(content), params.url, (gltf) => {
       this.models.set(params.name, gltf);
       this.loadingManager.itemEnd(params.url);
-    }, () => {
+    }, (e) => {
+      console.log(e);
       this.loadingManager.itemError(params.url);
       this.loadingManager.itemEnd(params.url);
     });

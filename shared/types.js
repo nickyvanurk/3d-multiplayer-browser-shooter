@@ -9,6 +9,7 @@ export default {
     WORLD: 6
   },
   Entities: {
-    CUBE: 0
+    SPACESHIP: 0,
+    ASTEROID: 1,
   }
 };

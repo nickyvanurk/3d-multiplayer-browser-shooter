@@ -63,6 +63,8 @@ import {
   sRGBEncoding
 } from 'three';
 global.XMLHttpRequest = require('xmlhttprequest').XMLHttpRequest;
+global.Blob = require("cross-blob");
+global.blobUtil = require("blob-util");
 
 var GLTFLoader = ( function () {
 
@@ -687,33 +689,6 @@ var GLTFLoader = ( function () {
     this.name = EXTENSIONS.KHR_TEXTURE_BASISU;
 
   }
-
-  GLTFTextureBasisUExtension.prototype.loadTexture = function ( textureIndex ) {
-
-    var parser = this.parser;
-    var json = parser.json;
-
-    var textureDef = json.textures[ textureIndex ];
-
-    if ( ! textureDef.extensions || ! textureDef.extensions[ this.name ] ) {
-
-      return null;
-
-    }
-
-    var extension = textureDef.extensions[ this.name ];
-    var source = json.images[ extension.source ];
-    var loader = parser.options.ktx2Loader;
-
-    if ( ! loader ) {
-
-      throw new Error( 'THREE.GLTFLoader: setKTX2Loader must be called before loading KTX2 textures' );
-
-    }
-
-    return parser.loadTextureImage( textureIndex, source, loader );
-
-  };
 
   /* BINARY EXTENSION */
   var BINARY_EXTENSION_HEADER_MAGIC = 'glTF';
@@ -1911,11 +1886,6 @@ var GLTFLoader = ( function () {
           break;
 
         case 'texture':
-          dependency = this._invokeOne( function ( ext ) {
-
-            return ext.loadTexture && ext.loadTexture( index );
-
-          } );
           break;
 
         case 'skin':
@@ -2164,188 +2134,6 @@ var GLTFLoader = ( function () {
   };
 
   /**
-   * Specification: https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#textures
-   * @param {number} textureIndex
-   * @return {Promise<THREE.Texture>}
-   */
-  GLTFParser.prototype.loadTexture = function ( textureIndex ) {
-
-    var parser = this;
-    var json = this.json;
-    var options = this.options;
-
-    var textureDef = json.textures[ textureIndex ];
-
-    var textureExtensions = textureDef.extensions || {};
-
-    var source;
-
-    if ( textureExtensions[ EXTENSIONS.MSFT_TEXTURE_DDS ] ) {
-
-      source = json.images[ textureExtensions[ EXTENSIONS.MSFT_TEXTURE_DDS ].source ];
-
-    } else {
-
-      source = json.images[ textureDef.source ];
-
-    }
-
-    var loader;
-
-    if ( source.uri ) {
-
-      loader = options.manager.getHandler( source.uri );
-
-    }
-
-    if ( ! loader ) {
-
-      loader = textureExtensions[ EXTENSIONS.MSFT_TEXTURE_DDS ]
-        ? parser.extensions[ EXTENSIONS.MSFT_TEXTURE_DDS ].ddsLoader
-        : this.textureLoader;
-
-    }
-
-    return this.loadTextureImage( textureIndex, source, loader );
-
-  };
-
-  GLTFParser.prototype.loadTextureImage = function ( textureIndex, source, loader ) {
-
-    var parser = this;
-    var json = this.json;
-    var options = this.options;
-
-    var textureDef = json.textures[ textureIndex ];
-
-    var URL = self.URL || self.webkitURL;
-
-    var sourceURI = source.uri;
-    var isObjectURL = false;
-    var hasAlpha = true;
-
-    if ( source.mimeType === 'image/jpeg' ) hasAlpha = false;
-
-    if ( source.bufferView !== undefined ) {
-
-      // Load binary image data from bufferView, if provided.
-
-      sourceURI = parser.getDependency( 'bufferView', source.bufferView ).then( function ( bufferView ) {
-
-        if ( source.mimeType === 'image/png' ) {
-
-          // https://en.wikipedia.org/wiki/Portable_Network_Graphics#File_header
-          hasAlpha = new DataView( bufferView, 25, 1 ).getUint8( 0, false ) === 6;
-
-        }
-
-        isObjectURL = true;
-        var blob = new Blob( [ bufferView ], { type: source.mimeType } );
-        sourceURI = URL.createObjectURL( blob );
-        return sourceURI;
-
-      } );
-
-    }
-
-    return Promise.resolve( sourceURI ).then( function ( sourceURI ) {
-
-      return new Promise( function ( resolve, reject ) {
-
-        var onLoad = resolve;
-
-        if ( loader.isImageBitmapLoader === true ) {
-
-          onLoad = function ( imageBitmap ) {
-
-            resolve( new CanvasTexture( imageBitmap ) );
-
-          };
-
-        }
-
-        loader.load( resolveURL( sourceURI, options.path ), onLoad, undefined, reject );
-
-      } );
-
-    } ).then( function ( texture ) {
-
-      // Clean up resources and configure Texture.
-
-      if ( isObjectURL === true ) {
-
-        URL.revokeObjectURL( sourceURI );
-
-      }
-
-      texture.flipY = false;
-
-      if ( textureDef.name ) texture.name = textureDef.name;
-
-      // When there is definitely no alpha channel in the texture, set RGBFormat to save space.
-      if ( ! hasAlpha ) texture.format = RGBFormat;
-
-      var samplers = json.samplers || {};
-      var sampler = samplers[ textureDef.sampler ] || {};
-
-      texture.magFilter = WEBGL_FILTERS[ sampler.magFilter ] || LinearFilter;
-      texture.minFilter = WEBGL_FILTERS[ sampler.minFilter ] || LinearMipmapLinearFilter;
-      texture.wrapS = WEBGL_WRAPPINGS[ sampler.wrapS ] || RepeatWrapping;
-      texture.wrapT = WEBGL_WRAPPINGS[ sampler.wrapT ] || RepeatWrapping;
-
-      parser.associations.set( texture, {
-        type: 'textures',
-        index: textureIndex
-      } );
-
-      return texture;
-
-    } );
-
-  };
-
-  /**
-   * Asynchronously assigns a texture to the given material parameters.
-   * @param {Object} materialParams
-   * @param {string} mapName
-   * @param {Object} mapDef
-   * @return {Promise}
-   */
-  GLTFParser.prototype.assignTexture = function ( materialParams, mapName, mapDef ) {
-
-    var parser = this;
-
-    return this.getDependency( 'texture', mapDef.index ).then( function ( texture ) {
-
-      // Materials sample aoMap from UV set 1 and other maps from UV set 0 - this can't be configured
-      // However, we will copy UV set 0 to UV set 1 on demand for aoMap
-      if ( mapDef.texCoord !== undefined && mapDef.texCoord != 0 && ! ( mapName === 'aoMap' && mapDef.texCoord == 1 ) ) {
-
-        console.warn( 'THREE.GLTFLoader: Custom UV set ' + mapDef.texCoord + ' for texture ' + mapName + ' not yet supported.' );
-
-      }
-
-      if ( parser.extensions[ EXTENSIONS.KHR_TEXTURE_TRANSFORM ] ) {
-
-        var transform = mapDef.extensions !== undefined ? mapDef.extensions[ EXTENSIONS.KHR_TEXTURE_TRANSFORM ] : undefined;
-
-        if ( transform ) {
-
-          var gltfReference = parser.associations.get( texture );
-          texture = parser.extensions[ EXTENSIONS.KHR_TEXTURE_TRANSFORM ].extendTexture( texture, transform );
-          parser.associations.set( texture, gltfReference );
-
-        }
-
-      }
-
-      materialParams[ mapName ] = texture;
-
-    } );
-
-  };
-
-  /**
    * Assigns final material to a Mesh, Line, or Points instance. The instance
    * already has a material (generated from the glTF material options alone)
    * but reuse of the same glTF material may require multiple threejs materials
@@ -2521,22 +2309,6 @@ var GLTFLoader = ( function () {
 
       }
 
-      if ( metallicRoughness.baseColorTexture !== undefined ) {
-
-        pending.push( parser.assignTexture( materialParams, 'map', metallicRoughness.baseColorTexture ) );
-
-      }
-
-      materialParams.metalness = metallicRoughness.metallicFactor !== undefined ? metallicRoughness.metallicFactor : 1.0;
-      materialParams.roughness = metallicRoughness.roughnessFactor !== undefined ? metallicRoughness.roughnessFactor : 1.0;
-
-      if ( metallicRoughness.metallicRoughnessTexture !== undefined ) {
-
-        pending.push( parser.assignTexture( materialParams, 'metalnessMap', metallicRoughness.metallicRoughnessTexture ) );
-        pending.push( parser.assignTexture( materialParams, 'roughnessMap', metallicRoughness.metallicRoughnessTexture ) );
-
-      }
-
       materialType = this._invokeOne( function ( ext ) {
 
         return ext.getMaterialType && ext.getMaterialType( materialIndex );
@@ -2578,41 +2350,9 @@ var GLTFLoader = ( function () {
 
     }
 
-    if ( materialDef.normalTexture !== undefined && materialType !== MeshBasicMaterial ) {
-
-      pending.push( parser.assignTexture( materialParams, 'normalMap', materialDef.normalTexture ) );
-
-      materialParams.normalScale = new Vector2( 1, 1 );
-
-      if ( materialDef.normalTexture.scale !== undefined ) {
-
-        materialParams.normalScale.set( materialDef.normalTexture.scale, materialDef.normalTexture.scale );
-
-      }
-
-    }
-
-    if ( materialDef.occlusionTexture !== undefined && materialType !== MeshBasicMaterial ) {
-
-      pending.push( parser.assignTexture( materialParams, 'aoMap', materialDef.occlusionTexture ) );
-
-      if ( materialDef.occlusionTexture.strength !== undefined ) {
-
-        materialParams.aoMapIntensity = materialDef.occlusionTexture.strength;
-
-      }
-
-    }
-
     if ( materialDef.emissiveFactor !== undefined && materialType !== MeshBasicMaterial ) {
 
       materialParams.emissive = new Color().fromArray( materialDef.emissiveFactor );
-
-    }
-
-    if ( materialDef.emissiveTexture !== undefined && materialType !== MeshBasicMaterial ) {
-
-      pending.push( parser.assignTexture( materialParams, 'emissiveMap', materialDef.emissiveTexture ) );
 
     }
 

@@ -38,6 +38,8 @@
   "dependencies": {
     "ammo.js": "github:kripken/ammo.js",
     "atob": "^2.1.2",
+    "blob-util": "^2.0.2",
+    "cross-blob": "^2.0.0",
     "dotenv": "^8.2.0",
     "ecsy": "^0.4.2",
     "sanitize-html": "^1.27.4",

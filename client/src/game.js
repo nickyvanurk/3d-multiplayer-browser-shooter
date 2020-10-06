@@ -125,6 +125,7 @@ export default class Game {
 
     this.assetManager = new AssetManager(loadingManager);
     this.assetManager.loadModel({name: 'spaceship', url: 'models/spaceship.gltf'});
+    this.assetManager.loadModel({name: 'asteroid', url: 'models/asteroid.gltf'});
     
     this.addStars(scene, 1000, 4000);
   }
@@ -192,9 +193,8 @@ export default class Game {
       .addComponent(Connection, { value: connection });
   }
 
-  addPlayer(id, position, rotation) {
-    this.entities[id] = this.player
-      .addComponent(Object3d, { value: this.assetManager.getModel('spaceship') })
+  addPlayer(id, kind, position, rotation) {
+    const entity = this.player
       .addComponent(Transform, { prevPosition: position, position, rotation })
       .addComponent(PlayerController, {
         forward: 'KeyE',
@@ -207,17 +207,36 @@ export default class Game {
         strafeDown: 'Delete',
         boost: 'ShiftLeft'
       });
+
+    switch (kind) {
+      case Types.Entities.SPACESHIP:
+        entity.addComponent(Object3d, { value: this.assetManager.getModel('spaceship') });
+        break;
+      case Types.Entities.ASTEROID:
+        entity.addComponent(Object3d, { value: this.assetManager.getModel('asteroid') });
+        break;
+    }
+
+    this.entities[id] = entity;
   }
 
   addEntity(id, kind, position, rotation) {
+    const entity = this.world
+      .createEntity()
+      .addComponent(Transform, { prevPosition: position, position, rotation });
+
     switch (kind) {
-      case Types.Entities.CUBE: {
-        this.entities[id] = this.world
-          .createEntity()
-          .addComponent(Object3d, { value: this.assetManager.getModel('spaceship') })
-          .addComponent(Transform, { prevPosition: position, position, rotation });
+      case Types.Entities.SPACESHIP: {
+        entity.addComponent(Object3d, { value: this.assetManager.getModel('spaceship') });
+        break;
+      }
+      case Types.Entities.ASTEROID: {
+        entity.addComponent(Object3d, { value: this.assetManager.getModel('asteroid') });
+        break;
       }
     }
+
+    this.entities[id] = entity;
   }
 
   removeEntity(id) {

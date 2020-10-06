@@ -2,16 +2,18 @@ const path = require('path');
 import { System } from 'ecsy';
 import { Quaternion, LoadingManager } from 'three';
 
+import Types from '../../../shared/types';
 import { Transform } from '../components/transform';
 import { RigidBody } from '../components/rigidbody';
 import { AssetManager } from '../asset-manager';
+import { Kind } from '../../../shared/components/kind';
 
 let quaternion = new Quaternion();
 
 export class PhysicsSystem extends System {
   static queries = {
     entities: {
-      components: [Transform, RigidBody],
+      components: [Transform, RigidBody, Kind],
       listen: {
         added: true,
         removed: true
@@ -36,22 +38,39 @@ export class PhysicsSystem extends System {
     loadingManager.onLoad = this.handleLoad.bind(this);
 
     this.assetManager = new AssetManager(loadingManager);
-    this.assetManager.loadModel({name: 'spaceship', url: path.join(__dirname, '../../../client/public/models/spaceship.gltf')});
+    this.assetManager.loadModel({
+      name: 'spaceship',
+      url: path.join(__dirname, '../../../client/public/models/spaceship.gltf')
+    });
+    this.assetManager.loadModel({
+      name: 'asteroid',
+      url: path.join(__dirname, '../../../client/public/models/asteroid.gltf')
+    });
     
     this.stop();
   }
 
   handleLoad() {
     this.play();
-    // TODO: Create convex/concave shape from triangles
-    // src: https://stackoverflow.com/questions/39441459/rigid-body-shape-in-bullet-ammo-js-from-a-mesh-in-three-js
   }
 
   execute(delta) {
     this.frame++;
 
     this.queries.entities.added.forEach((entity) => {
-      const body = this.setupRigidBody(this.createRigidBody(entity), entity);
+      const kind = entity.getComponent(Kind).value;
+      let modelName = 'spaceship';
+
+      switch(kind) {
+        case Types.Entities.SPACESHIP:
+          modelName = 'spaceship';
+          break;
+        case Types.Entities.ASTEROID:
+          modelName = 'asteroid';
+          break;
+      }
+
+      const body = this.setupRigidBody(this.createRigidBody(entity, modelName), entity);
 
       body.setCcdMotionThreshold(0.01);
       body.setCcdSweptSphereRadius(0.01);
@@ -111,11 +130,11 @@ export class PhysicsSystem extends System {
     return world;
   }
 
-  createRigidBody(entity) {
+  createRigidBody(entity, modelName) {
     const rigidBody = entity.getComponent(RigidBody);
     const transform = entity.getComponent(Transform);
 
-    const shape = this.createConcaveShape(this.assetManager.getTriangles('spaceship'));
+    const shape = this.createConcaveShape(this.assetManager.getTriangles(modelName));
     const localInertia = new this.ammo.btVector3(1, 1, 1);
     shape.calculateLocalInertia(rigidBody.weight, localInertia);
     const form = new this.ammo.btTransform();

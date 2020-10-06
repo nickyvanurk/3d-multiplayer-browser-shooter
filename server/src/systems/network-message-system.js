@@ -1,10 +1,10 @@
 import { System } from 'ecsy';
 
-import Types from '../../../shared/types';
 import Messages from '../../../shared/messages';
 import { Connection } from '../../../shared/components/connection';
 import { PlayerInputState } from '../../../shared/components/player-input-state';
 import { Transform } from '../components/transform';
+import { Kind } from '../../../shared/components/kind';
 
 export class NetworkMessageSystem extends System {
   static queries = {
@@ -27,9 +27,10 @@ export class NetworkMessageSystem extends System {
 
       this.queries.players.results.forEach((playerEntity) => {
         const { position, rotation } = playerEntity.getComponent(Transform);
+        const kind = playerEntity.getComponent(Kind).value;
         connection.pushMessage(new Messages.Spawn(
           playerEntity.worldId,
-          Types.Entities.CUBE,
+          kind,
           position,
           rotation
         ));

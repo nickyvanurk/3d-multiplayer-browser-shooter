@@ -6,10 +6,12 @@ import Ammo from 'ammo.js';
 import logger from './utils/logger';
 import Utils from '../../shared/utils';
 import Messages from '../../shared/messages';
+import Types from '../../shared/types';
 import { Connection } from '../../shared/components/connection';
 import { Playing } from '../../shared/components/playing';
 import { Transform } from './components/transform';
 import { RigidBody } from './components/rigidbody';
+import { Kind } from '../../shared/components/kind';
 import { PlayerInputState } from '../../shared/components/player-input-state';
 import { NetworkEventSystem } from './systems/network-event-system';
 import { NetworkMessageSystem } from './systems/network-message-system';
@@ -34,7 +36,8 @@ export default class World {
       .registerComponent(Playing)
       .registerComponent(Transform)
       .registerComponent(RigidBody)
-      .registerComponent(PlayerInputState);
+      .registerComponent(PlayerInputState)
+      .registerComponent(Kind);
   
     Ammo().then((Ammo) => {
       this.world
@@ -116,6 +119,7 @@ export default class World {
 
     this.entities[entityId] = clientEntity
       .addComponent(Playing)
+      .addComponent(Kind, { value: Types.Entities.SPACESHIP })
       .addComponent(Transform, {
         position: this.getRandomPosition()
       })
