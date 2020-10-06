@@ -37,6 +37,7 @@
   },
   "dependencies": {
     "ammo.js": "github:kripken/ammo.js",
+    "atob": "^2.1.2",
     "dotenv": "^8.2.0",
     "ecsy": "^0.4.2",
     "sanitize-html": "^1.27.4",
@@ -45,6 +46,7 @@
     "winston": "^3.3.3",
     "winston-transport-browserconsole": "^1.0.5",
     "worker-interval": "^1.0.6",
-    "ws": "^7.3.1"
+    "ws": "^7.3.1",
+    "xmlhttprequest": "^1.8.0"
   }
 }

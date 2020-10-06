@@ -1,10 +1,8 @@
 import { System } from 'ecsy';
-import { Vector3 } from 'three';
 
 import { Connection } from '../../../shared/components/connection';
 import { PlayerInputState } from '../../../shared/components/player-input-state';
 import { RigidBody } from '../components/rigidbody';
-import { Transform } from '../components/transform';
 
 export class PlayerInputSystem extends System {
   static queries = {
@@ -25,7 +23,6 @@ export class PlayerInputSystem extends System {
         boost
       } = entity.getComponent(PlayerInputState);
       const rigidBody = entity.getMutableComponent(RigidBody);
-      const transform = entity.getMutableComponent(Transform);
 
       const acceleration = boost ? rigidBody.acceleration*2 : rigidBody.acceleration;
 

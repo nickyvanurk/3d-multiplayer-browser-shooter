@@ -35,7 +35,7 @@ export default class World {
       .registerComponent(Transform)
       .registerComponent(RigidBody)
       .registerComponent(PlayerInputState);
-
+  
     Ammo().then((Ammo) => {
       this.world
         .registerSystem(NetworkEventSystem, this)

@@ -1,9 +1,10 @@
+const path = require('path');
 import { System } from 'ecsy';
-import { Quaternion } from 'three';
-import Util from 'util';
+import { Quaternion, LoadingManager } from 'three';
 
 import { Transform } from '../components/transform';
 import { RigidBody } from '../components/rigidbody';
+import { AssetManager } from '../asset-manager';
 
 let quaternion = new Quaternion();
 
@@ -30,6 +31,20 @@ export class PhysicsSystem extends System {
     this.quaternion = new this.ammo.btQuaternion(0, 0, 0, 1);
 
     this.bodyToEntity = new Map();
+    
+    const loadingManager = new LoadingManager();
+    loadingManager.onLoad = this.handleLoad.bind(this);
+
+    this.assetManager = new AssetManager(loadingManager);
+    this.assetManager.loadModel({name: 'spaceship', url: path.join(__dirname, '../../../client/public/models/spaceship.gltf')});
+    
+    this.stop();
+  }
+
+  handleLoad() {
+    this.play();
+    // TODO: Create convex/concave shape from triangles
+    // src: https://stackoverflow.com/questions/39441459/rigid-body-shape-in-bullet-ammo-js-from-a-mesh-in-three-js
   }
 
   execute(delta) {
@@ -100,7 +115,7 @@ export class PhysicsSystem extends System {
     const rigidBody = entity.getComponent(RigidBody);
     const transform = entity.getComponent(Transform);
 
-    const shape = new this.ammo.btSphereShape(1);
+    const shape = this.createConcaveShape(this.assetManager.getTriangles('spaceship'));
     const localInertia = new this.ammo.btVector3(1, 1, 1);
     shape.calculateLocalInertia(rigidBody.weight, localInertia);
     const form = new this.ammo.btTransform();
@@ -154,5 +169,31 @@ export class PhysicsSystem extends System {
       new this.ammo.btVector3(angularVelocity.x, angularVelocity.y, angularVelocity.z)
     );
     return body;
+  }
+
+  createConcaveShape(triangles) {
+    const convexHullShape = new this.ammo.btConvexHullShape();
+    const vec1 = new this.ammo.btVector3();
+    const vec2 = new this.ammo.btVector3();
+    const vec3 = new this.ammo.btVector3();
+
+    for (const triangle of triangles) {
+      vec1.setX(triangle[0].x);
+      vec1.setY(triangle[0].y);
+      vec1.setZ(triangle[0].z);
+      convexHullShape.addPoint(vec1, true);
+      
+      vec2.setX(triangle[1].x);
+      vec2.setY(triangle[1].y);
+      vec2.setZ(triangle[1].z);
+      convexHullShape.addPoint(vec2, true);
+      
+      vec3.setX(triangle[2].x);
+      vec3.setY(triangle[2].y);
+      vec3.setZ(triangle[2].z);
+      convexHullShape.addPoint(vec3, true);
+    }
+
+    return convexHullShape;
   }
 }
