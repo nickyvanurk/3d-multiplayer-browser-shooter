@@ -21,13 +21,14 @@ export class PhysicsSystem extends System {
     },
   };
 
-  init(Ammo) {
+  init({ worldServer, ammo }) {
+    this.worldServer = worldServer;
     this.epsilon = 10e-6;
     this.collisions = new Map();
     this.collisionKeys = [];
     this.frame = 0;
 
-    this.ammo = Ammo;
+    this.ammo = ammo;
     this.physicsWorld = this.createWorld(); 
     this.transform = new this.ammo.btTransform();
     this.quaternion = new this.ammo.btQuaternion(0, 0, 0, 1);
@@ -52,6 +53,7 @@ export class PhysicsSystem extends System {
 
   handleLoad() {
     this.play();
+    this.worldServer.spawnAsteroids(100);
   }
 
   execute(delta) {

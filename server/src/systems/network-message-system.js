@@ -2,7 +2,6 @@ import { System } from 'ecsy';
 
 import Messages from '../../../shared/messages';
 import { Connection } from '../../../shared/components/connection';
-import { PlayerInputState } from '../../../shared/components/player-input-state';
 import { Transform } from '../components/transform';
 import { Kind } from '../../../shared/components/kind';
 
@@ -12,8 +11,8 @@ export class NetworkMessageSystem extends System {
       components: [Connection],
       listen: { added: true }
     },
-    players: {
-      components: [Connection, PlayerInputState]
+    entities: {
+      components: [Transform, Kind]
     }
   };
 
@@ -25,11 +24,11 @@ export class NetworkMessageSystem extends System {
     this.queries.connections.added.forEach((entity) => {
       const connection = entity.getComponent(Connection).value;
 
-      this.queries.players.results.forEach((playerEntity) => {
-        const { position, rotation } = playerEntity.getComponent(Transform);
-        const kind = playerEntity.getComponent(Kind).value;
+      this.queries.entities.results.forEach((entity2) => {
+        const { position, rotation } = entity2.getComponent(Transform);
+        const kind = entity2.getComponent(Kind).value;
         connection.pushMessage(new Messages.Spawn(
-          playerEntity.worldId,
+          entity2.worldId,
           kind,
           position,
           rotation

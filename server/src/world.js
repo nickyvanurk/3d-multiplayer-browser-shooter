@@ -1,6 +1,6 @@
 import { performance } from 'perf_hooks';
 import { World as World$1 } from 'ecsy';
-import { Vector3, Euler } from 'three';
+import { Vector3, Euler, Quaternion } from 'three';
 import Ammo from 'ammo.js';
 
 import logger from './utils/logger';
@@ -43,7 +43,7 @@ export default class World {
       this.world
         .registerSystem(NetworkEventSystem, this)
         .registerSystem(PlayerInputSystem)
-        .registerSystem(PhysicsSystem, Ammo)
+        .registerSystem(PhysicsSystem, { worldServer: this, ammo: Ammo })
         .registerSystem(NetworkMessageSystem, this);
     });
 
@@ -169,5 +169,42 @@ export default class World {
     }
 
     return this.entities.length;
+  }
+
+  spawnAsteroids(count) {
+    const rng = Utils.randomNumberGenerator(5);
+
+    for (let i = 0; i < count; ++i) {
+      const scaleValue = [1, 5, 10];
+      const scale = scaleValue[Math.floor(rng() * scaleValue.length)];
+
+      const rotation = new Quaternion();
+      rotation.setFromAxisAngle(new Vector3(1, 0, 0), rng() * Math.PI * 2);
+      rotation.setFromAxisAngle(new Vector3(0, 1, 0), rng() * Math.PI * 2);
+      rotation.setFromAxisAngle(new Vector3(0, 0, 1), rng() * Math.PI * 2);
+
+      const asteroid = this.world.createEntity()
+        .addComponent(Kind, { value: Types.Entities.ASTEROID })
+        .addComponent(Transform, {
+          position: new Vector3(
+            (rng() - 0.5) * 120,
+            (rng() - 0.5) * 120,
+            (rng() - 0.5) * 120
+          ),
+          rotation,
+          scale: new Vector3(scale, scale, scale)
+        })
+        .addComponent(RigidBody, {
+          acceleration: 0,
+          angularAcceleration: new Euler(0, 0, 0),
+          damping: 0.001,
+          angularDamping: 0.1
+        });
+
+      const entityId = this.getEntityId();
+      asteroid.worldId = entityId;
+
+      this.entities[entityId] = asteroid;
+    }
   }
 }
