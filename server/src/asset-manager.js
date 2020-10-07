@@ -35,14 +35,17 @@ export class AssetManager {
     return this.models.get(name).scene.clone();
   }
 
-  getTriangles(name) {
+  getTriangles(name, scale) {
     const geometry = new Geometry();
+    const mesh = this.getModel(name);
 
-    this.models.get(name).scene.traverse((child) => {
+    mesh.traverse((child) => {
       if (child.isMesh) {
         geometry.merge(new Geometry().fromBufferGeometry(child.geometry));
       }
     });
+
+    geometry.scale(scale, scale, scale);
     
     const vertices = geometry.vertices;
     const triangles = [];

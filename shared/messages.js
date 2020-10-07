@@ -28,12 +28,13 @@ class Hello {
 }
 
 class Welcome {
-  constructor(id, name, kind, position, rotation) {
+  constructor(id, name, kind, position, rotation, scale) {
     this.id = id;
     this.name = name;
     this.kind = kind;
     this.position = position;
     this.rotation = rotation;
+    this.scale = scale;
   }
 
   static deserialize(message) {
@@ -43,6 +44,7 @@ class Welcome {
       kind: message[2],
       position: new Vector3(message[3], message[4], message[5]),
       rotation: new Vector3(message[6], message[7], message[8]),
+      scale: message[9]
     };
   }
 
@@ -57,17 +59,19 @@ class Welcome {
       this.position.z,
       this.rotation.x,
       this.rotation.y,
-      this.rotation.z
+      this.rotation.z,
+      this.scale
     ];
   }
 }
 
 export class Spawn {
-  constructor(id, kind, position, rotation) {
+  constructor(id, kind, position, rotation, scale) {
     this.id = id;
     this.kind = kind;
     this.position = position;
     this.rotation = rotation;
+    this.scale = scale;
   }
 
   static deserialize(message) {
@@ -75,7 +79,8 @@ export class Spawn {
       id: message[0],
       kind: message[1],
       position: new Vector3(message[2], message[3], message[4]),
-      rotation: new Vector3(message[5], message[6], message[7])
+      rotation: new Vector3(message[5], message[6], message[7]),
+      scale: message[8]
     };
   }
 
@@ -89,7 +94,8 @@ export class Spawn {
       this.position.z,
       this.rotation.x,
       this.rotation.y,
-      this.rotation.z
+      this.rotation.z,
+      this.scale
     ];
   }
 }

@@ -192,7 +192,7 @@ export default class World {
             (rng() - 0.5) * 120
           ),
           rotation,
-          scale: new Vector3(scale, scale, scale)
+          scale 
         })
         .addComponent(RigidBody, {
           acceleration: 0,

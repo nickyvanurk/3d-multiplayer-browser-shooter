@@ -32,6 +32,9 @@ export class WebGlRendererSystem extends System {
       }
 
       const object3d = entity.getComponent(Object3d).value;
+      const transform = entity.getComponent(Transform);
+
+      object3d.scale.copy(new Vector3().setScalar(transform.scale));
 
       this.queries.renderers.results.forEach((rendererEntity) => {
         const scene = rendererEntity.getComponent(WebGlRenderer).scene;

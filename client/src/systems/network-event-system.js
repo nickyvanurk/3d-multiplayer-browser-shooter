@@ -37,17 +37,17 @@ export class NetworkEventSystem extends System {
             connection.pushMessage(new Messages.Hello('Nicky'));
             break;
           case Types.Messages.WELCOME: {
-            const { id, kind, position, rotation } = message.data;
+            const { id, kind, position, rotation, scale } = message.data;
             const connection = entity.getMutableComponent(Connection).value;
             connection.id = id;
             console.log(`my id: ${id}`);
-            this.game.addPlayer(id, kind, position, rotation);
+            this.game.addPlayer(id, kind, position, rotation, scale);
             break;
           }
           case Types.Messages.SPAWN: {
-            const { id, kind, position, rotation } = message.data;
+            const { id, kind, position, rotation, scale } = message.data;
             console.log(`spawn id ${id}`);
-            this.game.addEntity(id, kind, position, rotation);
+            this.game.addEntity(id, kind, position, rotation, scale);
             break;
           }
           case Types.Messages.DESPAWN: {

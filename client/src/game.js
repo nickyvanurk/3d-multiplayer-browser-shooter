@@ -193,9 +193,9 @@ export default class Game {
       .addComponent(Connection, { value: connection });
   }
 
-  addPlayer(id, kind, position, rotation) {
+  addPlayer(id, kind, position, rotation, scale) {
     const entity = this.player
-      .addComponent(Transform, { prevPosition: position, position, rotation })
+      .addComponent(Transform, { prevPosition: position, position, rotation, scale })
       .addComponent(PlayerController, {
         forward: 'KeyE',
         backward: 'KeyD',
@@ -220,10 +220,10 @@ export default class Game {
     this.entities[id] = entity;
   }
 
-  addEntity(id, kind, position, rotation) {
+  addEntity(id, kind, position, rotation, scale) {
     const entity = this.world
       .createEntity()
-      .addComponent(Transform, { prevPosition: position, position, rotation });
+      .addComponent(Transform, { prevPosition: position, position, rotation, scale });
 
     switch (kind) {
       case Types.Entities.SPACESHIP: {

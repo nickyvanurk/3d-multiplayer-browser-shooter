@@ -53,7 +53,7 @@ export class PhysicsSystem extends System {
 
   handleLoad() {
     this.play();
-    this.worldServer.spawnAsteroids(100);
+    this.worldServer.spawnAsteroids(50);
   }
 
   execute(delta) {
@@ -136,7 +136,10 @@ export class PhysicsSystem extends System {
     const rigidBody = entity.getComponent(RigidBody);
     const transform = entity.getComponent(Transform);
 
-    const shape = this.createConcaveShape(this.assetManager.getTriangles(modelName));
+    const shape = this.createConcaveShape(this.assetManager.getTriangles(
+      modelName,
+      transform.scale
+    ));
     const localInertia = new this.ammo.btVector3(1, 1, 1);
     shape.calculateLocalInertia(rigidBody.weight, localInertia);
     const form = new this.ammo.btTransform();

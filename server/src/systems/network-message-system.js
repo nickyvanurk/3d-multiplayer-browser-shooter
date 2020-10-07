@@ -25,13 +25,14 @@ export class NetworkMessageSystem extends System {
       const connection = entity.getComponent(Connection).value;
 
       this.queries.entities.results.forEach((entity2) => {
-        const { position, rotation } = entity2.getComponent(Transform);
+        const { position, rotation, scale } = entity2.getComponent(Transform);
         const kind = entity2.getComponent(Kind).value;
         connection.pushMessage(new Messages.Spawn(
           entity2.worldId,
           kind,
           position,
-          rotation
+          rotation,
+          scale
         ));
       });
     });

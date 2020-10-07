@@ -37,7 +37,7 @@ export class NetworkEventSystem extends System {
 
             this.worldServer.addPlayer(connection.id);
 
-            const { position, rotation } = entity.getComponent(Transform);
+            const { position, rotation, scale } = entity.getComponent(Transform);
             const kind = entity.getComponent(Kind).value;
             connection.pushMessage(new Messages.Welcome(
               entity.worldId,
@@ -45,13 +45,15 @@ export class NetworkEventSystem extends System {
               kind,
               position,
               rotation,
+              scale
             ));
 
             this.worldServer.broadcast(new Messages.Spawn(
               entity.worldId,
               kind,
               position,
-              rotation
+              rotation,
+              scale
             ), connection.id);
             break;
           }
