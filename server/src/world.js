@@ -175,7 +175,8 @@ export default class World {
     const rng = Utils.randomNumberGenerator(5);
 
     for (let i = 0; i < count; ++i) {
-      const scaleValue = [1, 5, 10];
+      // const scaleValue = [1, 5, 10, 20, 40, 60, 120, 240, 560];
+      const scaleValue = [1, 5, 10, 20, 40, 60, 120, 240];
       const scale = scaleValue[Math.floor(rng() * scaleValue.length)];
 
       const rotation = new Quaternion();
@@ -187,9 +188,9 @@ export default class World {
         .addComponent(Kind, { value: Types.Entities.ASTEROID })
         .addComponent(Transform, {
           position: new Vector3(
-            (rng() - 0.5) * 120,
-            (rng() - 0.5) * 120,
-            (rng() - 0.5) * 120
+            (rng() - 0.5) * 800,
+            (rng() - 0.5) * 800,
+            (rng() - 0.5) * 800
           ),
           rotation,
           scale 

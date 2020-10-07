@@ -53,7 +53,7 @@ export class PhysicsSystem extends System {
 
   handleLoad() {
     this.play();
-    this.worldServer.spawnAsteroids(50);
+    this.worldServer.spawnAsteroids(80);
   }
 
   execute(delta) {
