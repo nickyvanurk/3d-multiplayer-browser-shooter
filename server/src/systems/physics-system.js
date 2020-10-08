@@ -32,6 +32,7 @@ export class PhysicsSystem extends System {
     this.physicsWorld = this.createWorld(); 
     this.transform = new this.ammo.btTransform();
     this.quaternion = new this.ammo.btQuaternion(0, 0, 0, 1);
+    this.vector3 = new this.ammo.btVector3(0, 0, 0);
 
     this.bodyToEntity = new Map();
     
@@ -94,12 +95,18 @@ export class PhysicsSystem extends System {
       const velocity = rigidBody.velocity;
       const angularVelocity = rigidBody.angularVelocity;
 
-      body.applyCentralLocalForce(
-        new this.ammo.btVector3(velocity.x, velocity.y, velocity.z)
-      );
-      body.applyLocalTorque(
-        new this.ammo.btVector3(angularVelocity.x, angularVelocity.y, angularVelocity.z)
-      );
+      const vec = this.vector3;
+      vec.setX(velocity.x);
+      vec.setY(velocity.y);
+      vec.setZ(velocity.z);
+
+      body.applyCentralLocalForce(vec);
+
+      vec.setX(angularVelocity.x);
+      vec.setY(angularVelocity.y);
+      vec.setZ(angularVelocity.z);
+
+      body.applyLocalTorque(vec);
 
       if (body.isActive() && body.getMotionState()) {
         const transform = this.transform;
