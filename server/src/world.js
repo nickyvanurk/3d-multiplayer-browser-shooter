@@ -175,8 +175,7 @@ export default class World {
     const rng = Utils.randomNumberGenerator(5);
 
     for (let i = 0; i < count; ++i) {
-      // const scaleValue = [1, 5, 10, 20, 40, 60, 120, 240, 560];
-      const scaleValue = [1, 5, 10, 20, 40, 60, 120, 240];
+      const scaleValue = [1, 5, 10, 20, 40, 60, 120, 240, 560];
       const scale = scaleValue[Math.floor(rng() * scaleValue.length)];
 
       const rotation = new Quaternion();
@@ -199,7 +198,8 @@ export default class World {
           acceleration: 0,
           angularAcceleration: new Euler(0, 0, 0),
           damping: 0.001,
-          angularDamping: 0.1
+          angularDamping: 0.1,
+          weight: scale <= 5 ? 1 : 0
         });
 
       const entityId = this.getEntityId();
