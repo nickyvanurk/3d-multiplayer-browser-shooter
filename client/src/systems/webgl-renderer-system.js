@@ -55,6 +55,8 @@ export class WebGlRendererSystem extends System {
       const transform = entity.getComponent(Transform);
       const object3d = entity.getMutableComponent(Object3d).value;
 
+
+
       const renderPosition = new Vector3()
         .copy(transform.position)
         .multiplyScalar(this.game.alpha)

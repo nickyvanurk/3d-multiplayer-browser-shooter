@@ -29,6 +29,7 @@ import { InputState } from './components/input-state';
 import { PlayerInputState } from '../../shared/components/player-input-state';
 import { PlayerController } from './components/player-controller';
 import { Camera } from './components/camera';
+import { Raycaster } from './components/raycaster';
 import { WebGlRendererSystem } from './systems/webgl-renderer-system';
 import { NetworkEventSystem } from './systems/network-event-system';
 import { NetworkMessageSystem } from './systems/network-message-system';
@@ -36,6 +37,7 @@ import { TransformSystem } from './systems/transform-system';
 import { InputSystem } from './systems/input-system';
 import { PlayerInputSystem } from './systems/player-input-system';
 import { CameraSystem } from './systems/camera-system';
+import { RaycasterSystem } from './systems/raycaster-system';
 
 export default class Game {
   constructor() {
@@ -52,11 +54,13 @@ export default class Game {
       .registerComponent(PlayerInputState)
       .registerComponent(PlayerController)
       .registerComponent(Camera)
+      .registerComponent(Raycaster)
       .registerSystem(TransformSystem)
       .registerSystem(NetworkEventSystem, this)
       .registerSystem(InputSystem)
       .registerSystem(PlayerInputSystem)
       .registerSystem(WebGlRendererSystem, this)
+      .registerSystem(RaycasterSystem)
       .registerSystem(NetworkMessageSystem);
 
     this.inputSystem = this.world.getSystem(InputSystem);
@@ -88,7 +92,8 @@ export default class Game {
       .createEntity()
       .addComponent(Camera)
       .addComponent(Object3d, { value: camera })
-      .addComponent(Transform);
+      .addComponent(Transform)
+      .addComponent(Raycaster);
 
     scene.add(camera);
 
