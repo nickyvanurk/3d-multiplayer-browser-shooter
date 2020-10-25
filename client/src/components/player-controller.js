@@ -10,7 +10,8 @@ export class PlayerController extends Component {
     strafeRight: { type: Types.String },
     strafeUp: { type: Types.String },
     strafeDown: { type: Types.String },
-    boost: { type: Types.String }
+    boost: { type: Types.String },
+    weaponPrimary: { type: Types.Boolean }
   };
 }
 

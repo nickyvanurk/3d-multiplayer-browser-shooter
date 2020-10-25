@@ -21,7 +21,7 @@ class Hello {
   static deserialize(message) {
     return { name: message[0] };
   }
-  
+
   serialize() {
     return [Types.Messages.HELLO, this.name];
   }
@@ -108,14 +108,14 @@ export class Despawn {
   static deserialize(message) {
     return { id: message[0] };
   }
-  
+
   serialize() {
     return [Types.Messages.DESPAWN, this.id];
   }
 }
 
 export class Input {
-  constructor({ movementX, movementY, movementZ, roll, yaw, pitch, boost }) {
+  constructor({ movementX, movementY, movementZ, roll, yaw, pitch, boost, weaponPrimary }) {
     this.movementX = movementX;
     this.movementY = movementY;
     this.movementZ = movementZ;
@@ -123,8 +123,9 @@ export class Input {
     this.yaw = yaw;
     this.pitch = pitch;
     this.boost = boost;
+    this.weaponPrimary = weaponPrimary;
   }
-  
+
   static deserialize(message) {
     return {
       movementX: message[0],
@@ -134,9 +135,10 @@ export class Input {
       yaw: message[4],
       pitch: message[5],
       boost: message[6],
+      weaponPrimary: message[7],
     };
   }
-  
+
   serialize() {
     return [
       Types.Messages.INPUT,
@@ -146,7 +148,8 @@ export class Input {
       this.roll,
       this.yaw,
       this.pitch,
-      this.boost
+      this.boost,
+      this.weaponPrimary
     ];
   }
 }
@@ -163,13 +166,13 @@ class World {
       data.push({
         id: message[i],
         position: new Vector3(message[i + 1], message[i + 2], message[i + 3]),
-        rotation: new Quaternion(message[i + 4], message[i + 5], message[i + 6], message[i + 7]) 
+        rotation: new Quaternion(message[i + 4], message[i + 5], message[i + 6], message[i + 7])
       });
     }
 
     return data;
   }
-  
+
   serialize() {
     const data = [Types.Messages.WORLD];
 
@@ -182,13 +185,13 @@ class World {
 
       const transform = this.entities[i].getComponent(Transform);
 
-      data.push(transform.position.x); 
-      data.push(transform.position.y); 
-      data.push(transform.position.z); 
-      data.push(transform.rotation.x); 
-      data.push(transform.rotation.y); 
-      data.push(transform.rotation.z); 
-      data.push(transform.rotation.w); 
+      data.push(transform.position.x);
+      data.push(transform.position.y);
+      data.push(transform.position.z);
+      data.push(transform.rotation.x);
+      data.push(transform.rotation.y);
+      data.push(transform.rotation.z);
+      data.push(transform.rotation.w);
     }
 
     return data;

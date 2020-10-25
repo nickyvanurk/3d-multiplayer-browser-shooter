@@ -1,7 +1,7 @@
 import { World } from 'ecsy';
-import { 
+import {
   PerspectiveCamera,
-  Scene, 
+  Scene,
   WebGLRenderer as WebGlRenderer$1,
   LoadingManager,
   AmbientLight,
@@ -124,14 +124,14 @@ export default class Game {
     this.world.stop();
 
     camera.position.z = 15;
-  
+
     const loadingManager = new LoadingManager();
     loadingManager.onLoad = this.handleLoad.bind(this);
 
     this.assetManager = new AssetManager(loadingManager);
     this.assetManager.loadModel({name: 'spaceship', url: 'models/spaceship.gltf'});
     this.assetManager.loadModel({name: 'asteroid', url: 'models/asteroid.gltf'});
-    
+
     this.addStars(scene, 1000, 4000);
   }
 
@@ -141,8 +141,8 @@ export default class Game {
     this.fixedUpdate = Utils.createFixedTimestep(
       1000/this.updatesPerSecond,
       this.handleFixedUpdate.bind(this)
-    ); 
-    
+    );
+
     workerInterval.setInterval(this.update.bind(this), 1000/60);
     requestAnimationFrame(this.render.bind(this));
   }
@@ -158,9 +158,9 @@ export default class Game {
     if (delta > 250) {
       delta = 250;
     }
-    
+
     this.alpha = this.fixedUpdate(delta, time);
-   
+
     if (document.hidden) {
       this.world.entityManager.processDeferredRemoval();
     }
@@ -210,7 +210,8 @@ export default class Game {
         strafeRight: 'KeyF',
         strafeUp: 'Backspace',
         strafeDown: 'Delete',
-        boost: 'ShiftLeft'
+        boost: 'ShiftLeft',
+        weaponPrimary: 0,
       });
 
     switch (kind) {

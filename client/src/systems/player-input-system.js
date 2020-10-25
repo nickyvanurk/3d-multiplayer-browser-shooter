@@ -26,14 +26,15 @@ export class PlayerInputSystem extends System {
 
     const inputStateEntity = this.queries.inputState.results[0];
     const mainPlayerEntity = this.queries.mainPlayer.results[0];
-    
+
     if (!inputStateEntity || !mainPlayerEntity) {
       return;
     }
 
-    const { 
+    const {
       keysDown,
-      mousePosition
+      mousePosition,
+      mouseButtonsDown
     } = inputStateEntity.getComponent(InputState);
     const {
       strafeLeft,
@@ -44,7 +45,8 @@ export class PlayerInputSystem extends System {
       backward,
       rollLeft,
       rollRight,
-      boost
+      boost,
+      weaponPrimary
     } = mainPlayerEntity.getComponent(PlayerController);
     const playerInputState = mainPlayerEntity.getMutableComponent(PlayerInputState);
 
@@ -55,5 +57,6 @@ export class PlayerInputSystem extends System {
     playerInputState.yaw = parseFloat(mousePosition.x);
     playerInputState.pitch = parseFloat(mousePosition.y);
     playerInputState.boost = keysDown.includes(boost);
+    playerInputState.weaponPrimary = mouseButtonsDown.includes(weaponPrimary);
   }
 }

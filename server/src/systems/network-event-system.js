@@ -25,15 +25,15 @@ export class NetworkEventSystem extends System {
   execute() {
     this.queries.connections.results.forEach((entity) => {
       const connection = entity.getComponent(Connection).value;
-        
+
       while (connection.hasIncomingMessage()) {
         const message = connection.popMessage();
 
         switch (message.type) {
           case Types.Messages.HELLO: {
             let { name } = message.data;
-            name = Utils.sanitize(name); 
-            name = !name ? 'UNKNOWN' : name.substr(0, 15);  
+            name = Utils.sanitize(name);
+            name = !name ? 'UNKNOWN' : name.substr(0, 15);
 
             this.worldServer.addPlayer(connection.id);
 
@@ -63,7 +63,7 @@ export class NetworkEventSystem extends System {
 
     this.queries.players.results.forEach((entity) => {
       const connection = entity.getComponent(Connection).value;
-        
+
       while (connection.hasIncomingMessage()) {
         const message = connection.popMessage();
 
@@ -76,10 +76,11 @@ export class NetworkEventSystem extends System {
               roll,
               yaw,
               pitch,
-              boost
+              boost,
+              weaponPrimary
             } = message.data;
             const component = entity.getMutableComponent(PlayerInputState);
-            
+
             component.movementX = movementX;
             component.movementY = movementY;
             component.movementZ = movementZ;
@@ -87,6 +88,7 @@ export class NetworkEventSystem extends System {
             component.yaw = yaw;
             component.pitch = pitch;
             component.boost = boost;
+            component.weaponPrimary = weaponPrimary;
             break;
           }
         }
