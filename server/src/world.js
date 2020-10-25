@@ -12,11 +12,16 @@ import { Playing } from '../../shared/components/playing';
 import { Transform } from './components/transform';
 import { RigidBody } from './components/rigidbody';
 import { Kind } from '../../shared/components/kind';
+import { Weapon } from './components/weapon';
+import { Weapons } from './components/weapons';
+import { Active } from './components/active';
+
 import { PlayerInputState } from '../../shared/components/player-input-state';
 import { NetworkEventSystem } from './systems/network-event-system';
 import { NetworkMessageSystem } from './systems/network-message-system';
 import { PlayerInputSystem } from './systems/player-input-system';
 import { PhysicsSystem } from './systems/physics-system';
+import { WeaponSystem } from './systems/weapon-system';
 
 export default class World {
   constructor(id, maxClients, server) {
@@ -37,18 +42,22 @@ export default class World {
       .registerComponent(Transform)
       .registerComponent(RigidBody)
       .registerComponent(PlayerInputState)
-      .registerComponent(Kind);
-  
+      .registerComponent(Kind)
+      .registerComponent(Weapon)
+      .registerComponent(Weapons)
+      .registerComponent(Active);
+
     Ammo().then((Ammo) => {
       this.world
         .registerSystem(NetworkEventSystem, this)
         .registerSystem(PlayerInputSystem)
+        .registerSystem(WeaponSystem)
         .registerSystem(PhysicsSystem, { worldServer: this, ammo: Ammo })
         .registerSystem(NetworkMessageSystem, this);
     });
 
     this.size = new Vector3(10, 10, 10);
-    
+
     logger.info(`${this.id} running`);
   }
 
@@ -59,7 +68,7 @@ export default class World {
     );
     setInterval(this.update.bind(this), 1000/this.updatesPerSecond);
   }
-  
+
   update() {
     const time = performance.now();
     let delta = time - this.lastTime;
@@ -78,7 +87,7 @@ export default class World {
 
   handlePlayerConnect(connection) {
     logger.debug(`Adding client${connection.id} to ${this.id}`);
-    
+
     connection.onDisconnect(() => {
       this.handlePlayerDisconnect(connection);
     });
@@ -91,10 +100,10 @@ export default class World {
       .addComponent(Connection, { value: connection });
 
     this.connectedClients++;
-    
+
     connection.pushMessage(new Messages.Go());
   }
-  
+
   handlePlayerDisconnect(connection) {
     logger.debug(`Deleting player ${connection.id}`);
 
@@ -117,7 +126,7 @@ export default class World {
 
     clientEntity.worldId = entityId;
 
-    this.entities[entityId] = clientEntity
+    const player = clientEntity
       .addComponent(Playing)
       .addComponent(Kind, { value: Types.Entities.SPACESHIP })
       .addComponent(Transform, {
@@ -130,6 +139,28 @@ export default class World {
         damping: 0.001,
         angularDamping: 0.1
       });
+
+    const weaponLeft = this.world
+      .createEntity()
+      .addComponent(Weapon, {
+        offset: new Vector3(-0.5, 0, 0.5),
+        fireInterval: 100,
+        parent: player
+      });
+
+    const weaponRight = this.world
+      .createEntity()
+      .addComponent(Weapon, {
+        offset: new Vector3(0.5, 0, 0.5),
+        fireInterval: 100,
+        parent: player
+      });
+
+    player.addComponent(Weapons, {
+      primary: [weaponLeft, weaponRight]
+    });
+
+    this.entities[entityId] = player;
   }
 
   getRandomPosition() {
@@ -145,7 +176,7 @@ export default class World {
       if (id == ignoredPlayerId || !entity) {
         continue;
       }
-      
+
       const connection = entity.getComponent(Connection).value;
       connection.pushMessage(message);
     }
@@ -192,7 +223,7 @@ export default class World {
             (rng() - 0.5) * 800
           ),
           rotation,
-          scale 
+          scale
         })
         .addComponent(RigidBody, {
           acceleration: 0,

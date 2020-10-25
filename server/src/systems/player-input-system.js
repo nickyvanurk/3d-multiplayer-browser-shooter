@@ -3,6 +3,8 @@ import { System } from 'ecsy';
 import { Connection } from '../../../shared/components/connection';
 import { PlayerInputState } from '../../../shared/components/player-input-state';
 import { RigidBody } from '../components/rigidbody';
+import { Weapons } from '../components/weapons';
+import { Active } from '../components/active';
 
 export class PlayerInputSystem extends System {
   static queries = {
@@ -20,7 +22,8 @@ export class PlayerInputSystem extends System {
         pitch,
         yaw,
         roll,
-        boost
+        boost,
+        weaponPrimary
       } = entity.getComponent(PlayerInputState);
       const rigidBody = entity.getMutableComponent(RigidBody);
 
@@ -37,6 +40,22 @@ export class PlayerInputSystem extends System {
 
       if (Math.abs(rigidBody.angularVelocity.z) < 0.000001) {
         rigidBody.angularVelocity.z = 0;
+      }
+
+      if (entity.hasComponent(Weapons)) {
+        const weapons = entity.getComponent(Weapons).primary;
+
+        weapons.forEach((weaponEntity) => {
+          if (weaponPrimary) {
+            if (!weaponEntity.hasComponent(Active)) {
+              weaponEntity.addComponent(Active);
+            }
+          } else {
+            if (weaponEntity.hasComponent(Active)) {
+              weaponEntity.removeComponent(Active);
+            }
+          }
+        });
       }
     });
   }
