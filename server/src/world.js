@@ -51,7 +51,7 @@ export default class World {
       this.world
         .registerSystem(NetworkEventSystem, this)
         .registerSystem(PlayerInputSystem)
-        .registerSystem(WeaponSystem)
+        .registerSystem(WeaponSystem, this)
         .registerSystem(PhysicsSystem, { worldServer: this, ammo: Ammo })
         .registerSystem(NetworkMessageSystem, this);
     });
@@ -143,16 +143,16 @@ export default class World {
     const weaponLeft = this.world
       .createEntity()
       .addComponent(Weapon, {
-        offset: new Vector3(-0.5, 0, 0.5),
-        fireInterval: 100,
+        offset: new Vector3(-0.5, 0, -0.5),
+        fireInterval: 500,
         parent: player
       });
 
     const weaponRight = this.world
       .createEntity()
       .addComponent(Weapon, {
-        offset: new Vector3(0.5, 0, 0.5),
-        fireInterval: 100,
+        offset: new Vector3(0.5, 0, -0.5),
+        fireInterval: 500,
         parent: player
       });
 
@@ -161,6 +161,38 @@ export default class World {
     });
 
     this.entities[entityId] = player;
+  }
+
+  addBullet(weapon) {
+    const entityId = this.getEntityId();
+    const parentTransform = weapon.parent.getComponent(Transform);
+    const bulletEntity = this.world
+      .createEntity()
+      .addComponent(Kind, { value: Types.Entities.BULLET })
+      .addComponent(Transform, {
+        position: new Vector3().copy(weapon.offset)
+          .applyQuaternion(parentTransform.rotation)
+          .add(parentTransform.position),
+        rotation: parentTransform.rotation
+      });
+      //.addComponent(RigidBody, {
+      //  velocity: new Vector3(0, 0, -0.00001)
+      //});
+
+    // How to use ammojs for bullets only for collision detection?
+
+    bulletEntity.worldId = entityId;
+
+    this.entities[entityId] = bulletEntity;
+
+    const { position, rotation, scale } = bulletEntity.getComponent(Transform);
+    this.broadcast(new Messages.Spawn(
+      bulletEntity.worldId,
+      Types.Entities.BULLET,
+      position,
+      rotation,
+      scale
+    ));
   }
 
   getRandomPosition() {

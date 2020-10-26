@@ -79,8 +79,8 @@ export class Spawn {
       id: message[0],
       kind: message[1],
       position: new Vector3(message[2], message[3], message[4]),
-      rotation: new Vector3(message[5], message[6], message[7]),
-      scale: message[8]
+      rotation: new Quaternion(message[5], message[6], message[7], message[8]),
+      scale: message[9]
     };
   }
 
@@ -95,6 +95,7 @@ export class Spawn {
       this.rotation.x,
       this.rotation.y,
       this.rotation.z,
+      this.rotation.w,
       this.scale
     ];
   }

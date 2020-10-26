@@ -10,6 +10,10 @@ export class WeaponSystem extends System {
     }
   };
 
+  init(worldServer) {
+    this.worldServer = worldServer;
+  }
+
   execute(delta, time) {
     this.queries.activeWeapons.results.forEach((entity) => {
       const weapon = entity.getMutableComponent(Weapon);
@@ -17,7 +21,7 @@ export class WeaponSystem extends System {
       if (weapon.lastFiredTimestamp + weapon.fireInterval < time) {
         weapon.lastFiredTimestamp = time;
 
-        console.log('shooting!');
+        this.worldServer.addBullet(weapon);
       }
     });
   }

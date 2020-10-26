@@ -11,5 +11,6 @@ export default {
   Entities: {
     SPACESHIP: 0,
     ASTEROID: 1,
+    BULLET: 2
   }
 };

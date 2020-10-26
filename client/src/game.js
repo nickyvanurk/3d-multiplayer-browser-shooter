@@ -10,7 +10,10 @@ import {
   BufferGeometry,
   BufferAttribute,
   PointsMaterial,
-  Points
+  Points,
+  BoxGeometry,
+  MeshBasicMaterial,
+  Mesh
 } from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass';
@@ -145,6 +148,10 @@ export default class Game {
 
     workerInterval.setInterval(this.update.bind(this), 1000/60);
     requestAnimationFrame(this.render.bind(this));
+
+    const geometry = new BoxGeometry(0.1, 0.1, 1);
+    const material = new MeshBasicMaterial( {color: 0xffa900} );
+    this.bulletMesh = new Mesh(geometry, material);
   }
 
   handleLoad() {
@@ -214,6 +221,8 @@ export default class Game {
         weaponPrimary: 0,
       });
 
+    entity.worldId = id;
+
     switch (kind) {
       case Types.Entities.SPACESHIP:
         entity.addComponent(Object3d, { value: this.assetManager.getModel('spaceship') });
@@ -229,7 +238,15 @@ export default class Game {
   addEntity(id, kind, position, rotation, scale) {
     const entity = this.world
       .createEntity()
-      .addComponent(Transform, { prevPosition: position, position, rotation, scale });
+      .addComponent(Transform, {
+        prevPosition: position,
+        prevRotation: rotation,
+        position,
+        rotation,
+        scale
+      });
+
+    entity.worldId = id;
 
     switch (kind) {
       case Types.Entities.SPACESHIP: {
@@ -238,6 +255,10 @@ export default class Game {
       }
       case Types.Entities.ASTEROID: {
         entity.addComponent(Object3d, { value: this.assetManager.getModel('asteroid') });
+        break;
+      }
+      case Types.Entities.BULLET: {
+        entity.addComponent(Object3d, { value: this.bulletMesh.clone() });
         break;
       }
     }

@@ -55,8 +55,6 @@ export class WebGlRendererSystem extends System {
       const transform = entity.getComponent(Transform);
       const object3d = entity.getMutableComponent(Object3d).value;
 
-
-
       const renderPosition = new Vector3()
         .copy(transform.position)
         .multiplyScalar(this.game.alpha)
@@ -75,7 +73,7 @@ export class WebGlRendererSystem extends System {
       const scene = component.scene;
       const renderer = component.renderer;
       const composer = component.composer;
-      
+
       if (this.needsResize) {
         const currentPixelRatio = renderer.getPixelRatio();
 
