@@ -1,6 +1,6 @@
 const path = require('path');
 import { System } from 'ecsy';
-import { Quaternion, LoadingManager } from 'three';
+import { Vector3, Quaternion, LoadingManager } from 'three';
 
 import Types from '../../../shared/types';
 import { Transform } from '../components/transform';
@@ -29,13 +29,14 @@ export class PhysicsSystem extends System {
     this.frame = 0;
 
     this.ammo = ammo;
-    this.physicsWorld = this.createWorld(); 
+    this.physicsWorld = this.createWorld();
     this.transform = new this.ammo.btTransform();
     this.quaternion = new this.ammo.btQuaternion(0, 0, 0, 1);
     this.vector3 = new this.ammo.btVector3(0, 0, 0);
+    this.threeVector3 = new Vector3();
 
     this.bodyToEntity = new Map();
-    
+
     const loadingManager = new LoadingManager();
     loadingManager.onLoad = this.handleLoad.bind(this);
 
@@ -48,7 +49,7 @@ export class PhysicsSystem extends System {
       name: 'asteroid',
       url: path.join(__dirname, '../../../client/public/models/asteroid.gltf')
     });
-    
+
     this.stop();
   }
 
@@ -107,6 +108,37 @@ export class PhysicsSystem extends System {
       vec.setZ(angularVelocity.z);
 
       body.applyLocalTorque(vec);
+
+      if (rigidBody.kinematic) {
+        const motionState = body.getMotionState();
+
+        if (motionState) {
+          const transformComponent = entity.getComponent(Transform);
+          const velocity = this.threeVector3
+            .copy(rigidBody.velocity)
+            .applyQuaternion(transformComponent.rotation);
+
+          const vec = this.vector3;
+          vec.setX(transformComponent.position.x + velocity.x * delta);
+          vec.setY(transformComponent.position.y + velocity.y * delta);
+          vec.setZ(transformComponent.position.z + velocity.z * delta);
+
+          const q = this.quaternion;
+          q.setValue(
+            transformComponent.rotation.x,
+            transformComponent.rotation.y,
+            transformComponent.rotation.z,
+            transformComponent.rotation.w
+          );
+
+          const transform = this.transform;
+          transform.setIdentity();
+          transform.setOrigin(vec);
+          transform.setRotation(q);
+
+          motionState.setWorldTransform(transform);
+        }
+      }
 
       if (body.isActive() && body.getMotionState()) {
         const transform = this.transform;
@@ -199,6 +231,20 @@ export class PhysicsSystem extends System {
     body.setAngularVelocity(
       new this.ammo.btVector3(angularVelocity.x, angularVelocity.y, angularVelocity.z)
     );
+
+    if (rigidBody.kinematic && body.setCollisionFlags && body.getCollisionFlags) {
+      const CF_NO_CONTACT_RESPONSE = 4;
+      const CF_KINEMATIC_OBJECT= 2;
+      const DISABLE_DEACTIVATION = 4;
+
+      body.setCollisionFlags(
+        body.getCollisionFlags() |
+        CF_NO_CONTACT_RESPONSE |
+        CF_KINEMATIC_OBJECT
+      );
+      body.setActivationState(DISABLE_DEACTIVATION);
+    }
+
     return body;
   }
 
@@ -213,12 +259,12 @@ export class PhysicsSystem extends System {
       vec1.setY(triangle[0].y);
       vec1.setZ(triangle[0].z);
       convexHullShape.addPoint(vec1, true);
-      
+
       vec2.setX(triangle[1].x);
       vec2.setY(triangle[1].y);
       vec2.setZ(triangle[1].z);
       convexHullShape.addPoint(vec2, true);
-      
+
       vec3.setX(triangle[2].x);
       vec3.setY(triangle[2].y);
       vec3.setZ(triangle[2].z);

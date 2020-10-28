@@ -174,12 +174,11 @@ export default class World {
           .applyQuaternion(parentTransform.rotation)
           .add(parentTransform.position),
         rotation: parentTransform.rotation
+      })
+      .addComponent(RigidBody, {
+        velocity: new Vector3(0, 0, -0.1),
+        kinematic: true
       });
-      //.addComponent(RigidBody, {
-      //  velocity: new Vector3(0, 0, -0.00001)
-      //});
-
-    // How to use ammojs for bullets only for collision detection?
 
     bulletEntity.worldId = entityId;
 
