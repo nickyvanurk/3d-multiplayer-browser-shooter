@@ -24,15 +24,15 @@ export class RaycasterSystem extends System {
   };
 
   init() {
-    this.arrowHelper = this.world
-      .createEntity()
-      .addComponent(Transform)
-      .addComponent(Object3d, { value: new ArrowHelper(
-        new Vector3(1, 0, 0),
-        new Vector3(),
-        1000,
-        0xffff00
-      ) });
+    //this.arrowHelper = this.world
+    //  .createEntity()
+    //  .addComponent(Transform)
+    //  .addComponent(Object3d, { value: new ArrowHelper(
+    //    new Vector3(1, 0, 0),
+    //    new Vector3(),
+    //    1000,
+    //    0xffff00
+    //  ) });
   }
 
   execute() {
@@ -59,7 +59,7 @@ export class RaycasterSystem extends System {
         raycaster.set(cameraTransform.position, dir);
 
         const mainPlayerEntity = this.queries.mainPlayer.results[0];
-        
+
         if (mainPlayerEntity) {
           const transform =  this.arrowHelper.getMutableComponent(Transform);
           const arrowHelper = this.arrowHelper.getComponent(Object3d).value;

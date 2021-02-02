@@ -36,6 +36,14 @@ export class AssetManager {
   }
 
   getModel(name) {
+    if (typeof this.models.get(name).scene === 'undefined') {
+      return this.models.get(name).clone();
+    }
+
     return this.models.get(name).scene.clone();
+  }
+
+  setModel(name, model) {
+    this.models.set(name, model);
   }
 }

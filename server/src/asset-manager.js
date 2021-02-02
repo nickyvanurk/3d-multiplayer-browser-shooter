@@ -20,7 +20,7 @@ export class AssetManager {
     const content = fs.readFileSync(params.url);
 
     this.loadingManager.itemStart(params.url);
-  
+
     this.loader.parse(trimBuffer(content), params.url, (gltf) => {
       this.models.set(params.name, gltf);
       this.loadingManager.itemEnd(params.url);
@@ -32,7 +32,15 @@ export class AssetManager {
   }
 
   getModel(name) {
+    if (typeof this.models.get(name).scene === 'undefined') {
+      return this.models.get(name).clone();
+    }
+
     return this.models.get(name).scene.clone();
+  }
+
+  setModel(name, model) {
+    this.models.set(name, model);
   }
 
   getTriangles(name, scale) {
@@ -41,12 +49,16 @@ export class AssetManager {
 
     mesh.traverse((child) => {
       if (child.isMesh) {
-        geometry.merge(new Geometry().fromBufferGeometry(child.geometry));
+        if (child.geometry instanceof Geometry) {
+          geometry.merge(child.geometry);
+        } else {
+          geometry.merge(new Geometry().fromBufferGeometry(child.geometry));
+        }
       }
     });
 
     geometry.scale(scale, scale, scale);
-    
+
     const vertices = geometry.vertices;
     const triangles = [];
 

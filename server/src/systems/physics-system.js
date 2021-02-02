@@ -1,6 +1,6 @@
 const path = require('path');
 import { System } from 'ecsy';
-import { Vector3, Quaternion, LoadingManager } from 'three';
+import { Vector3, Quaternion, LoadingManager, BoxGeometry, MeshBasicMaterial, Mesh, BufferGeometry } from 'three';
 
 import Types from '../../../shared/types';
 import { Transform } from '../components/transform';
@@ -50,6 +50,11 @@ export class PhysicsSystem extends System {
       url: path.join(__dirname, '../../../client/public/models/asteroid.gltf')
     });
 
+    const geometry = new BoxGeometry(0.1, 0.1, 1);
+    const material = new MeshBasicMaterial( {color: 0xffa900} );
+    const bulletMesh = new Mesh(geometry, material);
+    this.assetManager.setModel('bullet', bulletMesh);
+
     this.stop();
   }
 
@@ -71,6 +76,9 @@ export class PhysicsSystem extends System {
           break;
         case Types.Entities.ASTEROID:
           modelName = 'asteroid';
+          break;
+        case Types.Entities.BULLET:
+          modelName = 'bullet';
           break;
       }
 
