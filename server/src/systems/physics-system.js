@@ -187,7 +187,7 @@ export class PhysicsSystem extends System {
       modelName,
       transform.scale
     ));
-    const localInertia = new this.ammo.btVector3(1, 1, 1);
+    const localInertia = new this.ammo.btVector3(0, 0, 0);
     shape.calculateLocalInertia(rigidBody.weight, localInertia);
     const form = new this.ammo.btTransform();
     form.setIdentity();
