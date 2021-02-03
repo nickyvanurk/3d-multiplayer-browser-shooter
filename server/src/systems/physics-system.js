@@ -50,10 +50,10 @@ export class PhysicsSystem extends System {
       url: path.join(__dirname, '../../../client/public/models/asteroid.gltf')
     });
 
-    const geometry = new BoxGeometry(0.1, 0.1, 1);
-    const material = new MeshBasicMaterial( {color: 0xffa900} );
-    const bulletMesh = new Mesh(geometry, material);
-    this.assetManager.setModel('bullet', bulletMesh);
+    this.shapes = {};
+    for (const [_, value] of Object.entries(Types.Entities)) {
+      this.shapes[value] = {};
+    };
 
     this.stop();
   }
@@ -68,21 +68,39 @@ export class PhysicsSystem extends System {
 
     this.queries.entities.added.forEach((entity) => {
       const kind = entity.getComponent(Kind).value;
-      let modelName = 'spaceship';
+      const scale = entity.getComponent(Transform).scale;
 
-      switch(kind) {
+      switch (kind) {
         case Types.Entities.SPACESHIP:
-          modelName = 'spaceship';
+          if (!this.shapes[Types.Entities.SPACESHIP][scale]) {
+            let triangles = this.assetManager.getTriangles('spaceship', scale);
+            let shape = this.createConcaveShape(triangles);
+            this.shapes[Types.Entities.SPACESHIP][scale] = shape;
+          }
           break;
         case Types.Entities.ASTEROID:
-          modelName = 'asteroid';
+          if (!this.shapes[Types.Entities.ASTEROID][scale]) {
+            let triangles = this.assetManager.getTriangles('asteroid', scale);
+            let shape = this.createConcaveShape(triangles);
+            this.shapes[Types.Entities.ASTEROID][scale] = shape;
+          }
           break;
         case Types.Entities.BULLET:
-          modelName = 'bullet';
+          if (!this.shapes[Types.Entities.BULLET][scale]) {
+            let shape = new this.ammo.btBoxShape(new this.ammo.btVector3(
+              0.1*0.5*scale,
+              0.1*0.5*scale,
+              1*0.5*scale
+            ));
+            this.shapes[Types.Entities.BULLET][scale] = shape;
+          }
           break;
       }
 
-      const body = this.setupRigidBody(this.createRigidBody(entity, modelName), entity);
+      const shape = this.shapes[kind][scale];
+      const rbInfo = this.createRigidBodyConstructionInfo(entity, shape);
+      let body = new this.ammo.btRigidBody(rbInfo);
+      body = this.setupRigidBody(body, entity);
 
       body.setCcdMotionThreshold(0.01);
       body.setCcdSweptSphereRadius(0.01);
@@ -122,22 +140,18 @@ export class PhysicsSystem extends System {
 
         if (motionState) {
           const transformComponent = entity.getComponent(Transform);
-          const velocity = this.threeVector3
-            .copy(rigidBody.velocity)
-            .applyQuaternion(transformComponent.rotation);
+
+          const pos = transformComponent.position;
+          const rot = transformComponent.rotation;
+          const vel = this.threeVector3.copy(rigidBody.velocity).applyQuaternion(rot);
 
           const vec = this.vector3;
-          vec.setX(transformComponent.position.x + velocity.x * delta);
-          vec.setY(transformComponent.position.y + velocity.y * delta);
-          vec.setZ(transformComponent.position.z + velocity.z * delta);
+          vec.setX(pos.x + vel.x * delta);
+          vec.setY(pos.y + vel.y * delta);
+          vec.setZ(pos.z + vel.z * delta);
 
           const q = this.quaternion;
-          q.setValue(
-            transformComponent.rotation.x,
-            transformComponent.rotation.y,
-            transformComponent.rotation.z,
-            transformComponent.rotation.w
-          );
+          q.setValue(rot.x, rot.y, rot.z, rot.w);
 
           const transform = this.transform;
           transform.setIdentity();
@@ -179,49 +193,23 @@ export class PhysicsSystem extends System {
     return world;
   }
 
-  createRigidBody(entity, modelName) {
-    const rigidBody = entity.getComponent(RigidBody);
-    const transform = entity.getComponent(Transform);
+  createRigidBodyConstructionInfo(entity, shape) {
+      const transformComponent = entity.getComponent(Transform);
+      const mass = entity.getComponent(RigidBody).weight;
 
-    const shape = this.createConcaveShape(this.assetManager.getTriangles(
-      modelName,
-      transform.scale
-    ));
-    const localInertia = new this.ammo.btVector3(0, 0, 0);
-    shape.calculateLocalInertia(rigidBody.weight, localInertia);
-    const form = new this.ammo.btTransform();
-    form.setIdentity();
-    form.setOrigin(
-      new this.ammo.btVector3(
-        transform.position.x,
-        transform.position.y,
-        transform.position.z
-      )
-    );
+      const pos = transformComponent.position;
+      const rot = transformComponent.rotation;
 
-    quaternion.copy(transform.rotation);
+      let transform = new this.ammo.btTransform();
+      transform.setIdentity();
+      transform.setOrigin(new this.ammo.btVector3(pos.x, pos.y, pos.z));
+      transform.setRotation(new this.ammo.btQuaternion(rot.x, rot.y, rot.z, rot.w));
+      const motionState = new this.ammo.btDefaultMotionState(transform);
 
-    form.setRotation(
-      new this.ammo.btQuaternion(
-        quaternion.x,
-        quaternion.y,
-        quaternion.z,
-        quaternion.w
-      )
-    );
+      const localInertia = new this.ammo.btVector3(0, 0, 0);
+      shape.calculateLocalInertia(mass, localInertia);
 
-    const state = new this.ammo.btDefaultMotionState(form);
-    const info = new this.ammo.btRigidBodyConstructionInfo(
-      rigidBody.weight,
-      state,
-      shape,
-      localInertia
-    );
-
-    const body = new this.ammo.btRigidBody(info);
-    this.bodyToEntity.set(this.ammo.getPointer(body), entity);
-
-    return body;
+      return new this.ammo.btRigidBodyConstructionInfo(mass, motionState, shape, localInertia);
   }
 
   setupRigidBody(body, entity) {
