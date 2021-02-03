@@ -152,7 +152,7 @@ export default class World {
       .createEntity()
       .addComponent(Weapon, {
         offset: new Vector3(-0.5, 0, -0.5),
-        fireInterval: 200,
+        fireInterval: 100,
         parent: player
       });
 
@@ -160,7 +160,7 @@ export default class World {
       .createEntity()
       .addComponent(Weapon, {
         offset: new Vector3(0.5, 0, -0.5),
-        fireInterval: 200,
+        fireInterval: 100,
         parent: player
       });
 
