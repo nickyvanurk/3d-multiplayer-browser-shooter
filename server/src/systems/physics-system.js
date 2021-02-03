@@ -1,14 +1,14 @@
 const path = require('path');
 import { System } from 'ecsy';
-import { Vector3, Quaternion, LoadingManager, BoxGeometry, MeshBasicMaterial, Mesh, BufferGeometry } from 'three';
+import { Vector3, LoadingManager } from 'three';
+
+import { AssetManager } from '../asset-manager';
 
 import Types from '../../../shared/types';
+import { Kind } from '../../../shared/components/kind';
 import { Transform } from '../components/transform';
 import { RigidBody } from '../components/rigidbody';
-import { AssetManager } from '../asset-manager';
-import { Kind } from '../../../shared/components/kind';
-
-let quaternion = new Quaternion();
+import { Destroy } from '../components/destroy';
 
 export class PhysicsSystem extends System {
   static queries = {
@@ -112,6 +112,15 @@ export class PhysicsSystem extends System {
     this.physicsWorld.stepSimulation(delta, 4, delta);
 
     this.queries.entities.results.forEach((entity) => {
+      if (entity.hasComponent(Destroy) || !entity.alive) {
+        // TODO: Refactor this into destroy system. Put physics body
+        // on component. Have reference to physicsWorld in world.js
+        // or also on a component?
+        this.physicsWorld.removeRigidBody(entity.body);
+        return;
+      }
+
+
       const rigidBody = entity.getComponent(RigidBody);
 
       if (rigidBody.weight === 0) {

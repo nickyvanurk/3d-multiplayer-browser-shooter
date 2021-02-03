@@ -15,6 +15,8 @@ import { Kind } from '../../shared/components/kind';
 import { Weapon } from './components/weapon';
 import { Weapons } from './components/weapons';
 import { Active } from './components/active';
+import { Timeout } from './components/timeout';
+import { Destroy } from './components/destroy';
 
 import { PlayerInputState } from '../../shared/components/player-input-state';
 import { NetworkEventSystem } from './systems/network-event-system';
@@ -22,6 +24,8 @@ import { NetworkMessageSystem } from './systems/network-message-system';
 import { PlayerInputSystem } from './systems/player-input-system';
 import { PhysicsSystem } from './systems/physics-system';
 import { WeaponSystem } from './systems/weapon-system';
+import { TimeoutSystem } from './systems/timeout-system';
+import { DestroySystem } from './systems/destroy-system';
 
 export default class World {
   constructor(id, maxClients, server) {
@@ -45,15 +49,19 @@ export default class World {
       .registerComponent(Kind)
       .registerComponent(Weapon)
       .registerComponent(Weapons)
-      .registerComponent(Active);
+      .registerComponent(Active)
+      .registerComponent(Timeout)
+      .registerComponent(Destroy);
 
     Ammo().then((Ammo) => {
       this.world
         .registerSystem(NetworkEventSystem, this)
         .registerSystem(PlayerInputSystem)
         .registerSystem(WeaponSystem, this)
+        .registerSystem(TimeoutSystem)
         .registerSystem(PhysicsSystem, { worldServer: this, ammo: Ammo })
-        .registerSystem(NetworkMessageSystem, this);
+        .registerSystem(NetworkMessageSystem, this)
+        .registerSystem(DestroySystem, this);
     });
 
     this.size = new Vector3(10, 10, 10);
@@ -178,6 +186,10 @@ export default class World {
       .addComponent(RigidBody, {
         velocity: new Vector3(0, 0, -0.1),
         kinematic: true
+      })
+      .addComponent(Timeout, {
+        timer: 500,
+        addComponents: [Destroy]
       });
 
     bulletEntity.worldId = entityId;
