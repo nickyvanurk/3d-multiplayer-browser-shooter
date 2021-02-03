@@ -142,10 +142,10 @@ export default class World {
       })
       .addComponent(PlayerInputState)
       .addComponent(RigidBody, {
-        acceleration: 0.000001,
-        angularAcceleration: new Euler(0.000003, 0.000003, 0.0000002),
-        damping: 0.001,
-        angularDamping: 0.1
+        acceleration: 0.8,
+        angularAcceleration: new Euler(0.15, 0.3, 0.05),
+        damping: 0.5,
+        angularDamping: 0.99
       });
 
     const weaponLeft = this.world

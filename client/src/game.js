@@ -80,6 +80,7 @@ export default class Game {
 
     const renderer = new WebGlRenderer$1({ antialias: true });
     renderer.setClearColor(0x020207);
+    renderer.shadowMap.enabled = true;
 
     document.body.appendChild(renderer.domElement);
 

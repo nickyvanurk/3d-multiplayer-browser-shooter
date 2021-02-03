@@ -109,7 +109,7 @@ export class PhysicsSystem extends System {
       this.physicsWorld.addRigidBody(body);
     });
 
-    this.physicsWorld.stepSimulation(delta, 4, delta);
+    this.physicsWorld.stepSimulation(delta/1000, 0, delta/1000);
 
     this.queries.entities.results.forEach((entity) => {
       if (entity.hasComponent(Destroy) || !entity.alive) {

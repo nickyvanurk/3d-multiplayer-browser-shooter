@@ -36,7 +36,7 @@ export class PlayerInputSystem extends System {
       rigidBody.angularVelocity.x = rigidBody.angularAcceleration.x*delta * pitch;
       rigidBody.angularVelocity.y = rigidBody.angularAcceleration.y*delta * -yaw;
       rigidBody.angularVelocity.z += rigidBody.angularAcceleration.z*delta * -roll;
-      rigidBody.angularVelocity.z *= Math.pow(rigidBody.angularDamping, delta/1000);
+      rigidBody.angularVelocity.z *= Math.pow(rigidBody.angularDamping, delta);
 
       if (Math.abs(rigidBody.angularVelocity.z) < 0.000001) {
         rigidBody.angularVelocity.z = 0;
