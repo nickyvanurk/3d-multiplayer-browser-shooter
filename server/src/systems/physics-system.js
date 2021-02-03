@@ -120,7 +120,6 @@ export class PhysicsSystem extends System {
         return;
       }
 
-
       const rigidBody = entity.getComponent(RigidBody);
 
       if (rigidBody.weight === 0) {
