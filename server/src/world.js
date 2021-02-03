@@ -17,6 +17,7 @@ import { Weapons } from './components/weapons';
 import { Active } from './components/active';
 import { Timeout } from './components/timeout';
 import { Destroy } from './components/destroy';
+import { Collision } from './components/collision';
 
 import { PlayerInputState } from '../../shared/components/player-input-state';
 import { NetworkEventSystem } from './systems/network-event-system';
@@ -26,6 +27,7 @@ import { PhysicsSystem } from './systems/physics-system';
 import { WeaponSystem } from './systems/weapon-system';
 import { TimeoutSystem } from './systems/timeout-system';
 import { DestroySystem } from './systems/destroy-system';
+import { CollisionSystem } from './systems/collision-system';
 
 export default class World {
   constructor(id, maxClients, server) {
@@ -51,7 +53,8 @@ export default class World {
       .registerComponent(Weapons)
       .registerComponent(Active)
       .registerComponent(Timeout)
-      .registerComponent(Destroy);
+      .registerComponent(Destroy)
+      .registerComponent(Collision);
 
     Ammo().then((Ammo) => {
       this.world
@@ -60,6 +63,7 @@ export default class World {
         .registerSystem(WeaponSystem, this)
         .registerSystem(TimeoutSystem)
         .registerSystem(PhysicsSystem, { worldServer: this, ammo: Ammo })
+        .registerSystem(CollisionSystem)
         .registerSystem(NetworkMessageSystem, this)
         .registerSystem(DestroySystem, this);
     });

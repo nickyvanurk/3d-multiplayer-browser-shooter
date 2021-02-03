@@ -9,6 +9,7 @@ import { Kind } from '../../../shared/components/kind';
 import { Transform } from '../components/transform';
 import { RigidBody } from '../components/rigidbody';
 import { Destroy } from '../components/destroy';
+import { Collision } from '../components/collision';
 
 export class PhysicsSystem extends System {
   static queries = {
@@ -26,7 +27,6 @@ export class PhysicsSystem extends System {
     this.epsilon = 10e-6;
     this.collisions = new Map();
     this.collisionKeys = [];
-    this.frame = 0;
 
     this.ammo = ammo;
     this.physicsWorld = this.createWorld();
@@ -64,8 +64,6 @@ export class PhysicsSystem extends System {
   }
 
   execute(delta) {
-    this.frame++;
-
     this.queries.entities.added.forEach((entity) => {
       const kind = entity.getComponent(Kind).value;
       const scale = entity.getComponent(Transform).scale;
@@ -106,10 +104,9 @@ export class PhysicsSystem extends System {
       body.setCcdSweptSphereRadius(0.01);
 
       entity.body = body;
+      body.entity = entity;
       this.physicsWorld.addRigidBody(body);
     });
-
-    this.physicsWorld.stepSimulation(delta/1000, 0, delta/1000);
 
     this.queries.entities.results.forEach((entity) => {
       if (entity.hasComponent(Destroy) || !entity.alive) {
@@ -183,6 +180,9 @@ export class PhysicsSystem extends System {
         transformComponent.rotation.set(q.x(), q.y(), q.z(), q.w());
       }
     });
+
+    this.physicsWorld.stepSimulation(delta/1000, 0, delta/1000);
+    this.detectCollision();
   }
 
   createWorld() {
@@ -250,6 +250,48 @@ export class PhysicsSystem extends System {
     }
 
     return body;
+  }
+
+  detectCollision() {
+    let dispatcher = this.physicsWorld.getDispatcher();
+    let numManifolds = dispatcher.getNumManifolds();
+
+    for (let i = 0; i < numManifolds; i++) {
+      let contactManifold = dispatcher.getManifoldByIndexInternal(i);
+
+      let rb0 = this.ammo.castObject(contactManifold.getBody0(), this.ammo.btRigidBody);
+      let rb1 = this.ammo.castObject(contactManifold.getBody1(), this.ammo.btRigidBody);
+
+      let entity0 = rb0.entity;
+      let entity1 = rb1.entity;
+
+      if (!entity0 && !entity1) continue;
+
+      let numContacts = contactManifold.getNumContacts();
+
+      for (let j = 0; j < numContacts; j++) {
+        let contactPoint = contactManifold.getContactPoint(j);
+        let distance = contactPoint.getDistance();
+
+        if (distance > 0) continue;
+
+        if (!rb0.isStaticObject()) {
+          if (!entity0.hasComponent(Collision)) {
+            entity0.addComponent(Collision);
+          }
+
+          entity0.getMutableComponent(Collision).collidingWith.push(entity1);
+        }
+
+        if (!rb1.isStaticObject()) {
+          if (!entity1.hasComponent(Collision)) {
+            entity1.addComponent(Collision);
+          }
+
+          entity1.getMutableComponent(Collision).collidingWith.push(entity0);
+        }
+      }
+    }
   }
 
   createConcaveShape(triangles) {
