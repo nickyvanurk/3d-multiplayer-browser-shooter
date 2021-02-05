@@ -1,6 +1,6 @@
 import { performance } from 'perf_hooks';
 import { World as World$1 } from 'ecsy';
-import { Vector3, Euler, Quaternion } from 'three';
+import { Vector3, Euler, Quaternion, Ray, Matrix4 } from 'three';
 import Ammo from 'ammo.js';
 
 import logger from './utils/logger';
@@ -181,15 +181,30 @@ export default class World {
   addBullet(weapon) {
     const entityId = this.getEntityId();
     const parentTransform = weapon.parent.getComponent(Transform);
+
+    const pos = new Vector3().copy(weapon.offset)
+      .applyQuaternion(parentTransform.rotation)
+      .add(parentTransform.position);
+    let rot = parentTransform.rotation;
+
+    if (weapon.parent.hasComponent(Aim)) {
+      const ray = weapon.parent.getComponent(Aim);
+
+      const target = new Vector3();
+      new Ray(ray.position, ray.direction).at(ray.distance, target);
+
+      const direction = new Vector3();
+      direction.subVectors(pos, target).normalize();
+
+      const mx = new Matrix4().lookAt(direction, new Vector3(0,0,0), new Vector3(0,1,0));
+      const qt = new Quaternion().setFromRotationMatrix(mx);
+      rot = qt;
+    }
+
     const bulletEntity = this.world
       .createEntity()
       .addComponent(Kind, { value: Types.Entities.BULLET })
-      .addComponent(Transform, {
-        position: new Vector3().copy(weapon.offset)
-          .applyQuaternion(parentTransform.rotation)
-          .add(parentTransform.position),
-        rotation: parentTransform.rotation
-      })
+      .addComponent(Transform, { position: pos, rotation: rot })
       .addComponent(RigidBody, {
         velocity: new Vector3(0, 0, -0.1),
         kinematic: true
