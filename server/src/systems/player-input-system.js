@@ -46,8 +46,10 @@ export class PlayerInputSystem extends System {
 
       if (entity.hasComponent(Aim)) {
         const ray = entity.getMutableComponent(Aim);
-        ray.position = aim.position;
-        ray.direction = aim.direction;
+        let pos = aim.position;
+        let dir = aim.direction;
+        ray.position.set(pos.x, pos.y, pos.z);
+        ray.direction.set(dir.x, dir.y, dir.z);
       }
 
       if (entity.hasComponent(Weapons)) {
