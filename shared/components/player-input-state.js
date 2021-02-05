@@ -9,7 +9,8 @@ export class PlayerInputState extends Component {
     yaw: { type: Types.Number },
     pitch: { type: Types.Number },
     boost: { type: Types.Boolean },
-    weaponPrimary: { type: Types.Boolean }
+    weaponPrimary: { type: Types.Boolean },
+    aim: { type: Types.Ref }
   };
 }
 

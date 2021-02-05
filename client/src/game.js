@@ -96,8 +96,8 @@ export default class Game {
       .createEntity()
       .addComponent(Camera)
       .addComponent(Object3d, { value: camera })
-      .addComponent(Transform);
-      //.addComponent(Raycaster);
+      .addComponent(Transform)
+      .addComponent(Raycaster);
 
     scene.add(camera);
 

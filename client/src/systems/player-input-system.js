@@ -1,9 +1,13 @@
 import { System } from 'ecsy';
+import { Vector3, Matrix4 } from 'three';
 
 import { Connection } from '../../../shared/components/connection';
 import { InputState } from '../components/input-state';
 import { PlayerController } from '../components/player-controller';
 import { PlayerInputState } from '../../../shared/components/player-input-state';
+import { Camera } from '../components/camera';
+import { Object3d } from '../components/object3d';
+import { Transform } from '../components/transform';
 
 export class PlayerInputSystem extends System {
   static queries = {
@@ -16,7 +20,10 @@ export class PlayerInputSystem extends System {
     mainPlayer: {
       components: [PlayerController],
       listen: { added: true }
-    }
+    },
+    camera: {
+      components: [Camera]
+    },
   };
 
   execute() {
@@ -58,5 +65,19 @@ export class PlayerInputSystem extends System {
     playerInputState.pitch = parseFloat(mousePosition.y);
     playerInputState.boost = keysDown.includes(boost);
     playerInputState.weaponPrimary = mouseButtonsDown.includes(weaponPrimary);
+
+    const camera = this.queries.camera.results[0];
+    const transform = camera.getComponent(Transform);
+    const object3d = camera.getComponent(Object3d).value;
+
+    const position = transform.position;
+    const rotation = transform.rotation;
+
+    const direction = new Vector3(mousePosition.x, mousePosition.y, 0.5)
+      .applyMatrix4(object3d.projectionMatrixInverse)
+      .applyMatrix4(new Matrix4().compose(position, rotation, new Vector3(1, 1, 1)))
+      .sub(position).normalize();
+
+    playerInputState.aim = { position, direction };
   }
 }

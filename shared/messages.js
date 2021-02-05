@@ -116,7 +116,7 @@ export class Despawn {
 }
 
 export class Input {
-  constructor({ movementX, movementY, movementZ, roll, yaw, pitch, boost, weaponPrimary }) {
+  constructor({ movementX, movementY, movementZ, roll, yaw, pitch, boost, weaponPrimary, aim }) {
     this.movementX = movementX;
     this.movementY = movementY;
     this.movementZ = movementZ;
@@ -125,6 +125,7 @@ export class Input {
     this.pitch = pitch;
     this.boost = boost;
     this.weaponPrimary = weaponPrimary;
+    this.aim = aim;
   }
 
   static deserialize(message) {
@@ -137,6 +138,7 @@ export class Input {
       pitch: message[5],
       boost: message[6],
       weaponPrimary: message[7],
+      aim: message[8]
     };
   }
 
@@ -150,7 +152,8 @@ export class Input {
       this.yaw,
       this.pitch,
       this.boost,
-      this.weaponPrimary
+      this.weaponPrimary,
+      this.aim
     ];
   }
 }

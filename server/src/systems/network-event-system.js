@@ -77,9 +77,12 @@ export class NetworkEventSystem extends System {
               yaw,
               pitch,
               boost,
-              weaponPrimary
+              weaponPrimary,
+              aim
             } = message.data;
             const component = entity.getMutableComponent(PlayerInputState);
+
+            console.log(aim);
 
             component.movementX = movementX;
             component.movementY = movementY;
@@ -89,6 +92,7 @@ export class NetworkEventSystem extends System {
             component.pitch = pitch;
             component.boost = boost;
             component.weaponPrimary = weaponPrimary;
+            component.aim = aim;
             break;
           }
         }

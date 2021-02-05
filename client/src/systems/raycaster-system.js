@@ -24,15 +24,15 @@ export class RaycasterSystem extends System {
   };
 
   init() {
-    //this.arrowHelper = this.world
-    //  .createEntity()
-    //  .addComponent(Transform)
-    //  .addComponent(Object3d, { value: new ArrowHelper(
-    //    new Vector3(1, 0, 0),
-    //    new Vector3(),
-    //    1000,
-    //    0xffff00
-    //  ) });
+    this.arrowHelper = this.world
+      .createEntity()
+      .addComponent(Transform)
+      .addComponent(Object3d, { value: new ArrowHelper(
+        new Vector3(1, 0, 0),
+        new Vector3(),
+        1000,
+        0xffff00
+      ) });
   }
 
   execute() {
