@@ -5,6 +5,7 @@ import { PlayerInputState } from '../../../shared/components/player-input-state'
 import { RigidBody } from '../components/rigidbody';
 import { Weapons } from '../components/weapons';
 import { Active } from '../components/active';
+import { Aim } from '../components/aim';
 
 export class PlayerInputSystem extends System {
   static queries = {
@@ -23,7 +24,8 @@ export class PlayerInputSystem extends System {
         yaw,
         roll,
         boost,
-        weaponPrimary
+        weaponPrimary,
+        aim
       } = entity.getComponent(PlayerInputState);
       const rigidBody = entity.getMutableComponent(RigidBody);
 
@@ -40,6 +42,12 @@ export class PlayerInputSystem extends System {
 
       if (Math.abs(rigidBody.angularVelocity.z) < 0.000001) {
         rigidBody.angularVelocity.z = 0;
+      }
+
+      if (entity.hasComponent(Aim)) {
+        const ray = entity.getMutableComponent(Aim);
+        ray.position = aim.position;
+        ray.direction = aim.direction;
       }
 
       if (entity.hasComponent(Weapons)) {

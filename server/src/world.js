@@ -18,6 +18,7 @@ import { Active } from './components/active';
 import { Timeout } from './components/timeout';
 import { Destroy } from './components/destroy';
 import { Collision } from './components/collision';
+import { Aim } from './components/aim';
 
 import { PlayerInputState } from '../../shared/components/player-input-state';
 import { NetworkEventSystem } from './systems/network-event-system';
@@ -54,7 +55,8 @@ export default class World {
       .registerComponent(Active)
       .registerComponent(Timeout)
       .registerComponent(Destroy)
-      .registerComponent(Collision);
+      .registerComponent(Collision)
+      .registerComponent(Aim);
 
     Ammo().then((Ammo) => {
       this.world
@@ -150,7 +152,8 @@ export default class World {
         angularAcceleration: new Euler(0.15, 0.3, 0.05),
         damping: 0.5,
         angularDamping: 0.99
-      });
+      })
+      .addComponent(Aim);
 
     const weaponLeft = this.world
       .createEntity()
