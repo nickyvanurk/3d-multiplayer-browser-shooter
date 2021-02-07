@@ -11,6 +11,8 @@ export class TimeoutSystem extends System {
 
   execute(delta, _time) {
     this.queries.timeouts.results.forEach((entity) => {
+      if (!entity.alive) return;
+
       const timeout = entity.getMutableComponent(Timeout);
 
       timeout.timer -= delta;

@@ -100,8 +100,8 @@ export class PhysicsSystem extends System {
       let body = new this.ammo.btRigidBody(rbInfo);
       body = this.setupRigidBody(body, entity);
 
-      body.setCcdMotionThreshold(0.01);
-      body.setCcdSweptSphereRadius(0.01);
+      body.setCcdMotionThreshold(0.5);
+      body.setCcdSweptSphereRadius(0.5);
 
       entity.body = body;
       body.entity = entity;
@@ -110,10 +110,6 @@ export class PhysicsSystem extends System {
 
     this.queries.entities.results.forEach((entity) => {
       if (entity.hasComponent(Destroy) || !entity.alive) {
-        // TODO: Refactor this into destroy system. Put physics body
-        // on component. Have reference to physicsWorld in world.js
-        // or also on a component?
-        this.physicsWorld.removeRigidBody(entity.body);
         return;
       }
 
@@ -267,6 +263,17 @@ export class PhysicsSystem extends System {
 
       if (!entity0 && !entity1) continue;
 
+      let kind0;
+      let kind1;
+
+      if (entity0.alive && entity0.hasComponent(Kind)) {
+        kind0 = entity0.getComponent(Kind).value;
+      }
+
+      if (entity1.alive && entity1.hasComponent(Kind)) {
+        kind1 = entity1.getComponent(Kind).value;
+      }
+
       let numContacts = contactManifold.getNumContacts();
 
       for (let j = 0; j < numContacts; j++) {
@@ -275,20 +282,28 @@ export class PhysicsSystem extends System {
 
         if (distance > 0) continue;
 
-        if (!rb0.isStaticObject()) {
+        if (!rb0.isStaticObject() && entity0.alive) {
           if (!entity0.hasComponent(Collision)) {
             entity0.addComponent(Collision);
           }
 
           entity0.getMutableComponent(Collision).collidingWith.push(entity1);
+
+          if (kind0 === Types.Entities.BULLET) {
+            this.physicsWorld.removeRigidBody(entity0.body);
+          }
         }
 
-        if (!rb1.isStaticObject()) {
+        if (!rb1.isStaticObject() && entity1.alive) {
           if (!entity1.hasComponent(Collision)) {
             entity1.addComponent(Collision);
           }
 
           entity1.getMutableComponent(Collision).collidingWith.push(entity0);
+
+          if (kind1 === Types.Entities.BULLET) {
+            this.physicsWorld.removeRigidBody(entity1.body);
+          }
         }
       }
     }

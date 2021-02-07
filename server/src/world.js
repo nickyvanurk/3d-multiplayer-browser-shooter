@@ -66,8 +66,8 @@ export default class World {
         .registerSystem(TimeoutSystem)
         .registerSystem(PhysicsSystem, { worldServer: this, ammo: Ammo })
         .registerSystem(CollisionSystem)
-        .registerSystem(NetworkMessageSystem, this)
-        .registerSystem(DestroySystem, this);
+        .registerSystem(DestroySystem, this)
+        .registerSystem(NetworkMessageSystem, this);
     });
 
     this.size = new Vector3(10, 10, 10);
