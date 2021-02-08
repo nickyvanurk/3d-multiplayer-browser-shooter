@@ -4,6 +4,7 @@ import Messages from '../../../shared/messages';
 import { Connection } from '../../../shared/components/connection';
 import { Transform } from '../components/transform';
 import { Kind } from '../../../shared/components/kind';
+import { Dead } from '../components/dead';
 
 export class NetworkMessageSystem extends System {
   static queries = {
@@ -39,7 +40,9 @@ export class NetworkMessageSystem extends System {
 
     this.queries.connections.results.forEach((entity) => {
       const connection = entity.getComponent(Connection).value;
-      connection.pushMessage(new Messages.World(this.worldServer.entities));
+      connection.pushMessage(new Messages.World(
+        this.worldServer.entities.filter(entity => !entity.hasComponent(Dead))
+      ));
       connection.sendOutgoingMessages();
     });
   }

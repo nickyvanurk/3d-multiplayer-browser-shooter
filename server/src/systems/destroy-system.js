@@ -21,7 +21,7 @@ export class DestroySystem extends System {
     this.queries.entities.results.forEach((entity) => {
       if (entity.hasComponent(Connection)) {
         if (entity.hasComponent(Playing)) {
-          this.worldServer.broadcast(new Messages.Despawn(entity.worldId));
+          this.worldServer.broadcast(new Messages.Despawn(entity.worldId), entity.worldId);
         }
       } else {
           this.worldServer.broadcast(new Messages.Despawn(entity.worldId));

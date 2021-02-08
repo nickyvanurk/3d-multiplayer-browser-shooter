@@ -19,6 +19,9 @@ import { Timeout } from './components/timeout';
 import { Destroy } from './components/destroy';
 import { Collision } from './components/collision';
 import { Aim } from './components/aim';
+import { Health } from './components/health';
+import { Damage } from './components/damage';
+import { Dead } from './components/dead';
 
 import { PlayerInputState } from '../../shared/components/player-input-state';
 import { NetworkEventSystem } from './systems/network-event-system';
@@ -29,6 +32,7 @@ import { WeaponSystem } from './systems/weapon-system';
 import { TimeoutSystem } from './systems/timeout-system';
 import { DestroySystem } from './systems/destroy-system';
 import { CollisionSystem } from './systems/collision-system';
+import { HealthSystem } from './systems/health-system';
 
 export default class World {
   constructor(id, maxClients, server) {
@@ -56,7 +60,10 @@ export default class World {
       .registerComponent(Timeout)
       .registerComponent(Destroy)
       .registerComponent(Collision)
-      .registerComponent(Aim);
+      .registerComponent(Aim)
+      .registerComponent(Health)
+      .registerComponent(Damage)
+      .registerComponent(Dead);
 
     Ammo().then((Ammo) => {
       this.world
@@ -65,6 +72,7 @@ export default class World {
         .registerSystem(WeaponSystem, this)
         .registerSystem(TimeoutSystem)
         .registerSystem(PhysicsSystem, { worldServer: this, ammo: Ammo })
+        .registerSystem(HealthSystem, this)
         .registerSystem(CollisionSystem)
         .registerSystem(DestroySystem, this)
         .registerSystem(NetworkMessageSystem, this);
@@ -153,7 +161,8 @@ export default class World {
         damping: 0.5,
         angularDamping: 0.99
       })
-      .addComponent(Aim);
+      .addComponent(Aim)
+      .addComponent(Health);
 
     const weaponLeft = this.world
       .createEntity()
@@ -212,7 +221,8 @@ export default class World {
       .addComponent(Timeout, {
         timer: 500,
         addComponents: [Destroy]
-      });
+      })
+      .addComponent(Damage, { value: 5 });
 
     bulletEntity.worldId = entityId;
 
@@ -238,7 +248,8 @@ export default class World {
 
   broadcast(message, ignoredPlayerId = null) {
     for (const [id, entity] of this.clients.entries()) {
-      if (id == ignoredPlayerId || !entity) {
+      if (id == ignoredPlayerId || !entity || !entity.alive || entity.hasComponent(Destroy) ||
+          !entity.hasComponent(Connection) || entity.hasComponent(Dead)) {
         continue;
       }
 

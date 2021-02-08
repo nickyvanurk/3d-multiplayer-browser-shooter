@@ -179,6 +179,10 @@ export class PhysicsSystem extends System {
 
     this.physicsWorld.stepSimulation(delta/1000, 0, delta/1000);
     this.detectCollision();
+
+    this.queries.entities.removed.forEach((entity) => {
+      this.physicsWorld.removeRigidBody(entity.body);
+    });
   }
 
   createWorld() {
