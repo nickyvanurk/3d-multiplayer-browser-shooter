@@ -3,7 +3,8 @@ import { System } from 'ecsy';
 import Utils from '../../../shared/utils';
 import Messages from '../../../shared/messages';
 import { Connection } from '../../../shared/components/connection';
-import { PlayerInputState } from '../../../shared/components/player-input-state';
+import { Player } from '../components/player';
+import { Input } from '../components/input';
 
 export class NetworkMessageSystem extends System {
   static queries = {
@@ -11,7 +12,7 @@ export class NetworkMessageSystem extends System {
       components: [Connection]
     },
     mainPlayer: {
-      components: [Connection, PlayerInputState]
+      components: [Connection, Player, Input]
     }
   };
 
@@ -26,7 +27,7 @@ export class NetworkMessageSystem extends System {
   handleFixedUpdate() {
     this.queries.mainPlayer.results.forEach((entity) => {
       const connection = entity.getComponent(Connection).value;
-      const component = entity.getComponent(PlayerInputState);
+      const component = entity.getComponent(Input);
       connection.pushMessage(new Messages.Input(component));
     });
 

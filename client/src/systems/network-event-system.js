@@ -6,7 +6,7 @@ import Messages from '../../../shared/messages';
 import { Connection } from '../../../shared/components/connection';
 import { Transform } from '../components/transform';
 import { Camera } from '../components/camera';
-import { PlayerController } from '../components/player-controller';
+import { Player } from '../components/player';
 
 export class NetworkEventSystem extends System {
   static queries = {
@@ -17,7 +17,7 @@ export class NetworkEventSystem extends System {
       components: [Camera, Transform]
     },
     mainPlayer: {
-      components: [PlayerController]
+      components: [Player]
     }
   };
 

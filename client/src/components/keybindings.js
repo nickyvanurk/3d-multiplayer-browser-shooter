@@ -1,6 +1,6 @@
 import { Component, Types } from 'ecsy';
 
-export class PlayerController extends Component {
+export class Keybindings extends Component {
   static schema = {
     forward: { type: Types.String },
     backward: { type: Types.String },
@@ -14,4 +14,3 @@ export class PlayerController extends Component {
     weaponPrimary: { type: Types.Boolean }
   };
 }
-
