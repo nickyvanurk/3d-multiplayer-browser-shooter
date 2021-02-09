@@ -116,13 +116,22 @@ export class Despawn {
 }
 
 export class Input {
-  constructor({ movementX, movementY, movementZ, roll, yaw, pitch, boost, weaponPrimary, aim }) {
-    this.movementX = movementX;
-    this.movementY = movementY;
-    this.movementZ = movementZ;
-    this.roll = roll;
-    this.yaw = yaw;
-    this.pitch = pitch;
+  constructor(input) {
+    const {
+      forward, backward,
+      rollLeft, rollRight,
+      strafeLeft, strafeRight, strafeUp, strafeDown,
+      boost, weaponPrimary, aim
+    } = input;
+
+    this.forward = forward;
+    this.backward = backward;
+    this.rollLeft = rollLeft;
+    this.rollRight = rollRight;
+    this.strafeLeft = strafeLeft;
+    this.strafeRight = strafeRight;
+    this.strafeUp = strafeUp;
+    this.strafeDown = strafeDown;
     this.boost = boost;
     this.weaponPrimary = weaponPrimary;
     this.aim = aim;
@@ -130,27 +139,31 @@ export class Input {
 
   static deserialize(message) {
     return {
-      movementX: message[0],
-      movementY: message[1],
-      movementZ: message[2],
-      roll: message[3],
-      yaw: message[4],
-      pitch: message[5],
-      boost: message[6],
-      weaponPrimary: message[7],
-      aim: message[8]
+      forward: message[0],
+      backward: message[1],
+      rollLeft: message[2],
+      rollRight: message[3],
+      strafeLeft: message[4],
+      strafeRight: message[5],
+      strafeUp: message[6],
+      strafeDown: message[7],
+      boost: message[8],
+      weaponPrimar: message[9],
+      aim: message[10]
     };
   }
 
   serialize() {
     return [
       Types.Messages.INPUT,
-      this.movementX,
-      this.movementY,
-      this.movementZ,
-      this.roll,
-      this.yaw,
-      this.pitch,
+      this.forward,
+      this.backward,
+      this.rollLeft,
+      this.rollRight,
+      this.strafeLeft,
+      this.strafeRight,
+      this.strafeUp,
+      this.strafeDown,
       this.boost,
       this.weaponPrimary,
       this.aim
