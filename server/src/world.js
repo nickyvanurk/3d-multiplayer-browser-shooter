@@ -35,6 +35,8 @@ import { DestroySystem } from './systems/destroy-system';
 import { CollisionSystem } from './systems/collision-system';
 import { HealthSystem } from './systems/health-system';
 
+import * as Spawner from './spawner';
+
 export default class World {
   constructor(id, maxClients, server) {
     this.id = id;
@@ -145,44 +147,13 @@ export default class World {
   }
 
   addPlayer(clientId) {
-    logger.debug(`Creating spaceship for player ${clientId}`);
+    const spaceship = Spawner.spawnControllableSpaceship(
+      this.world,
+      this.clients[clientId],
+      this.getRandomPosition()
+    );
 
-    const spaceship = this.world.createEntity()
-      .addComponent(SpaceshipController, { player: this.clients[clientId]})
-      .addComponent(Playing)
-      .addComponent(Kind, { value: Types.Entities.SPACESHIP })
-      .addComponent(Transform, {
-        position: this.getRandomPosition()
-      })
-      .addComponent(RigidBody, {
-        acceleration: 0.8,
-        angularAcceleration: new Euler(0.15, 0.3, 0.05),
-        damping: 0.5,
-        angularDamping: 0.99
-      })
-      .addComponent(Aim)
-      .addComponent(Health);
-
-    const weaponLeft = this.world
-      .createEntity()
-      .addComponent(Weapon, {
-        offset: new Vector3(-0.5, 0, -0.5),
-        fireInterval: 100,
-        parent: spaceship
-      });
-
-    const weaponRight = this.world
-      .createEntity()
-      .addComponent(Weapon, {
-        offset: new Vector3(0.5, 0, -0.5),
-        fireInterval: 100,
-        parent: spaceship
-      });
-
-    spaceship.addComponent(Weapons, {
-      primary: [weaponLeft, weaponRight]
-    });
-
+    // TODO: Use ecsy ID's?
     spaceship.worldId = this.getEntityId();
     this.entities[spaceship.worldId] = spaceship;
 
