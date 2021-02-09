@@ -13,6 +13,8 @@ export class Input extends Component {
     strafeDown: { type: Types.Boolean },
     boost: { type: Types.Boolean },
     weaponPrimary: { type: Types.Boolean },
-    aim: { type: Types.Ref, default: { origin: new Vector3(), direction: new Vector3() } }
+    aim: { type: Types.Ref, default: { origin: new Vector3(),
+                                       direction: new Vector3(),
+                                       mouse: new Vector3() } }
   };
 }

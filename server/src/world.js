@@ -23,7 +23,7 @@ import { Health } from './components/health';
 import { Damage } from './components/damage';
 import { Dead } from './components/dead';
 
-import { PlayerInputState } from '../../shared/components/player-input-state';
+import { Input } from '../../shared/components/input';
 import { NetworkEventSystem } from './systems/network-event-system';
 import { NetworkMessageSystem } from './systems/network-message-system';
 import { PlayerInputSystem } from './systems/player-input-system';
@@ -52,7 +52,7 @@ export default class World {
       .registerComponent(Playing)
       .registerComponent(Transform)
       .registerComponent(RigidBody)
-      .registerComponent(PlayerInputState)
+      .registerComponent(Input)
       .registerComponent(Kind)
       .registerComponent(Weapon)
       .registerComponent(Weapons)
@@ -154,7 +154,7 @@ export default class World {
       .addComponent(Transform, {
         position: this.getRandomPosition()
       })
-      .addComponent(PlayerInputState)
+      .addComponent(Input)
       .addComponent(RigidBody, {
         acceleration: 0.8,
         angularAcceleration: new Euler(0.15, 0.3, 0.05),

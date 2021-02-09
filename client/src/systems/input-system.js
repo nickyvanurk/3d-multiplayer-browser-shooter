@@ -18,7 +18,6 @@ export class InputSystem extends System {
   };
 
   init() {
-    this.mouse = new Vector2();
     this.raycaster = new Raycaster();
   }
 
@@ -68,21 +67,37 @@ export class InputSystem extends System {
       });
 
       document.addEventListener('mousemove', (event) => {
-        this.mouse.x = ((event.clientX/window.innerWidth)*2 - 1);
-        this.mouse.y = (-(event.clientY/window.innerHeight)*2 + 1);
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        const size = height < width ? height : width;
 
-        const entity = this.queries.camera.results[0];
-        const camera = entity.getComponent(Object3d).value;
+        const mouse = {
+          x: ((event.clientX/size)*2 - width/size).toFixed(3),
+          y: (-(event.clientY/size)*2 + height/size).toFixed(3)
+        };
 
-        this.raycaster.setFromCamera(this.mouse, camera);
-        const { origin, direction } = this.raycaster.ray;
+        mouse.x = mouse.x < -1 ? -1 : mouse.x > 1 ? 1 : mouse.x;
+        mouse.y = mouse.y < -1 ? -1 : mouse.y > 1 ? 1 : mouse.y;
 
-        input.aim = { origin, direction };
+        input.aim.mouse = mouse;
       });
 
       document.addEventListener('contextmenu', (event) => {
         event.preventDefault();
       });
+    });
+
+    this.queries.client.results.forEach((entity) => {
+      const input = entity.getMutableComponent(Input);
+
+      const cameraEntity = this.queries.camera.results[0];
+      const camera = cameraEntity.getComponent(Object3d).value;
+
+      this.raycaster.setFromCamera(input.aim.mouse, camera);
+      const { origin, direction } = this.raycaster.ray;
+
+      input.aim.origin = origin;
+      input.aim.direction = direction;
     });
   }
 }

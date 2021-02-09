@@ -59,10 +59,8 @@ export default class Game {
       .registerSystem(WebGlRendererSystem, this)
       .registerSystem(NetworkMessageSystem);
 
-    this.inputSystem = this.world.getSystem(InputSystem);
     this.updateSystems = this.world.getSystems().filter((system) => {
-      return !(system instanceof InputSystem) &&
-             !(system instanceof WebGlRendererSystem);
+      return !(system instanceof WebGlRendererSystem);
     });
     this.renderSystem = this.world.getSystem(WebGlRendererSystem);
 
@@ -132,8 +130,6 @@ export default class Game {
   }
 
   init() {
-    this.world.systemManager.executeSystem(this.inputSystem);
-
     this.fixedUpdate = Utils.createFixedTimestep(
       1000/this.updatesPerSecond,
       this.handleFixedUpdate.bind(this)

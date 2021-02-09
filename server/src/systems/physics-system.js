@@ -124,6 +124,8 @@ export class PhysicsSystem extends System {
       const angularVelocity = rigidBody.angularVelocity;
 
       const vec = this.vector3;
+
+
       vec.setX(velocity.x);
       vec.setY(velocity.y);
       vec.setZ(velocity.z);

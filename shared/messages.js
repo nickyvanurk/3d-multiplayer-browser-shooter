@@ -148,7 +148,7 @@ export class Input {
       strafeUp: message[6],
       strafeDown: message[7],
       boost: message[8],
-      weaponPrimar: message[9],
+      weaponPrimary: message[9],
       aim: message[10]
     };
   }

@@ -5,16 +5,16 @@ import Types from '../../../shared/types';
 import Messages from '../../../shared/messages';
 import { Connection } from '../../../shared/components/connection';
 import { Transform } from '../components/transform';
-import { PlayerInputState } from '../../../shared/components/player-input-state';
+import { Input } from '../../../shared/components/input';
 import { Kind } from '../../../shared/components/kind';
 
 export class NetworkEventSystem extends System {
   static queries = {
     connections: {
-      components: [Connection, Not(PlayerInputState)]
+      components: [Connection, Not(Input)]
     },
     players: {
-      components: [Connection, PlayerInputState]
+      components: [Connection, Input]
     }
   };
 
@@ -70,24 +70,21 @@ export class NetworkEventSystem extends System {
         switch (message.type) {
           case Types.Messages.INPUT: {
             const {
-              movementX,
-              movementY,
-              movementZ,
-              roll,
-              yaw,
-              pitch,
-              boost,
-              weaponPrimary,
-              aim
+              forward, backward,
+              rollLeft, rollRight,
+              strafeLeft, strafeRight, strafeUp, strafeDown,
+              boost, weaponPrimary, aim
             } = message.data;
-            const component = entity.getMutableComponent(PlayerInputState);
+            const component = entity.getMutableComponent(Input);
 
-            component.movementX = movementX;
-            component.movementY = movementY;
-            component.movementZ = movementZ;
-            component.roll = roll;
-            component.yaw = yaw;
-            component.pitch = pitch;
+            component.forward = forward;
+            component.backward = backward;
+            component.rollLeft = rollLeft;
+            component.rollRight = rollRight;
+            component.strafeLeft = strafeLeft;
+            component.strafeRight = strafeRight;
+            component.strafeUp = strafeUp;
+            component.strafeDown = strafeDown;
             component.boost = boost;
             component.weaponPrimary = weaponPrimary;
             component.aim = aim;
