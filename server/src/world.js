@@ -11,6 +11,8 @@ import { Connection } from '../../shared/components/connection';
 import { Playing } from '../../shared/components/playing';
 import { Transform } from './components/transform';
 import { RigidBody } from './components/rigidbody';
+import { Input } from '../../shared/components/input';
+import { SpaceshipController } from './components/spaceship-controller';
 import { Kind } from '../../shared/components/kind';
 import { Weapon } from './components/weapon';
 import { Weapons } from './components/weapons';
@@ -23,10 +25,9 @@ import { Health } from './components/health';
 import { Damage } from './components/damage';
 import { Dead } from './components/dead';
 
-import { Input } from '../../shared/components/input';
 import { NetworkEventSystem } from './systems/network-event-system';
 import { NetworkMessageSystem } from './systems/network-message-system';
-import { PlayerInputSystem } from './systems/player-input-system';
+import { SpaceshipControllerSystem } from './systems/spaceship-controller-system';
 import { PhysicsSystem } from './systems/physics-system';
 import { WeaponSystem } from './systems/weapon-system';
 import { TimeoutSystem } from './systems/timeout-system';
@@ -63,12 +64,13 @@ export default class World {
       .registerComponent(Aim)
       .registerComponent(Health)
       .registerComponent(Damage)
-      .registerComponent(Dead);
+      .registerComponent(Dead)
+      .registerComponent(SpaceshipController);
 
     Ammo().then((Ammo) => {
       this.world
         .registerSystem(NetworkEventSystem, this)
-        .registerSystem(PlayerInputSystem)
+        .registerSystem(SpaceshipControllerSystem)
         .registerSystem(WeaponSystem, this)
         .registerSystem(TimeoutSystem)
         .registerSystem(PhysicsSystem, { worldServer: this, ammo: Ammo })
@@ -119,7 +121,8 @@ export default class World {
 
     this.clients[clientId] = this.world
       .createEntity()
-      .addComponent(Connection, { value: connection });
+      .addComponent(Connection, { value: connection })
+      .addComponent(Input);
 
     this.connectedClients++;
 
@@ -142,19 +145,15 @@ export default class World {
   }
 
   addPlayer(clientId) {
-    logger.debug(`Creating player ${clientId}`);
-    const clientEntity = this.clients[clientId];
-    const entityId = this.getEntityId();
+    logger.debug(`Creating spaceship for player ${clientId}`);
 
-    clientEntity.worldId = entityId;
-
-    const player = clientEntity
+    const spaceship = this.world.createEntity()
+      .addComponent(SpaceshipController, { player: this.clients[clientId]})
       .addComponent(Playing)
       .addComponent(Kind, { value: Types.Entities.SPACESHIP })
       .addComponent(Transform, {
         position: this.getRandomPosition()
       })
-      .addComponent(Input)
       .addComponent(RigidBody, {
         acceleration: 0.8,
         angularAcceleration: new Euler(0.15, 0.3, 0.05),
@@ -169,7 +168,7 @@ export default class World {
       .addComponent(Weapon, {
         offset: new Vector3(-0.5, 0, -0.5),
         fireInterval: 100,
-        parent: player
+        parent: spaceship
       });
 
     const weaponRight = this.world
@@ -177,14 +176,17 @@ export default class World {
       .addComponent(Weapon, {
         offset: new Vector3(0.5, 0, -0.5),
         fireInterval: 100,
-        parent: player
+        parent: spaceship
       });
 
-    player.addComponent(Weapons, {
+    spaceship.addComponent(Weapons, {
       primary: [weaponLeft, weaponRight]
     });
 
-    this.entities[entityId] = player;
+    spaceship.worldId = this.getEntityId();
+    this.entities[spaceship.worldId] = spaceship;
+
+    return spaceship;
   }
 
   addBullet(weapon) {

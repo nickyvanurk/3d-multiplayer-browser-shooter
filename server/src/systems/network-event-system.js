@@ -11,9 +11,6 @@ import { Kind } from '../../../shared/components/kind';
 export class NetworkEventSystem extends System {
   static queries = {
     connections: {
-      components: [Connection, Not(Input)]
-    },
-    players: {
       components: [Connection, Input]
     }
   };
@@ -35,12 +32,12 @@ export class NetworkEventSystem extends System {
             name = Utils.sanitize(name);
             name = !name ? 'UNKNOWN' : name.substr(0, 15);
 
-            this.worldServer.addPlayer(connection.id);
+            const spaceship = this.worldServer.addPlayer(connection.id);
 
-            const { position, rotation, scale } = entity.getComponent(Transform);
-            const kind = entity.getComponent(Kind).value;
+            const { position, rotation, scale } = spaceship.getComponent(Transform);
+            const kind = spaceship.getComponent(Kind).value;
             connection.pushMessage(new Messages.Welcome(
-              entity.worldId,
+              spaceship.worldId,
               name,
               kind,
               position,
@@ -49,7 +46,7 @@ export class NetworkEventSystem extends System {
             ));
 
             this.worldServer.broadcast(new Messages.Spawn(
-              entity.worldId,
+              spaceship.worldId,
               kind,
               position,
               rotation,
@@ -57,17 +54,6 @@ export class NetworkEventSystem extends System {
             ), connection.id);
             break;
           }
-        }
-      }
-    });
-
-    this.queries.players.results.forEach((entity) => {
-      const connection = entity.getComponent(Connection).value;
-
-      while (connection.hasIncomingMessage()) {
-        const message = connection.popMessage();
-
-        switch (message.type) {
           case Types.Messages.INPUT: {
             const {
               forward, backward,

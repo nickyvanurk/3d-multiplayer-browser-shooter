@@ -7,11 +7,12 @@ import { RigidBody } from '../components/rigidbody';
 import { Weapons } from '../components/weapons';
 import { Active } from '../components/active';
 import { Aim } from '../components/aim';
+import { SpaceshipController } from '../components/spaceship-controller';
 
-export class PlayerInputSystem extends System {
+export class SpaceshipControllerSystem extends System {
   static queries = {
-    players: {
-      components: [Connection, Input, RigidBody]
+    spaceships: {
+      components: [SpaceshipController]
     }
   };
 
@@ -20,13 +21,20 @@ export class PlayerInputSystem extends System {
   }
 
   execute(delta) {
-    this.queries.players.results.forEach((entity) => {
+    this.queries.spaceships.results.forEach((entity) => {
+      const controller = entity.getComponent(SpaceshipController);
+
+      if (!controller.hasPlayerAttached()) return;
+
+      const player = controller.player;
+
       const {
         forward, backward,
         rollLeft, rollRight,
         strafeLeft, strafeRight, strafeUp, strafeDown,
         boost, weaponPrimary, aim
-      } = entity.getComponent(Input);
+      } = player.getComponent(Input);
+
       const rigidBody = entity.getMutableComponent(RigidBody);
 
       const acceleration = boost ? rigidBody.acceleration*2 : rigidBody.acceleration;
