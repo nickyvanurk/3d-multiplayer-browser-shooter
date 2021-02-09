@@ -4,7 +4,7 @@ import Utils from '../../../shared/utils';
 import Messages from '../../../shared/messages';
 import { Connection } from '../../../shared/components/connection';
 import { Player } from '../components/player';
-import { Input } from '../components/input';
+import { Input } from '../../../shared/components/input';
 
 export class NetworkMessageSystem extends System {
   static queries = {

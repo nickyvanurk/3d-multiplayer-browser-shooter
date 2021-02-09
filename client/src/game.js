@@ -29,7 +29,7 @@ import { Connection } from '../../shared/components/connection';
 import { Object3d } from './components/object3d';
 import { Transform } from './components/transform';
 import { Keybindings } from './components/keybindings';
-import { Input } from './components/input';
+import { Input } from '../../shared/components/input';
 import { Camera } from './components/camera';
 import { Player } from './components/player';
 import { WebGlRendererSystem } from './systems/webgl-renderer-system';

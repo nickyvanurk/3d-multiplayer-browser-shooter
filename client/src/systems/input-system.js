@@ -1,7 +1,7 @@
 import { System } from 'ecsy';
 import { Vector2, Raycaster } from 'three';
 
-import { Input } from '../components/input';
+import { Input } from '../../../shared/components/input';
 import { Keybindings } from '../components/keybindings';
 import { Camera } from '../components/camera';
 import { Object3d } from '../components/object3d';
