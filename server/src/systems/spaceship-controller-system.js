@@ -1,12 +1,12 @@
 import { System } from 'ecsy';
 import { Ray } from 'three';
 
-import { Connection } from '../../../shared/components/connection';
 import { Input } from '../../../shared/components/input';
 import { RigidBody } from '../components/rigidbody';
 import { Weapons } from '../components/weapons';
 import { Active } from '../components/active';
 import { Aim } from '../components/aim';
+import { Destroy } from '../components/destroy';
 import { SpaceshipController } from '../components/spaceship-controller';
 
 export class SpaceshipControllerSystem extends System {
@@ -22,11 +22,18 @@ export class SpaceshipControllerSystem extends System {
 
   execute(delta) {
     this.queries.spaceships.results.forEach((entity) => {
-      const controller = entity.getComponent(SpaceshipController);
+      if (!entity.alive) return;
+
+      const controller = entity.getMutableComponent(SpaceshipController);
 
       if (!controller.hasPlayerAttached()) return;
 
       const player = controller.player;
+
+      if (!player.alive) {
+        entity.addComponent(Destroy);
+        return;
+      }
 
       const {
         forward, backward,
