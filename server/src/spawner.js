@@ -6,7 +6,7 @@ import Types from '../../shared/types';
 import { Playing } from '../../shared/components/playing';
 import { Transform } from './components/transform';
 import { RigidBody } from './components/rigidbody';
-import { SpaceshipController } from './components/spaceship-controller';
+import { SpaceshipController } from '../../shared/components/spaceship-controller';
 import { Kind } from '../../shared/components/kind';
 import { Weapon } from './components/weapon';
 import { Weapons } from './components/weapons';

@@ -7,7 +7,7 @@ import { Weapons } from '../components/weapons';
 import { Active } from '../components/active';
 import { Aim } from '../components/aim';
 import { Destroy } from '../components/destroy';
-import { SpaceshipController } from '../components/spaceship-controller';
+import { SpaceshipController } from '../../../shared/components/spaceship-controller';
 
 export class SpaceshipControllerSystem extends System {
   static queries = {
