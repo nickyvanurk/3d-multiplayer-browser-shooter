@@ -38,8 +38,6 @@ export class NetworkEventSystem extends System {
             break;
           case Types.Messages.WELCOME: {
             const { id, kind, position, rotation, scale } = message.data;
-            const connection = entity.getMutableComponent(Connection).value;
-            connection.id = id;
             console.log(`my id: ${id}`);
             this.game.addPlayer(id, kind, position, rotation, scale);
             break;
