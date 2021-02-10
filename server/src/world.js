@@ -23,7 +23,6 @@ import { Collision } from './components/collision';
 import { Aim } from './components/aim';
 import { Health } from './components/health';
 import { Damage } from './components/damage';
-import { Dead } from './components/dead';
 
 import { NetworkEventSystem } from './systems/network-event-system';
 import { NetworkMessageSystem } from './systems/network-message-system';
@@ -66,7 +65,6 @@ export default class World {
       .registerComponent(Aim)
       .registerComponent(Health)
       .registerComponent(Damage)
-      .registerComponent(Dead)
       .registerComponent(SpaceshipController);
 
     Ammo().then((Ammo) => {
@@ -222,7 +220,7 @@ export default class World {
   broadcast(message, ignoredPlayerId = null) {
     for (const [id, entity] of this.clients.entries()) {
       if (id == ignoredPlayerId || !entity || !entity.alive || entity.hasComponent(Destroy) ||
-          !entity.hasComponent(Connection) || entity.hasComponent(Dead)) {
+          !entity.hasComponent(Connection)) {
         continue;
       }
 

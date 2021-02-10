@@ -5,7 +5,7 @@ import Messages from '../../../shared/messages';
 import { Collision } from '../components/collision';
 import { Damage } from '../components/damage';
 import { Health } from '../components/health';
-import { Dead } from '../components/dead';
+import { Destroy } from '../components/destroy';
 
 export class HealthSystem extends System {
   static queries = {
@@ -24,7 +24,7 @@ export class HealthSystem extends System {
 
       const collidingWith = entity.getComponent(Collision).collidingWith;
       const entitiesWithHealth = collidingWith.filter((entity) => {
-        return entity.alive && entity.hasComponent(Health) && !entity.hasComponent(Dead)
+        return entity.alive && entity.hasComponent(Health) && !entity.hasComponent(Destroy)
       });
 
       entitiesWithHealth.forEach((healthyEntity) => {
@@ -33,7 +33,7 @@ export class HealthSystem extends System {
         health.value -= entity.getComponent(Damage).value;
 
         if (health.value <= 0) {
-          healthyEntity.addComponent(Dead);
+          healthyEntity.addComponent(Destroy);
           this.worldServer.broadcast(
             new Messages.Despawn(healthyEntity.worldId),
             healthyEntity.worldId
