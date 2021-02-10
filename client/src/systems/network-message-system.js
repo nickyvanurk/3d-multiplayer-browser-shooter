@@ -3,7 +3,6 @@ import { System } from 'ecsy';
 import Utils from '../../../shared/utils';
 import Messages from '../../../shared/messages';
 import { Connection } from '../../../shared/components/connection';
-import { Player } from '../components/player';
 import { Input } from '../../../shared/components/input';
 
 export class NetworkMessageSystem extends System {
@@ -12,7 +11,7 @@ export class NetworkMessageSystem extends System {
       components: [Connection]
     },
     mainPlayer: {
-      components: [Connection, Player, Input]
+      components: [Connection, Input]
     }
   };
 

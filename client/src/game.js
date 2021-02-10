@@ -208,7 +208,7 @@ export default class Game {
   }
 
   addPlayer(id, kind, position, rotation, scale) {
-    const entity = this.player
+    const entity = this.world.createEntity()
       .addComponent(Transform, { prevPosition: position, position, rotation, scale })
       .addComponent(Player);
 
@@ -217,9 +217,6 @@ export default class Game {
     switch (kind) {
       case Types.Entities.SPACESHIP:
         entity.addComponent(Object3d, { value: this.assetManager.getModel('spaceship') });
-        break;
-      case Types.Entities.ASTEROID:
-        entity.addComponent(Object3d, { value: this.assetManager.getModel('asteroid') });
         break;
     }
 
