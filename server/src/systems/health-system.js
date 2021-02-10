@@ -1,7 +1,5 @@
 import { System } from 'ecsy';
 
-import Messages from '../../../shared/messages';
-
 import { Collision } from '../components/collision';
 import { Damage } from '../components/damage';
 import { Health } from '../components/health';
@@ -34,10 +32,6 @@ export class HealthSystem extends System {
 
         if (health.value <= 0) {
           healthyEntity.addComponent(Destroy);
-          this.worldServer.broadcast(
-            new Messages.Despawn(healthyEntity.worldId),
-            healthyEntity.worldId
-          );
         }
       });
     });
