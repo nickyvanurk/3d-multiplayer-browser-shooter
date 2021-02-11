@@ -4,6 +4,7 @@ import { Collision } from '../components/collision';
 import { Damage } from '../components/damage';
 import { Health } from '../components/health';
 import { Destroy } from '../components/destroy';
+import { Respawn } from '../components/respawn';
 
 export class HealthSystem extends System {
   static queries = {
@@ -32,6 +33,7 @@ export class HealthSystem extends System {
 
         if (health.value <= 0) {
           healthyEntity.addComponent(Destroy);
+          healthyEntity.addComponent(Respawn);
         }
       });
     });
