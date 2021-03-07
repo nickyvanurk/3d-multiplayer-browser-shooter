@@ -3,7 +3,12 @@ import Messages from '../../shared/messages';
 
 export default class Connection {
   constructor() {
-    const host = location.origin.replace(/^http/, 'ws');
+    let host = location.origin.replace(/^http/, 'ws');
+
+    if (process.env.NODE_ENV === 'development') {
+      host = 'ws://localhost:1337'
+    }
+
     this.connection = new WebSocket(host);
 
     this.incomingMessageQueue = [];
