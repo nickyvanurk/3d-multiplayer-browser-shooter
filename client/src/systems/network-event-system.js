@@ -8,8 +8,6 @@ import { Transform } from '../components/transform';
 import { Camera } from '../components/camera';
 import { Player } from '../components/player';
 
-import { ParticleEffect, ParticleEffectType } from '../components/particle-effect.js';
-
 export class NetworkEventSystem extends System {
   static queries = {
     connections: {
@@ -42,7 +40,6 @@ export class NetworkEventSystem extends System {
             const { id, kind, position, rotation, scale } = message.data;
             console.log(`my id: ${id}`);
             this.game.addPlayer(id, kind, position, rotation, scale);
-
             break;
           }
           case Types.Messages.SPAWN: {
