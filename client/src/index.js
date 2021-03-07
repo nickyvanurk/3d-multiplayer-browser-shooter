@@ -3,11 +3,11 @@ import Connection from './connection';
 import Game from './game';
 
 function main() {
-  const connection = new Connection(process.env.SERVER_URL, +process.env.PORT || 1337);
+  const connection = new Connection();
   const game = new Game();
 
   game.init();
-  
+
   connection.onConnection(() => {
     console.log('Connected to server');
     game.handleConnect(connection);

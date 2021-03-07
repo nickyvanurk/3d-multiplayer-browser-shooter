@@ -1,6 +1,15 @@
 import WebSocket from 'ws';
+const express = require('express');
+const app = express();
+const path = require('path');
 
 import Connection from './connection';
+
+if (process.env.PRODUCTION) {
+  app
+    .use(express.static(path.join(__dirname, '../../client/public')))
+    .get('*', (_req, res) => res.sendFile(path.join(__dirname, '../../client/public/index.html')))
+}
 
 export default class Server {
   constructor(port, maxClients) {
@@ -8,16 +17,17 @@ export default class Server {
     this.connectedClients = 0;
     this.clients = new Array(this.maxClients).fill();
 
-    this.wss = new WebSocket.Server({ port });
+    const server = app.listen(port, () => console.log(`Listening on ${port}`));
+    this.wss = new WebSocket.Server({ server });
 
     this.wss.on('connection', (connection, req) => {
       const clientId = this.findFreeClientIndex();
-      
+
       if (clientId === -1) {
         connection.close();
         return;
       }
-      
+
       connection.remoteAddress = req.socket.remoteAddress;
       const con = new Connection(clientId, connection, this);
 
@@ -52,7 +62,7 @@ export default class Server {
     delete this.clients[id];
     this.connectedClients--;
   }
-  
+
   getConnection(id) {
     return this.clients[id];
   }

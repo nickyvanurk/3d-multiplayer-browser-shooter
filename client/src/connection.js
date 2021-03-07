@@ -2,8 +2,9 @@ import Types from '../../shared/types';
 import Messages from '../../shared/messages';
 
 export default class Connection {
-  constructor(host, port) {
-    this.connection = new WebSocket(`ws://${host}:${port}`);
+  constructor() {
+    const host = location.origin.replace(/^http/, 'ws');
+    this.connection = new WebSocket(host);
 
     this.incomingMessageQueue = [];
     this.outgoingMessageQueue = [];
@@ -23,7 +24,7 @@ export default class Connection {
     this.connection.onmessage = (event) => {
       let data = JSON.parse(event.data);
       const type = data.shift();
-      
+
       switch (type) {
         case Types.Messages.GO: data = Messages.Go.deserialize(data); break;
         case Types.Messages.WELCOME: data = Messages.Welcome.deserialize(data); break;
@@ -68,7 +69,7 @@ export default class Connection {
       this.connection.send(JSON.stringify(message.serialize()));
     }
   }
-  
+
   send(message) {
     this.connection.send(JSON.stringify(message));
   }
@@ -85,4 +86,3 @@ export default class Connection {
     return this.connection;
   }
 }
-
