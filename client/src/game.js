@@ -32,11 +32,14 @@ import { Keybindings } from './components/keybindings';
 import { Input } from '../../shared/components/input';
 import { Camera } from './components/camera';
 import { Player } from './components/player';
+import { Kind } from '../../shared/components/kind';
+import { ParticleEffect } from './components/particle-effect';
 import { WebGlRendererSystem } from './systems/webgl-renderer-system';
 import { NetworkEventSystem } from './systems/network-event-system';
 import { NetworkMessageSystem } from './systems/network-message-system';
 import { TransformSystem } from './systems/transform-system';
 import { InputSystem } from './systems/input-system';
+import { ParticleSystem } from './systems/particle-system';
 
 export default class Game {
   constructor() {
@@ -53,9 +56,12 @@ export default class Game {
       .registerComponent(Input)
       .registerComponent(Camera)
       .registerComponent(Player)
+      .registerComponent(Kind)
+      .registerComponent(ParticleEffect)
       .registerSystem(TransformSystem)
       .registerSystem(NetworkEventSystem, this)
       .registerSystem(InputSystem)
+      .registerSystem(ParticleSystem)
       .registerSystem(WebGlRendererSystem, this)
       .registerSystem(NetworkMessageSystem);
 
@@ -210,6 +216,7 @@ export default class Game {
   addPlayer(id, kind, position, rotation, scale) {
     const entity = this.world.createEntity()
       .addComponent(Transform, { prevPosition: position, position, rotation, scale })
+      .addComponent(Kind, { value: kind })
       .addComponent(Player);
 
     entity.worldId = id;
@@ -232,7 +239,8 @@ export default class Game {
         position,
         rotation,
         scale
-      });
+      })
+      .addComponent(Kind, { value: kind });
 
     entity.worldId = id;
 
@@ -255,7 +263,21 @@ export default class Game {
   }
 
   removeEntity(id) {
-    this.entities[id].remove();
+    const entity = this.entities[id];
+
+    if (entity.hasComponent(Kind) && entity.hasComponent(Transform)) {
+      switch (entity.getComponent(Kind).value) {
+        case Types.Entities.SPACESHIP:
+          const position = entity.getComponent(Transform).position;
+          this.world
+            .createEntity()
+            .addComponent(Transform, { position })
+            .addComponent(ParticleEffect, { type: ParticleEffect.Types.Explosion });
+          break;
+      }
+    }
+
+    entity.remove();
     delete this.entities[id];
   }
 
