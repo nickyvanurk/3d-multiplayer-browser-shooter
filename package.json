@@ -8,6 +8,7 @@
     "client:build": "webpack --config client/webpack.prod.js",
     "server:start:dev": "nodemon --config server/nodemon.json --exec babel-node -- server/src/index.js",
     "server:start": "babel-node server/src/index.js",
+    "start": "npm run client:build && npm run server:start & cd client/public && python3 -m http.server $PORT",
     "lint": "eslint . --ext .js",
     "lint-and-fix": "eslint . --ext .js --fix"
   },
