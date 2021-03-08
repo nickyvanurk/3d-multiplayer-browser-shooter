@@ -1,7 +1,7 @@
 import fs from 'fs';
-import { Geometry, Face3, Face4 } from 'three';
 
 import { GLTFLoader } from './gltf-loader';
+import { BufferGeometryUtils } from './buffer-geometry-utils';
 global.TextDecoder = require('util').TextDecoder;
 global.atob = require('atob');
 
@@ -44,44 +44,25 @@ export class AssetManager {
   }
 
   getTriangles(name, scale) {
-    const geometry = new Geometry();
+    const geometries = [];
     const mesh = this.getModel(name);
 
     mesh.traverse((child) => {
       if (child.isMesh) {
-        if (child.geometry instanceof Geometry) {
-          geometry.merge(child.geometry);
-        } else {
-          geometry.merge(new Geometry().fromBufferGeometry(child.geometry));
-        }
+        geometries.push(child.geometry.clone().scale(scale, scale, scale).applyMatrix4(child.matrixWorld));
       }
     });
 
-    geometry.scale(scale, scale, scale);
-
-    const vertices = geometry.vertices;
+    const geometry = BufferGeometryUtils.mergeBufferGeometries(geometries);
+    const vertices = geometry.attributes.position.array;
     const triangles = [];
 
-    for (const face of geometry.faces) {
-      if ( face instanceof Face3) {
+    for (let i = 0; i < vertices.length; i += 9) {
         triangles.push([
-          { x: vertices[face.a].x, y: vertices[face.a].y, z: vertices[face.a].z },
-          { x: vertices[face.b].x, y: vertices[face.b].y, z: vertices[face.b].z },
-          { x: vertices[face.c].x, y: vertices[face.c].y, z: vertices[face.c].z }
+          { x: vertices[i], y: vertices[i+1], z: vertices[i+2] },
+          { x: vertices[i+3], y: vertices[i+4], z: vertices[i+5] },
+          { x: vertices[i+6], y: vertices[i+7], z: vertices[i+8] }
         ]);
-
-      } else if ( face instanceof Face4 ) {
-        triangles.push([
-          { x: vertices[face.a].x, y: vertices[face.a].y, z: vertices[face.a].z },
-          { x: vertices[face.b].x, y: vertices[face.b].y, z: vertices[face.b].z },
-          { x: vertices[face.d].x, y: vertices[face.d].y, z: vertices[face.d].z }
-        ]);
-        triangles.push([
-          { x: vertices[face.b].x, y: vertices[face.b].y, z: vertices[face.b].z },
-          { x: vertices[face.c].x, y: vertices[face.c].y, z: vertices[face.c].z },
-          { x: vertices[face.d].x, y: vertices[face.d].y, z: vertices[face.d].z }
-        ]);
-      }
     }
 
     return triangles;
