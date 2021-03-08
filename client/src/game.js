@@ -18,6 +18,8 @@ import {
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass';
+import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass';
+import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader';
 import * as workerInterval from 'worker-interval';
 
 import { AssetManager } from '../../shared/asset-manager';
@@ -109,8 +111,15 @@ export default class Game {
 
     scene.fog = new Fog(0x020207, 0.04);
 
+    const fxaaPass = new ShaderPass(FXAAShader);
+    const pixelRatio = renderer.getPixelRatio();
+
+    fxaaPass.material.uniforms['resolution'].value.x = 1 / (window.innerWidth * pixelRatio);
+    fxaaPass.material.uniforms['resolution'].value.y = 1 / (window.innerHeight * pixelRatio);
+
     const composer = new EffectComposer(renderer);
     composer.addPass(new RenderPass(scene, camera));
+    composer.addPass(fxaaPass);
     composer.addPass(new UnrealBloomPass(undefined, 1.0, 0.5, 0));
 
     this.world
