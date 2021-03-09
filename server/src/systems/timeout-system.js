@@ -19,11 +19,15 @@ export class TimeoutSystem extends System {
 
       if (timeout.timer < 0) {
         timeout.addComponents.forEach((component) => {
-          entity.addComponent(component);
+          if (!entity.hasComponent(component)) {
+            entity.addComponent(component);
+          }
         });
 
         timeout.removeComponents.forEach((component) => {
-          entity.removeComponent(component);
+          if (entity.hasComponent(component)) {
+            entity.removeComponent(component);
+          }
         });
 
         entity.removeComponent(Timeout);
