@@ -255,32 +255,17 @@ export default class World {
     const rng = Utils.randomNumberGenerator(5);
 
     for (let i = 0; i < count; ++i) {
-      const scaleValue = [1, 5, 10, 20, 40, 60, /*120, 240, 560*/];
-      const scale = scaleValue[Math.floor(rng() * scaleValue.length)];
+      const position = new Vector3((rng() - 0.5) * 800, (rng() - 0.5) * 800, (rng() - 0.5) * 800);
 
       const rotation = new Quaternion();
       rotation.setFromAxisAngle(new Vector3(1, 0, 0), rng() * Math.PI * 2);
       rotation.setFromAxisAngle(new Vector3(0, 1, 0), rng() * Math.PI * 2);
       rotation.setFromAxisAngle(new Vector3(0, 0, 1), rng() * Math.PI * 2);
 
-      const asteroid = this.world.createEntity()
-        .addComponent(Kind, { value: Types.Entities.ASTEROID })
-        .addComponent(Transform, {
-          position: new Vector3(
-            (rng() - 0.5) * 800,
-            (rng() - 0.5) * 800,
-            (rng() - 0.5) * 800
-          ),
-          rotation,
-          scale
-        })
-        .addComponent(RigidBody, {
-          acceleration: 0,
-          angularAcceleration: new Euler(0, 0, 0),
-          damping: 0.001,
-          angularDamping: 0.1,
-          weight: scale <= 5 ? 1 : 0
-        });
+      const scaleValue = [1, 5, 10, 20, 40, 60, /*120, 240, 560*/];
+      const scale = scaleValue[Math.floor(rng() * scaleValue.length)];
+
+      const asteroid = Spawner.asteroid(this.world, position, rotation, scale);
 
       const entityId = this.getEntityId();
       asteroid.worldId = entityId;

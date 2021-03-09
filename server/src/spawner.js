@@ -50,3 +50,18 @@ export function spawnControllableSpaceship(ecs, player, position = new Vector3()
 
   return spaceship;
 }
+
+export function asteroid(ecs, position, rotation, scale = 1) {
+  const asteroid = ecs.createEntity()
+    .addComponent(Kind, { value: Types.Entities.ASTEROID })
+    .addComponent(Transform, { position, rotation, scale })
+    .addComponent(RigidBody, {
+      acceleration: 0,
+      angularAcceleration: new Euler(0, 0, 0),
+      damping: 0.001,
+      angularDamping: 0.1,
+      weight: scale <= 5 ? 1 : 0
+    });
+
+  return asteroid;
+}
