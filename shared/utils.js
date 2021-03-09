@@ -1,20 +1,28 @@
 import sanitizeHtml from 'sanitize-html';
-import { Vector3 } from 'three';
+import { Vector3, Quaternion } from 'three';
 
 export default {
   sanitize: (string) => {
     return sanitizeHtml(string);
   },
+
   random: (range) => {
     return Math.floor(Math.random() * range);
   },
-  getRandomRotation() {
-    return new Vector3(
-      this.random(360) * Math.PI/180,
-      this.random(360) * Math.PI/180,
-      this.random(360) * Math.PI/180
-    );
+
+  getRandomPosition(size, rng = Math.random) {
+    return new Vector3((rng() - 0.5) * size, (rng() - 0.5) * size, (rng() - 0.5) * size);
   },
+
+  getRandomQuaternion(rng = Math.random) {
+    rng = !!rng ? rng : Math.random;
+    const quaternion = new Quaternion();
+    quaternion.setFromAxisAngle(new Vector3(1, 0, 0), rng() * Math.PI * 2);
+    quaternion.setFromAxisAngle(new Vector3(0, 1, 0), rng() * Math.PI * 2);
+    quaternion.setFromAxisAngle(new Vector3(0, 0, 1), rng() * Math.PI * 2);
+    return quaternion;
+  },
+
   createFixedTimestep(timestep, callback) {
     let lag = 0;
 
@@ -29,6 +37,7 @@ export default {
       return lag / timestep;
     };
   },
+
   randomNumberGenerator(seed) {
     const mask = 0xffffffff;
     let m_w  = (123456789 + seed) & mask;

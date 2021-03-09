@@ -82,7 +82,8 @@ export default class World {
         .registerSystem(NetworkMessageSystem, this);
     });
 
-    this.size = new Vector3(10, 10, 10);
+    this.asteroidFieldSize = 800;
+    this.playerSpawnAreaSize = 10;
 
     logger.info(`${this.id} running`);
   }
@@ -150,7 +151,7 @@ export default class World {
     const spaceship = Spawner.spawnControllableSpaceship(
       this.world,
       this.clients[clientId],
-      this.getRandomPosition()
+      Utils.getRandomPosition(this.playerSpawnAreaSize)
     );
 
     // TODO: Use ecsy ID's?
@@ -211,14 +212,6 @@ export default class World {
     ));
   }
 
-  getRandomPosition() {
-    return new Vector3(
-      Utils.random(this.size.x + 1) - this.size.x/2,
-      Utils.random(this.size.y + 1) - this.size.y/2,
-      Utils.random(this.size.z + 1) - this.size.z/2
-    );
-  }
-
   broadcast(message, ignoredPlayerId = null) {
     for (const [id, entity] of this.clients.entries()) {
       if (id == ignoredPlayerId || !entity || !entity.alive || entity.hasComponent(Destroy) ||
@@ -255,12 +248,8 @@ export default class World {
     const rng = Utils.randomNumberGenerator(5);
 
     for (let i = 0; i < count; ++i) {
-      const position = new Vector3((rng() - 0.5) * 800, (rng() - 0.5) * 800, (rng() - 0.5) * 800);
-
-      const rotation = new Quaternion();
-      rotation.setFromAxisAngle(new Vector3(1, 0, 0), rng() * Math.PI * 2);
-      rotation.setFromAxisAngle(new Vector3(0, 1, 0), rng() * Math.PI * 2);
-      rotation.setFromAxisAngle(new Vector3(0, 0, 1), rng() * Math.PI * 2);
+      const position = Utils.getRandomPosition(this.asteroidFieldSize, rng);
+      const rotation = Utils.getRandomQuaternion(rng);
 
       const scaleValue = [1, 5, 10, 20, 40, 60, /*120, 240, 560*/];
       const scale = scaleValue[Math.floor(rng() * scaleValue.length)];
