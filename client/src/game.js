@@ -67,9 +67,7 @@ export default class Game {
       .registerSystem(WebGlRendererSystem, this)
       .registerSystem(NetworkMessageSystem);
 
-    this.updateSystems = this.world.getSystems().filter((system) => {
-      return !(system instanceof WebGlRendererSystem);
-    });
+    this.updateSystems = this.world.getSystems();
     this.renderSystem = this.world.getSystem(WebGlRendererSystem);
 
     this.alpha = 0;
@@ -182,15 +180,10 @@ export default class Game {
   render() {
     requestAnimationFrame(this.render.bind(this));
 
-    const time = performance.now();
-    let delta = time - this.lastRenderTime;
-
     if (!document.hidden) {
-      this.world.systemManager.executeSystem(this.renderSystem, delta);
+      this.renderSystem.render();
       this.world.entityManager.processDeferredRemoval();
     }
-
-    this.lastRenderTime = time;
   }
 
   handleFixedUpdate(delta, time) {

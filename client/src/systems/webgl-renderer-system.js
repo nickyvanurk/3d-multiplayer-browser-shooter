@@ -50,7 +50,9 @@ export class WebGlRendererSystem extends System {
         scene.remove(object3d);
       });
     });
+  }
 
+  render() {
     this.queries.object3ds.results.forEach((entity) => {
       const transform = entity.getComponent(Transform);
       const object3d = entity.getMutableComponent(Object3d).value;
