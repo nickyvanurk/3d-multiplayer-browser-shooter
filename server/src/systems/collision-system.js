@@ -16,12 +16,18 @@ export class CollisionSystem extends System {
     this.queries.collisions.results.forEach((entity) => {
       if (!entity.alive) return;
 
-      const kind = entity.getComponent(Kind).value;
 
       entity.removeComponent(Collision);
 
-      if (kind === Types.Entities.BULLET) {
-        entity.addComponent(Destroy);
+      if (entity.hasComponent(Kind)) {
+        const kind = entity.getComponent(Kind).value;
+
+        if (kind === Types.Entities.BULLET) {
+          entity.addComponent(Destroy);
+        }
+      } else {
+        console.log(entity);
+        console.log('CollisionSystem: has no kind component');
       }
     });
   }
