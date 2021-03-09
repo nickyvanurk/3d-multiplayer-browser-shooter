@@ -24,18 +24,12 @@ export class PhysicsSystem extends System {
 
   init({ worldServer, ammo }) {
     this.worldServer = worldServer;
-    this.epsilon = 10e-6;
-    this.collisions = new Map();
-    this.collisionKeys = [];
-
     this.ammo = ammo;
     this.physicsWorld = this.createWorld();
     this.transform = new this.ammo.btTransform();
     this.quaternion = new this.ammo.btQuaternion(0, 0, 0, 1);
     this.vector3 = new this.ammo.btVector3(0, 0, 0);
     this.threeVector3 = new Vector3();
-
-    this.bodyToEntity = new Map();
 
     const loadingManager = new LoadingManager();
     loadingManager.onLoad = this.handleLoad.bind(this);
