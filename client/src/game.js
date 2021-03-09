@@ -13,7 +13,8 @@ import {
   Points,
   BoxGeometry,
   MeshBasicMaterial,
-  Mesh
+  InstancedMesh,
+  DynamicDrawUsage
 } from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass';
@@ -153,7 +154,8 @@ export default class Game {
 
     const geometry = new BoxGeometry(0.1, 0.1, 1);
     const material = new MeshBasicMaterial( {color: 0xffa900} );
-    this.bulletMesh = new Mesh(geometry, material);
+    this.bulletMesh = new InstancedMesh(geometry, material, 10000);
+    this.bulletMesh.instanceMatrix.setUsage(DynamicDrawUsage);
   }
 
   handleLoad() {
@@ -298,11 +300,11 @@ export default class Game {
       positions.push(z);
     }
 
-    var geometry = new BufferGeometry();
-    var vertices = new Float32Array(positions);
-    geometry.setAttribute('position', new BufferAttribute(vertices, 3));
-    var material = new PointsMaterial({color: 0xffffff, size: 12.5, fog: false});
-    var mesh = new Points(geometry, material);
+    const geometry = new BufferGeometry();
+    geometry.setAttribute('position', new BufferAttribute(new Float32Array(positions), 3));
+    const material = new PointsMaterial({color: 0xffffff, size: 12.5, fog: false});
+    const mesh = new Points(geometry, material);
+
     scene.add(mesh);
   }
 }

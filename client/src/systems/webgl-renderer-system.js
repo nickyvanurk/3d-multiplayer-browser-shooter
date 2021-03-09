@@ -1,9 +1,11 @@
 import { System } from 'ecsy';
-import { Vector3, Quaternion } from 'three';
+import { Vector3, Quaternion, Object3D } from 'three';
 
+import Types from '../../../shared/types';
 import { WebGlRenderer } from '../components/webgl-renderer';
 import { Object3d } from '../components/object3d';
 import { Transform } from '../components/transform';
+import { Kind } from '../../../shared/components/kind';
 
 export class WebGlRendererSystem extends System {
   static queries = {
@@ -23,6 +25,7 @@ export class WebGlRendererSystem extends System {
     this.game = game;
     this.needsResize = true;
     window.onresize = this.onResize.bind(this);
+    this.dummy = new Object3D();
   }
 
   execute() {
@@ -65,8 +68,23 @@ export class WebGlRendererSystem extends System {
         .copy(transform.prevRotation)
         .slerp(transform.rotation, this.game.alpha);
 
-      object3d.position.copy(renderPosition);
-      object3d.quaternion.copy(renderRotation);
+
+      if (entity.hasComponent(Kind)) {
+        if (entity.getComponent(Kind).value === Types.Entities.BULLET) {
+          this.dummy.position.copy(renderPosition);
+          this.dummy.quaternion.copy(renderRotation);
+          this.dummy.updateMatrix();
+
+          object3d.setMatrixAt(entity.id, this.dummy.matrix);
+          object3d.instanceMatrix.needsUpdate = true;
+        } else {
+          object3d.position.copy(renderPosition);
+          object3d.quaternion.copy(renderRotation);
+        }
+      } else {
+        object3d.position.copy(renderPosition);
+        object3d.quaternion.copy(renderRotation);
+      }
     });
 
     this.queries.renderers.results.forEach((entity) => {
