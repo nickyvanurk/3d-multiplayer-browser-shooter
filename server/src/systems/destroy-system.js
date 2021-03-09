@@ -9,6 +9,7 @@ import { Respawn } from '../components/respawn';
 import { SpaceshipController } from '../../../shared/components/spaceship-controller';
 import { Transform } from '../components/transform';
 import { Kind } from '../../../shared/components/kind';
+import { Weapons } from '../components/weapons';
 
 export class DestroySystem extends System {
   static queries = {
@@ -40,6 +41,11 @@ export class DestroySystem extends System {
 
           if (controller.hasPlayerAttached()) {
             const connection = controller.player.getComponent(Connection).value;
+
+            if (entity.hasComponent(Weapons)) {
+              const weapons = entity.getComponent(Weapons).primary;
+              weapons.forEach(entity => entity.remove());
+            }
 
             setTimeout(() => {
                 const spaceship = this.worldServer.addPlayer(connection.id);
