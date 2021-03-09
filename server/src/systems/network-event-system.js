@@ -37,7 +37,7 @@ export class NetworkEventSystem extends System {
             const { position, rotation, scale } = spaceship.getComponent(Transform);
             const kind = spaceship.getComponent(Kind).value;
             connection.pushMessage(new Messages.Welcome(
-              spaceship.worldId,
+              spaceship.id,
               name,
               kind,
               position,
@@ -46,7 +46,7 @@ export class NetworkEventSystem extends System {
             ));
 
             this.worldServer.broadcast(new Messages.Spawn(
-              spaceship.worldId,
+              spaceship.id,
               kind,
               position,
               rotation,

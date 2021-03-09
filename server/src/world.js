@@ -46,7 +46,6 @@ export default class World {
     this.lastTime = performance.now();
 
     this.clients = [];
-    this.entities = [];
 
     this.connectedClients = 0;
 
@@ -138,12 +137,11 @@ export default class World {
     const entity = this.clients[connection.id];
 
     if (entity.hasComponent(Playing)) {
-      this.broadcast(new Messages.Despawn(entity.worldId));
+      this.broadcast(new Messages.Despawn(entity.id));
     }
 
     entity.remove();
     delete this.clients[connection.id];
-    delete this.entities[entity.worldId];
     this.connectedClients--;
   }
 
@@ -154,15 +152,10 @@ export default class World {
       Utils.getRandomPosition(this.playerSpawnAreaSize)
     );
 
-    // TODO: Use ecsy ID's?
-    spaceship.worldId = this.getEntityId();
-    this.entities[spaceship.worldId] = spaceship;
-
     return spaceship;
   }
 
   addBullet(weapon) {
-    const entityId = this.getEntityId();
     const parentTransform = weapon.parent.getComponent(Transform);
 
     const pos = new Vector3().copy(weapon.offset)
@@ -198,13 +191,9 @@ export default class World {
       })
       .addComponent(Damage, { value: 5 });
 
-    bulletEntity.worldId = entityId;
-
-    this.entities[entityId] = bulletEntity;
-
     const { position, rotation, scale } = bulletEntity.getComponent(Transform);
     this.broadcast(new Messages.Spawn(
-      bulletEntity.worldId,
+      bulletEntity.id,
       Types.Entities.BULLET,
       position,
       rotation,
@@ -234,16 +223,6 @@ export default class World {
     return this.clients.length;
   }
 
-  getEntityId() {
-    for (let i = 0; i < this.entities.length; ++i) {
-      if (!this.entities[i]) {
-        return i;
-      }
-    }
-
-    return this.entities.length;
-  }
-
   spawnAsteroids(count) {
     const rng = Utils.randomNumberGenerator(5);
 
@@ -254,12 +233,7 @@ export default class World {
       const scaleValue = [1, 5, 10, 20, 40, 60, /*120, 240, 560*/];
       const scale = scaleValue[Math.floor(rng() * scaleValue.length)];
 
-      const asteroid = Spawner.asteroid(this.world, position, rotation, scale);
-
-      const entityId = this.getEntityId();
-      asteroid.worldId = entityId;
-
-      this.entities[entityId] = asteroid;
+      Spawner.asteroid(this.world, position, rotation, scale);
     }
   }
 }

@@ -25,10 +25,10 @@ export class DestroySystem extends System {
     this.queries.entities.results.forEach((entity) => {
       if (entity.hasComponent(Connection)) {
         if (entity.hasComponent(Playing)) {
-          this.worldServer.broadcast(new Messages.Despawn(entity.worldId), entity.worldId);
+          this.worldServer.broadcast(new Messages.Despawn(entity.id), entity.id);
         }
       } else {
-          this.worldServer.broadcast(new Messages.Despawn(entity.worldId));
+          this.worldServer.broadcast(new Messages.Despawn(entity.id));
       }
 
       if (entity.hasComponent(Respawn)) {
@@ -47,7 +47,7 @@ export class DestroySystem extends System {
                 const kind = spaceship.getComponent(Kind).value;
 
                 connection.pushMessage(new Messages.Welcome(
-                  spaceship.worldId,
+                  spaceship.id,
                   'todo: decouple playerObject from Welcome msg',
                   kind,
                   position,
@@ -56,7 +56,7 @@ export class DestroySystem extends System {
                 ));
 
                 this.worldServer.broadcast(new Messages.Spawn(
-                  spaceship.worldId,
+                  spaceship.id,
                   kind,
                   position,
                   rotation,
@@ -67,7 +67,6 @@ export class DestroySystem extends System {
         }
       }
 
-      delete this.worldServer.entities[entity.worldId];
       entity.remove();
     });
   }

@@ -29,7 +29,7 @@ export class NetworkMessageSystem extends System {
         const { position, rotation, scale } = entity2.getComponent(Transform);
         const kind = entity2.getComponent(Kind).value;
         connection.pushMessage(new Messages.Spawn(
-          entity2.worldId,
+          entity2.id,
           kind,
           position,
           rotation,
@@ -41,7 +41,9 @@ export class NetworkMessageSystem extends System {
     this.queries.connections.results.forEach((entity) => {
       const connection = entity.getComponent(Connection).value;
       connection.pushMessage(new Messages.World(
-        this.worldServer.entities.filter(entity => !entity.hasComponent(Destroy))
+        this.worldServer.world.entityManager._entities.filter(entity => {
+          return entity.hasComponent(Transform) && !entity.hasComponent(Destroy)
+        })
       ));
       connection.sendOutgoingMessages();
     });
