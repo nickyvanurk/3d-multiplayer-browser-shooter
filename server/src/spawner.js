@@ -12,6 +12,9 @@ import { Weapon } from './components/weapon';
 import { Weapons } from './components/weapons';
 import { Aim } from './components/aim';
 import { Health } from './components/health';
+import { Timeout } from './components/timeout';
+import { Destroy } from './components/destroy';
+import { Damage } from './components/damage';
 
 export function spawnControllableSpaceship(ecs, player, position = new Vector3()) {
   logger.debug(`Spawning spaceship`);
@@ -64,4 +67,21 @@ export function asteroid(ecs, position, rotation, scale = 1) {
     });
 
   return asteroid;
+}
+
+export function projectile(ecs, position, rotation, damage, speed = 0.1,  timer = 500) {
+  const projectile = ecs.createEntity()
+    .addComponent(Kind, { value: Types.Entities.BULLET })
+    .addComponent(Transform, { position, rotation })
+    .addComponent(RigidBody, {
+      velocity: new Vector3(0, 0, -speed),
+      kinematic: true
+    })
+    .addComponent(Timeout, {
+      timer,
+      addComponents: [Destroy]
+    })
+    .addComponent(Damage, { value: damage });
+
+  return projectile;
 }

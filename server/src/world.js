@@ -1,6 +1,6 @@
 import { performance } from 'perf_hooks';
 import { World as World$1 } from 'ecsy';
-import { Vector3, Euler, Quaternion, Ray, Matrix4 } from 'three';
+import { Vector3, Quaternion, Ray, Matrix4 } from 'three';
 import Ammo from 'ammo.js';
 
 import logger from './utils/logger';
@@ -177,19 +177,7 @@ export default class World {
       rot = qt;
     }
 
-    const bulletEntity = this.world
-      .createEntity()
-      .addComponent(Kind, { value: Types.Entities.BULLET })
-      .addComponent(Transform, { position: pos, rotation: rot })
-      .addComponent(RigidBody, {
-        velocity: new Vector3(0, 0, -0.1),
-        kinematic: true
-      })
-      .addComponent(Timeout, {
-        timer: 500,
-        addComponents: [Destroy]
-      })
-      .addComponent(Damage, { value: 5 });
+    const bulletEntity = Spawner.projectile(this.world, pos, rot, 5);
 
     const { position, rotation, scale } = bulletEntity.getComponent(Transform);
     this.broadcast(new Messages.Spawn(
