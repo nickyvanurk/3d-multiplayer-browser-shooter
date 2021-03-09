@@ -69,11 +69,13 @@ export class SpaceshipControllerSystem extends System {
       }
 
       if (entity.hasComponent(Aim)) {
-        const ray = entity.getMutableComponent(Aim);
         let origin = aim.origin;
         let dir = aim.direction;
+
+        const ray = entity.getMutableComponent(Aim);
         ray.position.set(origin.x, origin.y, origin.z);
         ray.direction.set(dir.x, dir.y, dir.z);
+        ray.distance = aim.distance;
       }
 
       if (entity.hasComponent(Weapons)) {

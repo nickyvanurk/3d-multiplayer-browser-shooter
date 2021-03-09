@@ -1,10 +1,12 @@
 import { System } from 'ecsy';
-import { Vector2, Raycaster } from 'three';
+import { Raycaster } from 'three';
 
 import { Input } from '../../../shared/components/input';
 import { Keybindings } from '../components/keybindings';
 import { Camera } from '../components/camera';
 import { Object3d } from '../components/object3d';
+import { WebGlRenderer } from '../components/webgl-renderer';
+import { RaycasterReceiver } from '../components/raycaster-receiver';
 
 export class InputSystem extends System {
   static queries = {
@@ -14,6 +16,12 @@ export class InputSystem extends System {
     },
     camera: {
       components: [Camera, Object3d]
+    },
+    renderers: {
+      components: [WebGlRenderer]
+    },
+    raycastReceivers: {
+      components: [RaycasterReceiver, Object3d]
     }
   };
 
@@ -87,6 +95,9 @@ export class InputSystem extends System {
       });
     });
 
+    const renderers = this.queries.renderers.results;
+    const raycastReceivers = this.queries.raycastReceivers.results;
+
     this.queries.client.results.forEach((entity) => {
       const input = entity.getMutableComponent(Input);
 
@@ -98,6 +109,21 @@ export class InputSystem extends System {
 
       input.aim.origin = origin;
       input.aim.direction = direction;
+
+      // create raycaster system
+      if (renderers.length > 0 && raycastReceivers.length > 0) {
+        const objects = raycastReceivers.map(entity => entity.getComponent(Object3d).value);
+
+        this.raycaster.far = 200;
+        const intersects = this.raycaster.intersectObjects(objects, true);
+
+        if (intersects.length > 0) {
+          const intersection = intersects[0].object.parent ? intersects[0] : intersects[1];
+          input.aim.distance = intersection.distance;
+        } else {
+          input.aim.distance = 200;
+        }
+      }
     });
   }
 }

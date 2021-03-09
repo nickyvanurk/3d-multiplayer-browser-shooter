@@ -37,6 +37,8 @@ import { Camera } from './components/camera';
 import { Player } from './components/player';
 import { Kind } from '../../shared/components/kind';
 import { ParticleEffect } from './components/particle-effect';
+import { RaycasterReceiver } from './components/raycaster-receiver';
+
 import { WebGlRendererSystem } from './systems/webgl-renderer-system';
 import { NetworkEventSystem } from './systems/network-event-system';
 import { NetworkMessageSystem } from './systems/network-message-system';
@@ -61,6 +63,7 @@ export default class Game {
       .registerComponent(Player)
       .registerComponent(Kind)
       .registerComponent(ParticleEffect)
+      .registerComponent(RaycasterReceiver)
       .registerSystem(TransformSystem)
       .registerSystem(NetworkEventSystem, this)
       .registerSystem(InputSystem)
@@ -250,11 +253,15 @@ export default class Game {
 
     switch (kind) {
       case Types.Entities.SPACESHIP: {
-        entity.addComponent(Object3d, { value: this.assetManager.getModel('spaceship') });
+        entity
+          .addComponent(Object3d, { value: this.assetManager.getModel('spaceship') })
+          .addComponent(RaycasterReceiver);
         break;
       }
       case Types.Entities.ASTEROID: {
-        entity.addComponent(Object3d, { value: this.assetManager.getModel('asteroid') });
+        entity
+          .addComponent(Object3d, { value: this.assetManager.getModel('asteroid') })
+          .addComponent(RaycasterReceiver);
         break;
       }
       case Types.Entities.BULLET: {
