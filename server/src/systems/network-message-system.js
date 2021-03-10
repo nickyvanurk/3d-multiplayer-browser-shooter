@@ -13,7 +13,8 @@ export class NetworkMessageSystem extends System {
       listen: { added: true }
     },
     entities: {
-      components: [Transform, Kind]
+      components: [Transform, Kind],
+      listen: { removed: true }
     }
   };
 
@@ -36,6 +37,12 @@ export class NetworkMessageSystem extends System {
           scale
         ));
       });
+    });
+
+    this.queries.entities.removed.forEach((entity) => {
+      if (!entity.alive) {
+        this.worldServer.broadcast(new Messages.Despawn(entity.id));
+      }
     });
 
     this.queries.connections.results.forEach((entity) => {

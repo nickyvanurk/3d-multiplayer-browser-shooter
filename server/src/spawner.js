@@ -15,6 +15,7 @@ import { Health } from './components/health';
 import { Timeout } from './components/timeout';
 import { Destroy } from './components/destroy';
 import { Damage } from './components/damage';
+import { DestroyOnCollision } from './components/destroy-on-collision';
 
 export function spawnControllableSpaceship(ecs, player, position = new Vector3()) {
   logger.debug(`Spawning spaceship`);
@@ -81,7 +82,8 @@ export function projectile(ecs, position, rotation, damage, speed = 0.1,  timer 
       timer,
       addComponents: [Destroy]
     })
-    .addComponent(Damage, { value: damage });
+    .addComponent(Damage, { value: damage })
+    .addComponent(DestroyOnCollision);
 
   return projectile;
 }

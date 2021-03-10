@@ -3,7 +3,6 @@ import { System } from 'ecsy';
 import Messages from '../../../shared/messages';
 
 import { Connection } from '../../../shared/components/connection';
-import { Playing } from '../../../shared/components/playing';
 import { Destroy } from '../components/destroy';
 import { Respawn } from '../components/respawn';
 import { SpaceshipController } from '../../../shared/components/spaceship-controller';
@@ -24,14 +23,6 @@ export class DestroySystem extends System {
 
   execute(_delta, _time) {
     this.queries.entities.results.forEach((entity) => {
-      if (entity.hasComponent(Connection)) {
-        if (entity.hasComponent(Playing)) {
-          this.worldServer.broadcast(new Messages.Despawn(entity.id), entity.id);
-        }
-      } else {
-          this.worldServer.broadcast(new Messages.Despawn(entity.id));
-      }
-
       if (entity.hasComponent(Respawn)) {
         const timer = entity.getComponent(Respawn).timer;
 

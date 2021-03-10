@@ -1,34 +1,38 @@
 import { System } from 'ecsy';
 
-import Types from '../../../shared/types';
 import { Collision } from '../components/collision';
-import { Kind } from '../../../shared/components/kind';
-import { Destroy } from '../components/destroy';
+import { Damage } from '../components/damage';
+import { SufferDamage } from '../components/suffer-damage';
+import { DestroyOnCollision } from '../components/destroy-on-collision';
 
 export class CollisionSystem extends System {
   static queries = {
     collisions: {
-      components: [Collision]
+      components: [Collision],
+      listen: { added: true }
+    },
+    damageableCollisions: {
+      components: [Collision, Damage],
+      listen: { added: true }
+    },
+    destroyableCollisions: {
+      components: [Collision, DestroyOnCollision],
+      listen: { added: true }
     }
   };
 
   execute(_delta, _time) {
-    this.queries.collisions.results.forEach((entity) => {
-      if (!entity.alive) return;
-
-
+    this.queries.collisions.added.forEach((entity) => {
       entity.removeComponent(Collision);
+    });
 
-      if (entity.hasComponent(Kind)) {
-        const kind = entity.getComponent(Kind).value;
+    this.queries.damageableCollisions.added.forEach((entity) => {
+      const damage = entity.getComponent(Damage).value;
+      entity.addComponent(SufferDamage, { amount: damage });
+    });
 
-        if (kind === Types.Entities.BULLET) {
-          entity.addComponent(Destroy);
-        }
-      } else {
-        console.log(entity);
-        console.log('CollisionSystem: has no kind component');
-      }
+    this.queries.destroyableCollisions.added.forEach((entity) => {
+      entity.remove();
     });
   }
 }

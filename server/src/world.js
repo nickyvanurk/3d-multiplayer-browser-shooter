@@ -24,6 +24,8 @@ import { Aim } from './components/aim';
 import { Health } from './components/health';
 import { Damage } from './components/damage';
 import { Respawn } from './components/respawn';
+import { SufferDamage } from './components/suffer-damage';
+import { DestroyOnCollision } from './components/destroy-on-collision';
 
 import { NetworkEventSystem } from './systems/network-event-system';
 import { NetworkMessageSystem } from './systems/network-message-system';
@@ -66,7 +68,9 @@ export default class World {
       .registerComponent(Health)
       .registerComponent(Damage)
       .registerComponent(SpaceshipController)
-      .registerComponent(Respawn);
+      .registerComponent(Respawn)
+      .registerComponent(SufferDamage)
+      .registerComponent(DestroyOnCollision);
 
     Ammo().then((Ammo) => {
       this.world
