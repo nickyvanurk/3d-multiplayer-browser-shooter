@@ -44,15 +44,15 @@ export class PhysicsSystem extends System {
       url: path.join(__dirname, '../../../client/public/models/asteroid.gltf')
     });
 
-    this.shapes = {};
-    for (const [_, value] of Object.entries(Types.Entities)) {
-      this.shapes[value] = {};
-    };
-
     this.stop();
   }
 
   handleLoad() {
+    this.shapes = {};
+    this.shapes[Types.Entities.SPACESHIP] = { 1: this.createShapeFromEntityType(Types.Entities.SPACESHIP) };
+    this.shapes[Types.Entities.ASTEROID] = { 1: this.createShapeFromEntityType(Types.Entities.ASTEROID) };
+    this.shapes[Types.Entities.BULLET] = { 1: this.createShapeFromEntityType(Types.Entities.BULLET) };
+
     this.play();
     this.worldServer.spawnAsteroids(100);
   }
@@ -62,44 +62,27 @@ export class PhysicsSystem extends System {
       const kind = entity.getComponent(Kind).value;
       const scale = entity.getComponent(Transform).scale;
 
-      switch (kind) {
-        case Types.Entities.SPACESHIP:
-          if (!this.shapes[Types.Entities.SPACESHIP][scale]) {
-            let triangles = this.assetManager.getTriangles('spaceship', scale);
-            let shape = this.createConcaveShape(triangles);
-            this.shapes[Types.Entities.SPACESHIP][scale] = shape;
-          }
-          break;
-        case Types.Entities.ASTEROID:
-          if (!this.shapes[Types.Entities.ASTEROID][scale]) {
-            let triangles = this.assetManager.getTriangles('asteroid', scale);
-            let shape = this.createConcaveShape(triangles);
-            this.shapes[Types.Entities.ASTEROID][scale] = shape;
-          }
-          break;
-        case Types.Entities.BULLET:
-          if (!this.shapes[Types.Entities.BULLET][scale]) {
-            let shape = new this.ammo.btBoxShape(new this.ammo.btVector3(
-              0.1*0.5*scale,
-              0.1*0.5*scale,
-              1*0.5*scale
-            ));
-            this.shapes[Types.Entities.BULLET][scale] = shape;
-          }
-          break;
+      let shape = this.shapes[kind][scale];
+      if (!shape) {
+        shape = this.createShapeFromEntityType(kind);
+        this.shapes[kind][scale] = shape;
+        shape.setLocalScaling(new this.ammo.btVector3(scale, scale, scale));
       }
 
-      const shape = this.shapes[kind][scale];
       const rbInfo = this.createRigidBodyConstructionInfo(entity, shape);
       let body = new this.ammo.btRigidBody(rbInfo);
       body = this.setupRigidBody(body, entity);
-
       body.setCcdMotionThreshold(0.5);
       body.setCcdSweptSphereRadius(0.5);
 
       entity.body = body;
       body.entity = entity;
+
       this.physicsWorld.addRigidBody(body);
+    });
+
+    this.queries.entities.removed.forEach((entity) => {
+      this.physicsWorld.removeRigidBody(entity.body);
     });
 
     this.queries.entities.results.forEach((entity) => {
@@ -175,10 +158,6 @@ export class PhysicsSystem extends System {
 
     this.physicsWorld.stepSimulation(delta/1000, 0, delta/1000);
     this.detectCollision();
-
-    this.queries.entities.removed.forEach((entity) => {
-      this.physicsWorld.removeRigidBody(entity.body);
-    });
   }
 
   createWorld() {
@@ -309,27 +288,32 @@ export class PhysicsSystem extends System {
     }
   }
 
-  createConcaveShape(triangles) {
+  createShapeFromEntityType(type) {
+    if (type === Types.Entities.SPACESHIP) return this.createConvexHullShape(this.assetManager.getTriangles('spaceship'));
+    if (type === Types.Entities.ASTEROID) return this.createConvexHullShape(this.assetManager.getTriangles('asteroid'));
+    if (type === Types.Entities.BULLET) return new this.ammo.btBoxShape(new this.ammo.btVector3(0.05, 0.05, 0.5));
+    throw new Error('Unknown entity type');
+  }
+
+  createConvexHullShape(triangles) {
     const convexHullShape = new this.ammo.btConvexHullShape();
-    const vec1 = new this.ammo.btVector3();
-    const vec2 = new this.ammo.btVector3();
-    const vec3 = new this.ammo.btVector3();
+    const vec = new this.ammo.btVector3();
 
     for (const triangle of triangles) {
-      vec1.setX(triangle[0].x);
-      vec1.setY(triangle[0].y);
-      vec1.setZ(triangle[0].z);
-      convexHullShape.addPoint(vec1, true);
+      vec.setX(triangle[0].x);
+      vec.setY(triangle[0].y);
+      vec.setZ(triangle[0].z);
+      convexHullShape.addPoint(vec);
 
-      vec2.setX(triangle[1].x);
-      vec2.setY(triangle[1].y);
-      vec2.setZ(triangle[1].z);
-      convexHullShape.addPoint(vec2, true);
+      vec.setX(triangle[1].x);
+      vec.setY(triangle[1].y);
+      vec.setZ(triangle[1].z);
+      convexHullShape.addPoint(vec);
 
-      vec3.setX(triangle[2].x);
-      vec3.setY(triangle[2].y);
-      vec3.setZ(triangle[2].z);
-      convexHullShape.addPoint(vec3, true);
+      vec.setX(triangle[2].x);
+      vec.setY(triangle[2].y);
+      vec.setZ(triangle[2].z);
+      convexHullShape.addPoint(vec);
     }
 
     return convexHullShape;

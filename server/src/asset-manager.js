@@ -43,7 +43,7 @@ export class AssetManager {
     this.models.set(name, model);
   }
 
-  getTriangles(name, scale) {
+  getTriangles(name, scale = 1) {
     const geometries = [];
     const mesh = this.getModel(name);
 
