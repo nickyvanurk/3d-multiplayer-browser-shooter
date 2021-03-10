@@ -22,13 +22,15 @@ export class CollisionSystem extends System {
   };
 
   execute(_delta, _time) {
-    this.queries.collisions.added.forEach((entity) => {
-      entity.removeComponent(Collision);
-    });
-
     this.queries.damageableCollisions.added.forEach((entity) => {
       const damage = entity.getComponent(Damage).value;
-      entity.addComponent(SufferDamage, { amount: damage });
+      entity.getComponent(Collision).collidingWith.forEach((other) => {
+        other.addComponent(SufferDamage, { amount: damage });
+      });
+    });
+
+    this.queries.collisions.added.forEach((entity) => {
+      entity.removeComponent(Collision);
     });
 
     this.queries.destroyableCollisions.added.forEach((entity) => {

@@ -35,7 +35,7 @@ import { WeaponSystem } from './systems/weapon-system';
 import { TimeoutSystem } from './systems/timeout-system';
 import { DestroySystem } from './systems/destroy-system';
 import { CollisionSystem } from './systems/collision-system';
-import { HealthSystem } from './systems/health-system';
+import { DamageSystem } from './systems/damage-system';
 
 import * as Spawner from './spawner';
 
@@ -79,8 +79,8 @@ export default class World {
         .registerSystem(WeaponSystem, this)
         .registerSystem(TimeoutSystem)
         .registerSystem(PhysicsSystem, { worldServer: this, ammo: Ammo })
-        .registerSystem(HealthSystem, this)
         .registerSystem(CollisionSystem)
+        .registerSystem(DamageSystem, this)
         .registerSystem(DestroySystem, this)
         .registerSystem(NetworkMessageSystem, this);
     });
