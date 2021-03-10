@@ -23,6 +23,7 @@ export class NetworkEventSystem extends System {
 
   init(game) {
     this.game = game;
+    this.id = null;
   }
 
   execute(delta) {
@@ -37,15 +38,19 @@ export class NetworkEventSystem extends System {
             connection.pushMessage(new Messages.Hello('Nicky'));
             break;
           case Types.Messages.WELCOME: {
-            const { id, kind, position, rotation, scale } = message.data;
+            const { id } = message.data;
             console.log(`my id: ${id}`);
-            this.game.addPlayer(id, kind, position, rotation, scale);
+            this.id = id;
             break;
           }
           case Types.Messages.SPAWN: {
             const { id, kind, position, rotation, scale } = message.data;
             console.log(`spawn id ${id}`);
-            this.game.addEntity(id, kind, position, rotation, scale);
+            if (this.id === id) {
+              this.game.addPlayer(id, kind, position, rotation, scale);
+            } else {
+              this.game.addEntity(id, kind, position, rotation, scale);
+            }
             break;
           }
           case Types.Messages.DESPAWN: {

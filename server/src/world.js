@@ -6,7 +6,6 @@ import Ammo from 'ammo.js';
 import logger from './utils/logger';
 import Utils from '../../shared/utils';
 import Messages from '../../shared/messages';
-import Types from '../../shared/types';
 import { Connection } from '../../shared/components/connection';
 import { Playing } from '../../shared/components/playing';
 import { Transform } from './components/transform';
@@ -26,6 +25,7 @@ import { Damage } from './components/damage';
 import { Respawn } from './components/respawn';
 import { SufferDamage } from './components/suffer-damage';
 import { DestroyOnCollision } from './components/destroy-on-collision';
+import { RandomSpawn } from './components/random-spawn';
 
 import { NetworkEventSystem } from './systems/network-event-system';
 import { NetworkMessageSystem } from './systems/network-message-system';
@@ -36,6 +36,7 @@ import { TimeoutSystem } from './systems/timeout-system';
 import { DestroySystem } from './systems/destroy-system';
 import { CollisionSystem } from './systems/collision-system';
 import { DamageSystem } from './systems/damage-system';
+import { SpawnSystem } from './systems/spawn-system';
 
 import * as Spawner from './spawner';
 
@@ -70,23 +71,24 @@ export default class World {
       .registerComponent(SpaceshipController)
       .registerComponent(Respawn)
       .registerComponent(SufferDamage)
-      .registerComponent(DestroyOnCollision);
+      .registerComponent(DestroyOnCollision)
+      .registerComponent(RandomSpawn);
 
     Ammo().then((Ammo) => {
       this.world
+        .registerSystem(TimeoutSystem)
         .registerSystem(NetworkEventSystem, this)
+        .registerSystem(SpawnSystem)
         .registerSystem(SpaceshipControllerSystem)
         .registerSystem(WeaponSystem, this)
-        .registerSystem(TimeoutSystem)
         .registerSystem(PhysicsSystem, { worldServer: this, ammo: Ammo })
         .registerSystem(CollisionSystem)
-        .registerSystem(DamageSystem, this)
-        .registerSystem(DestroySystem, this)
+        .registerSystem(DamageSystem)
+        .registerSystem(DestroySystem)
         .registerSystem(NetworkMessageSystem, this);
     });
 
     this.asteroidFieldSize = 800;
-    this.playerSpawnAreaSize = 10;
 
     logger.info(`${this.id} running`);
   }
@@ -137,26 +139,13 @@ export default class World {
 
   handlePlayerDisconnect(connection) {
     logger.debug(`Deleting player ${connection.id}`);
-
-    const entity = this.clients[connection.id];
-
-    if (entity.hasComponent(Playing)) {
-      this.broadcast(new Messages.Despawn(entity.id));
-    }
-
-    entity.remove();
+    this.clients[connection.id].remove();
     delete this.clients[connection.id];
     this.connectedClients--;
   }
 
   addPlayer(clientId) {
-    const spaceship = Spawner.spawnControllableSpaceship(
-      this.world,
-      this.clients[clientId],
-      Utils.getRandomPosition(this.playerSpawnAreaSize)
-    );
-
-    return spaceship;
+    return Spawner.controllableSpaceship(this.world, this.clients[clientId]);
   }
 
   addBullet(weapon) {
@@ -181,16 +170,7 @@ export default class World {
       rot = qt;
     }
 
-    const bulletEntity = Spawner.projectile(this.world, pos, rot, 5);
-
-    const { position, rotation, scale } = bulletEntity.getComponent(Transform);
-    this.broadcast(new Messages.Spawn(
-      bulletEntity.id,
-      Types.Entities.BULLET,
-      position,
-      rotation,
-      scale
-    ));
+    Spawner.projectile(this.world, pos, rot, 5);
   }
 
   broadcast(message, ignoredPlayerId = null) {

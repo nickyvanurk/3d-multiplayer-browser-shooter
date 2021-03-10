@@ -14,13 +14,14 @@ export class WeaponSystem extends System {
     this.worldServer = worldServer;
   }
 
-  execute(delta, time) {
+  execute(_delta, time) {
     this.queries.activeWeapons.results.forEach((entity) => {
       const weapon = entity.getMutableComponent(Weapon);
 
       if (weapon.lastFiredTimestamp + weapon.fireInterval < time) {
         weapon.lastFiredTimestamp = time;
 
+        // TODO: Move addBullet logic here
         this.worldServer.addBullet(weapon);
       }
     });

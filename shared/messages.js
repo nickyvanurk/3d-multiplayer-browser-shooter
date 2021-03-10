@@ -28,23 +28,15 @@ class Hello {
 }
 
 class Welcome {
-  constructor(id, name, kind, position, rotation, scale) {
+  constructor(id, name) {
     this.id = id;
     this.name = name;
-    this.kind = kind;
-    this.position = position;
-    this.rotation = rotation;
-    this.scale = scale;
   }
 
   static deserialize(message) {
     return {
       id: message[0],
-      name: message[1],
-      kind: message[2],
-      position: new Vector3(message[3], message[4], message[5]),
-      rotation: new Vector3(message[6], message[7], message[8]),
-      scale: message[9]
+      name: message[1]
     };
   }
 
@@ -52,15 +44,7 @@ class Welcome {
     return [
       Types.Messages.WELCOME,
       this.id,
-      this.name,
-      this.kind,
-      this.position.x,
-      this.position.y,
-      this.position.z,
-      this.rotation.x,
-      this.rotation.y,
-      this.rotation.z,
-      this.scale
+      this.name
     ];
   }
 }

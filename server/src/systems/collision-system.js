@@ -25,7 +25,10 @@ export class CollisionSystem extends System {
     this.queries.damageableCollisions.added.forEach((entity) => {
       const damage = entity.getComponent(Damage).value;
       entity.getComponent(Collision).collidingWith.forEach((other) => {
-        other.addComponent(SufferDamage, { amount: damage });
+        // TODO: make damage stackable (example: hit by 2 projectiles at same time)
+        if (!other.hasComponent(SufferDamage)) {
+          other.addComponent(SufferDamage, { amount: damage });
+        }
       });
     });
 

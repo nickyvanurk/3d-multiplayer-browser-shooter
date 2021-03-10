@@ -6,7 +6,6 @@ import { RigidBody } from '../components/rigidbody';
 import { Weapons } from '../components/weapons';
 import { Active } from '../components/active';
 import { Aim } from '../components/aim';
-import { Destroy } from '../components/destroy';
 import { SpaceshipController } from '../../../shared/components/spaceship-controller';
 
 export class SpaceshipControllerSystem extends System {
@@ -31,7 +30,7 @@ export class SpaceshipControllerSystem extends System {
       const player = controller.player;
 
       if (!player.alive) {
-        entity.addComponent(Destroy);
+        entity.remove();
         return;
       }
 

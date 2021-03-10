@@ -14,7 +14,10 @@ export class NetworkMessageSystem extends System {
     },
     entities: {
       components: [Transform, Kind],
-      listen: { removed: true }
+      listen: {
+        added: true,
+        removed: true
+      }
     }
   };
 
@@ -39,8 +42,15 @@ export class NetworkMessageSystem extends System {
       });
     });
 
+    this.queries.entities.added.forEach((entity) => {
+      if (!entity.alive) return;
+      const { position, rotation, scale } = entity.getComponent(Transform);
+      const kind = entity.getComponent(Kind).value;
+      this.worldServer.broadcast(new Messages.Spawn(entity.id, kind, position, rotation, scale));
+    });
+
     this.queries.entities.removed.forEach((entity) => {
-      if (!entity.alive) {
+      if (entity.hasRemovedComponent(Transform)) {
         this.worldServer.broadcast(new Messages.Despawn(entity.id));
       }
     });

@@ -16,15 +16,18 @@ import { Timeout } from './components/timeout';
 import { Destroy } from './components/destroy';
 import { Damage } from './components/damage';
 import { DestroyOnCollision } from './components/destroy-on-collision';
+import { Respawn } from './components/respawn';
+import { RandomSpawn } from './components/random-spawn';
 
-export function spawnControllableSpaceship(ecs, player, position = new Vector3()) {
+export function controllableSpaceship(ecs, player) {
   logger.debug(`Spawning spaceship`);
 
   const spaceship = ecs.createEntity()
     .addComponent(SpaceshipController, { player })
     .addComponent(Playing)
     .addComponent(Kind, { value: Types.Entities.SPACESHIP })
-    .addComponent(Transform, { position })
+    .addComponent(Transform)
+    .addComponent(RandomSpawn)
     .addComponent(RigidBody, {
       acceleration: 0.8,
       angularAcceleration: new Euler(0.15, 0.3, 0.05),
@@ -32,7 +35,8 @@ export function spawnControllableSpaceship(ecs, player, position = new Vector3()
       angularDamping: 0.99
     })
     .addComponent(Aim)
-    .addComponent(Health);
+    .addComponent(Health)
+    .addComponent(Respawn);
 
   const weaponLeft = ecs.createEntity()
     .addComponent(Weapon, {
