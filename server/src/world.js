@@ -151,6 +151,8 @@ export default class World {
   addBullet(weapon) {
     const parentTransform = weapon.parent.getComponent(Transform);
 
+    if (!parentTransform) return;
+
     const pos = new Vector3().copy(weapon.offset)
       .applyQuaternion(parentTransform.rotation)
       .add(parentTransform.position);

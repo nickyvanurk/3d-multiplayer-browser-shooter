@@ -11,7 +11,9 @@ export class DestroySystem extends System {
 
   execute(_delta, _time) {
     this.queries.entities.results.forEach((entity) => {
-      entity.remove();
+      if (entity.alive) {
+        entity.remove();
+      }
     });
   }
 }
