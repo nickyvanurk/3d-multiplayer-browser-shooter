@@ -5,6 +5,8 @@ import Ammo from 'ammo.js';
 import logger from './utils/logger';
 import Utils from '../../shared/utils';
 import Messages from '../../shared/messages';
+import * as Spawner from './spawner';
+
 import { Connection } from '../../shared/components/connection';
 import { Playing } from '../../shared/components/playing';
 import { Transform } from './components/transform';
@@ -36,8 +38,6 @@ import { DestroySystem } from './systems/destroy-system';
 import { CollisionSystem } from './systems/collision-system';
 import { DamageSystem } from './systems/damage-system';
 import { SpawnSystem } from './systems/spawn-system';
-
-import * as Spawner from './spawner';
 
 export default class World {
   constructor(id, maxClients, server) {
@@ -143,10 +143,6 @@ export default class World {
     this.clients[connection.id].remove();
     delete this.clients[connection.id];
     this.connectedClients--;
-  }
-
-  addPlayer(clientId) {
-    return Spawner.controllableSpaceship(this.world, this.clients[clientId]);
   }
 
   broadcast(message, ignoredPlayerId = null) {

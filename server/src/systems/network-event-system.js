@@ -1,12 +1,12 @@
-import { System, Not } from 'ecsy';
+import { System } from 'ecsy';
 
 import Utils from '../../../shared/utils';
 import Types from '../../../shared/types';
 import Messages from '../../../shared/messages';
+import * as Spawner from '../spawner';
+
 import { Connection } from '../../../shared/components/connection';
-import { Transform } from '../components/transform';
 import { Input } from '../../../shared/components/input';
-import { Kind } from '../../../shared/components/kind';
 
 export class NetworkEventSystem extends System {
   static queries = {
@@ -32,7 +32,11 @@ export class NetworkEventSystem extends System {
             name = Utils.sanitize(name);
             name = !name ? 'UNKNOWN' : name.substr(0, 15);
 
-            const spaceship = this.worldServer.addPlayer(connection.id);
+            const spaceship = Spawner.controllableSpaceship(
+              this.world,
+              this.worldServer.clients[connection.id]
+            );
+
             connection.pushMessage(new Messages.Welcome(spaceship.worldId, name));
             break;
           }
