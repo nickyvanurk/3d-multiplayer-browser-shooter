@@ -39,15 +39,27 @@ export class NetworkEventSystem extends System {
             break;
           case Types.Messages.WELCOME: {
             const { id } = message.data;
-            console.log(`my id: ${id}`);
+            //console.log(`my id: ${id}`);
             this.id = id;
             break;
           }
           case Types.Messages.SPAWN: {
             const { id, kind, position, rotation, scale } = message.data;
-            console.log(`spawn id ${id}`);
+            //console.log(`spawn id ${id}`);
             if (this.id === id) {
               this.game.addPlayer(id, kind, position, rotation, scale);
+
+              const cameraEntity = this.queries.camera.results[0];
+              const cameraTransform = cameraEntity.getMutableComponent(Transform);
+
+              const obj = new Object3D();
+              obj.position.copy(position);
+              obj.quaternion.copy(rotation);
+              obj.translateY(1);
+              obj.translateZ(4);
+
+              cameraTransform.position.copy(obj.position);
+              cameraTransform.rotation.copy(obj.quaternion);
             } else {
               this.game.addEntity(id, kind, position, rotation, scale);
             }
@@ -55,7 +67,7 @@ export class NetworkEventSystem extends System {
           }
           case Types.Messages.DESPAWN: {
             const { id } = message.data;
-            console.log(`despawn id ${id}`);
+            //console.log(`despawn id ${id}`);
             this.game.removeEntity(id);
             break;
           }

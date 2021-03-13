@@ -4,7 +4,6 @@ import Messages from '../../../shared/messages';
 import { Connection } from '../../../shared/components/connection';
 import { Transform } from '../components/transform';
 import { Kind } from '../../../shared/components/kind';
-import { Destroy } from '../components/destroy';
 
 export class NetworkMessageSystem extends System {
   static queries = {
@@ -16,7 +15,8 @@ export class NetworkMessageSystem extends System {
       components: [Transform, Kind],
       listen: {
         added: true,
-        removed: true
+        removed: true,
+        changed: [Transform]
       }
     }
   };
@@ -40,6 +40,8 @@ export class NetworkMessageSystem extends System {
           scale
         ));
       });
+
+      connection.sendOutgoingMessages();
     });
 
     this.queries.entities.added.forEach((entity) => {
@@ -55,14 +57,15 @@ export class NetworkMessageSystem extends System {
       }
     });
 
-    this.queries.connections.results.forEach((entity) => {
-      const connection = entity.getComponent(Connection).value;
-      connection.pushMessage(new Messages.World(
-        this.worldServer.world.entityManager._entities.filter(entity => {
-          return entity.hasComponent(Transform) && !entity.hasComponent(Destroy)
-        })
-      ));
-      connection.sendOutgoingMessages();
+    const changedEntities = this.queries.entities.changed.filter((entity) => {
+      return entity.alive && entity.hasComponent(Transform)
     });
+    if (changedEntities.length) {
+      this.queries.connections.results.forEach((entity) => {
+        const connection = entity.getComponent(Connection).value;
+        connection.pushMessage(new Messages.World(changedEntities));
+        connection.sendOutgoingMessages();
+      });
+    }
   }
 }

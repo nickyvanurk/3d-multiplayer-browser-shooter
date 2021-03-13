@@ -150,9 +150,20 @@ export class PhysicsSystem extends System {
         const o = transform.getOrigin();
         transform.getBasis().getRotation(q);
 
-        let transformComponent = entity.getMutableComponent(Transform);
-        transformComponent.position.set(o.x(), o.y(), o.z());
-        transformComponent.rotation.set(q.x(), q.y(), q.z(), q.w());
+        let { position: p, rotation: r } = entity.getComponent(Transform);
+
+        let ep = { x: p.x, y: p.y, z: p.z };
+        let er = { x: r.x.toPrecision(4), y: r.y.toPrecision(4), z: r.z.toPrecision(4), w: r.w.toPrecision(4) };
+
+        let bp = { x: o.x(), y: o.y(), z: o.z() };
+        let br = { x: q.x().toPrecision(4), y: q.y().toPrecision(4), z: q.z().toPrecision(4), w: q.w().toPrecision(4) };
+
+        if (ep.x !== bp.x || ep.y !== bp.y || ep.z !== bp.z ||
+            er.x !== br.x || er.y !== br.y || er.z !== br.z || er.w !== br.w) {
+          let transformComponent = entity.getMutableComponent(Transform);
+          transformComponent.position.set(o.x(), o.y(), o.z());
+          transformComponent.rotation.set(q.x(), q.y(), q.z(), q.w());
+        }
       }
     });
 
