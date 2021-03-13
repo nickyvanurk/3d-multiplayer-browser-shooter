@@ -32,11 +32,7 @@ export class NetworkEventSystem extends System {
             name = Utils.sanitize(name);
             name = !name ? 'UNKNOWN' : name.substr(0, 15);
 
-            const spaceship = Spawner.controllableSpaceship(
-              this.world,
-              this.worldServer.clients[connection.id]
-            );
-
+            const spaceship = Spawner.controllableSpaceship(this.world, entity);
             connection.pushMessage(new Messages.Welcome(spaceship.worldId, name));
             break;
           }

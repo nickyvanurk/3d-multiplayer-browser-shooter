@@ -14,7 +14,7 @@ export default class Connection {
     this.connection.on('message', (message) => {
       let data = JSON.parse(message);
       const type = data.shift();
-      
+
       switch (type) {
         case Types.Messages.HELLO: data = Messages.Hello.deserialize(data); break;
         case Types.Messages.INPUT: data = Messages.Input.deserialize(data); break;
@@ -22,7 +22,7 @@ export default class Connection {
 
       this.incomingMessageQueue.push({ type, data });
     });
-    
+
     this.connection.on('close', () => {
       if (this.onCloseCallback) {
         this.onCloseCallback();

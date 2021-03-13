@@ -1,6 +1,8 @@
 import { System } from 'ecsy';
 
+import logger from '../utils/logger';
 import Messages from '../../../shared/messages';
+
 import { Connection } from '../../../shared/components/connection';
 import { Transform } from '../components/transform';
 import { Kind } from '../../../shared/components/kind';
@@ -25,11 +27,18 @@ export class NetworkMessageSystem extends System {
 
   init(worldServer) {
     this.worldServer = worldServer;
+    this.clients = [];
   }
 
   execute() {
     this.queries.connections.added.forEach((entity) => {
       const connection = entity.getComponent(Connection).value;
+
+      const clientId = this.getClientId();
+      connection.id = clientId;
+      this.clients[clientId] = entity;
+      connection.onDisconnect(() => { this.handlePlayerDisconnect(connection) });
+      connection.pushMessage(new Messages.Go());
 
       this.queries.entities.results.forEach((entity2) => {
         const { position, rotation, scale } = entity2.getComponent(Transform);
@@ -71,7 +80,7 @@ export class NetworkMessageSystem extends System {
   }
 
   broadcast(message, ignoredPlayerId = null) {
-    for (const [id, entity] of this.worldServer.clients.entries()) {
+    for (const [id, entity] of this.clients.entries()) {
       if (id == ignoredPlayerId || !entity || !entity.alive || entity.hasComponent(Destroy) ||
           !entity.hasComponent(Connection)) {
         continue;
@@ -80,5 +89,22 @@ export class NetworkMessageSystem extends System {
       const connection = entity.getComponent(Connection).value;
       connection.pushMessage(message);
     }
+  }
+
+  handlePlayerDisconnect(connection) {
+    logger.debug(`Deleting player ${connection.id}`);
+    this.clients[connection.id].remove();
+    this.worldServer.connectedClients--;
+    delete this.clients[connection.id];
+  }
+
+  getClientId() {
+    for (let i = 0; i < this.clients.length; ++i) {
+      if (!this.clients[i]) {
+        return i;
+      }
+    }
+
+    return this.clients.length;
   }
 }

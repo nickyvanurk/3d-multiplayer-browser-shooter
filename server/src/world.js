@@ -4,7 +4,6 @@ import Ammo from 'ammo.js';
 
 import logger from './utils/logger';
 import Utils from '../../shared/utils';
-import Messages from '../../shared/messages';
 import * as Spawner from './spawner';
 
 import { Connection } from '../../shared/components/connection';
@@ -43,13 +42,10 @@ export default class World {
   constructor(id, maxClients, server) {
     this.id = id;
     this.maxClients = maxClients;
+    this.connectedClients = 0;
     this.server = server;
     this.updatesPerSecond = 60;
     this.lastTime = performance.now();
-
-    this.clients = [];
-
-    this.connectedClients = 0;
 
     this.world = new World$1()
       .registerComponent(Connection)
@@ -84,7 +80,7 @@ export default class World {
         .registerSystem(CollisionSystem)
         .registerSystem(DamageSystem)
         .registerSystem(DestroySystem)
-        .registerSystem(NetworkMessageSystem, this);
+        .registerSystem(NetworkMessageSystem, this)
     });
 
     this.world.entities = [];
@@ -121,38 +117,11 @@ export default class World {
   handlePlayerConnect(connection) {
     logger.debug(`Adding client${connection.id} to ${this.id}`);
 
-    connection.onDisconnect(() => {
-      this.handlePlayerDisconnect(connection);
-    });
-
-    const clientId = this.getClientId();
-    connection.id = clientId;
-
-    this.clients[clientId] = this.world
-      .createEntity()
+    this.world.createEntity()
       .addComponent(Connection, { value: connection })
       .addComponent(Input);
 
     this.connectedClients++;
-
-    connection.pushMessage(new Messages.Go());
-  }
-
-  handlePlayerDisconnect(connection) {
-    logger.debug(`Deleting player ${connection.id}`);
-    this.clients[connection.id].remove();
-    delete this.clients[connection.id];
-    this.connectedClients--;
-  }
-
-  getClientId() {
-    for (let i = 0; i < this.clients.length; ++i) {
-      if (!this.clients[i]) {
-        return i;
-      }
-    }
-
-    return this.clients.length;
   }
 
   spawnAsteroids(count) {
