@@ -276,6 +276,11 @@ export default class Game {
   removeEntity(id) {
     const entity = this.entities[id];
 
+    if (!entity || !entity.alive) {
+      console.error(`Can't destroy entity#${id}: ${entity}`);
+      return;
+    }
+
     if (entity.hasComponent(Kind) && entity.hasComponent(Transform)) {
       switch (entity.getComponent(Kind).value) {
         case Types.Entities.SPACESHIP:
