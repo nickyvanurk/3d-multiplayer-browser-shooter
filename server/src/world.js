@@ -145,18 +145,6 @@ export default class World {
     this.connectedClients--;
   }
 
-  broadcast(message, ignoredPlayerId = null) {
-    for (const [id, entity] of this.clients.entries()) {
-      if (id == ignoredPlayerId || !entity || !entity.alive || entity.hasComponent(Destroy) ||
-          !entity.hasComponent(Connection)) {
-        continue;
-      }
-
-      const connection = entity.getComponent(Connection).value;
-      connection.pushMessage(message);
-    }
-  }
-
   getClientId() {
     for (let i = 0; i < this.clients.length; ++i) {
       if (!this.clients[i]) {
