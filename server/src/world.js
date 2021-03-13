@@ -88,6 +88,8 @@ export default class World {
         .registerSystem(NetworkMessageSystem, this);
     });
 
+    this.world.entities = [];
+
     this.asteroidFieldSize = 800;
 
     logger.info(`${this.id} running`);

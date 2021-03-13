@@ -33,7 +33,7 @@ export class NetworkEventSystem extends System {
             name = !name ? 'UNKNOWN' : name.substr(0, 15);
 
             const spaceship = this.worldServer.addPlayer(connection.id);
-            connection.pushMessage(new Messages.Welcome(spaceship.id, name));
+            connection.pushMessage(new Messages.Welcome(spaceship.worldId, name));
             break;
           }
           case Types.Messages.INPUT: {

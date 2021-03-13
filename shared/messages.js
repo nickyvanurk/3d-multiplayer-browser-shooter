@@ -182,7 +182,7 @@ class World {
         continue;
       }
 
-      data.push(this.entities[i].id);
+      data.push(this.entities[i].worldId);
 
       const transform = this.entities[i].getComponent(Transform);
 

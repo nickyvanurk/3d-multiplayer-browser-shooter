@@ -54,7 +54,7 @@ export class PhysicsSystem extends System {
     this.shapes[Types.Entities.BULLET] = { 1: this.createShapeFromEntityType(Types.Entities.BULLET) };
 
     this.play();
-    this.worldServer.spawnAsteroids(100);
+    //this.worldServer.spawnAsteroids(100);
   }
 
   execute(delta) {

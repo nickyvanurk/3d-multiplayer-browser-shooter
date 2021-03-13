@@ -56,6 +56,8 @@ export function controllableSpaceship(ecs, player) {
     primary: [weaponLeft, weaponRight]
   });
 
+  spaceship.worldId = getWorldId(ecs, asteroid);
+
   return spaceship;
 }
 
@@ -70,6 +72,8 @@ export function asteroid(ecs, position, rotation, scale = 1) {
       angularDamping: 0.1,
       weight: scale <= 5 ? 1 : 0
     });
+
+  asteroid.worldId = getWorldId(ecs, asteroid);
 
   return asteroid;
 }
@@ -89,5 +93,19 @@ export function projectile(ecs, position, rotation, damage, speed = 0.1,  timer 
     .addComponent(Damage, { value: damage })
     .addComponent(DestroyOnCollision);
 
+  projectile.worldId = getWorldId(ecs, asteroid);
+
   return projectile;
+}
+
+
+function getWorldId(ecs, entity) {
+  const freeIndex = ecs.entities.findIndex(entity => entity === undefined);
+
+  if (freeIndex !== -1) {
+    ecs.entities[freeIndex] = entity;
+    return freeIndex;
+  }
+
+  return ecs.entities.push(entity) - 1;
 }

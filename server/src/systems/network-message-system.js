@@ -4,6 +4,7 @@ import Messages from '../../../shared/messages';
 import { Connection } from '../../../shared/components/connection';
 import { Transform } from '../components/transform';
 import { Kind } from '../../../shared/components/kind';
+import { Respawn } from '../components/respawn';
 
 export class NetworkMessageSystem extends System {
   static queries = {
@@ -33,7 +34,7 @@ export class NetworkMessageSystem extends System {
         const { position, rotation, scale } = entity2.getComponent(Transform);
         const kind = entity2.getComponent(Kind).value;
         connection.pushMessage(new Messages.Spawn(
-          entity2.id,
+          entity2.worldId,
           kind,
           position,
           rotation,
@@ -48,12 +49,16 @@ export class NetworkMessageSystem extends System {
       if (!entity.alive) return;
       const { position, rotation, scale } = entity.getComponent(Transform);
       const kind = entity.getComponent(Kind).value;
-      this.worldServer.broadcast(new Messages.Spawn(entity.id, kind, position, rotation, scale));
+      this.worldServer.broadcast(new Messages.Spawn(entity.worldId, kind, position, rotation, scale));
     });
 
     this.queries.entities.removed.forEach((entity) => {
       if (entity.hasRemovedComponent(Transform)) {
-        this.worldServer.broadcast(new Messages.Despawn(entity.id));
+        if (!entity.hasComponent(Respawn)) {
+          delete this.world.entities[entity.worldId];
+        }
+
+        this.worldServer.broadcast(new Messages.Despawn(entity.worldId));
       }
     });
 
