@@ -1,6 +1,5 @@
 import { performance } from 'perf_hooks';
 import { World as World$1 } from 'ecsy';
-import { Vector3, Quaternion, Ray, Matrix4 } from 'three';
 import Ammo from 'ammo.js';
 
 import logger from './utils/logger';
@@ -148,33 +147,6 @@ export default class World {
 
   addPlayer(clientId) {
     return Spawner.controllableSpaceship(this.world, this.clients[clientId]);
-  }
-
-  addBullet(weapon) {
-    const parentTransform = weapon.parent.getComponent(Transform);
-
-    if (!parentTransform) return;
-
-    const pos = new Vector3().copy(weapon.offset)
-      .applyQuaternion(parentTransform.rotation)
-      .add(parentTransform.position);
-    let rot = parentTransform.rotation;
-
-    if (weapon.parent.hasComponent(Aim)) {
-      const ray = weapon.parent.getComponent(Aim);
-
-      const target = new Vector3();
-      new Ray(ray.position, ray.direction).at(ray.distance, target);
-
-      const direction = new Vector3();
-      direction.subVectors(pos, target).normalize();
-
-      const mx = new Matrix4().lookAt(direction, new Vector3(0,0,0), new Vector3(0,1,0));
-      const qt = new Quaternion().setFromRotationMatrix(mx);
-      rot = qt;
-    }
-
-    Spawner.projectile(this.world, pos, rot, 5);
   }
 
   broadcast(message, ignoredPlayerId = null) {
