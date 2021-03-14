@@ -21,8 +21,7 @@ export class WebGlRendererSystem extends System {
     }
   };
 
-  init(game) {
-    this.game = game;
+  init() {
     this.needsResize = true;
     window.onresize = this.onResize.bind(this);
     this.dummy = new Object3D();
@@ -55,19 +54,18 @@ export class WebGlRendererSystem extends System {
     });
   }
 
-  render() {
+  render(alpha) {
     this.queries.object3ds.results.forEach((entity) => {
       const transform = entity.getComponent(Transform);
       const object3d = entity.getMutableComponent(Object3d).value;
 
       const renderPosition = new Vector3()
         .copy(transform.position)
-        .multiplyScalar(this.game.alpha)
-        .add(new Vector3().copy(transform.prevPosition).multiplyScalar(1 - this.game.alpha));
+        .multiplyScalar(alpha)
+        .add(new Vector3().copy(transform.prevPosition).multiplyScalar(1 - alpha));
       const renderRotation = new Quaternion()
         .copy(transform.prevRotation)
-        .slerp(transform.rotation, this.game.alpha);
-
+        .slerp(transform.rotation, alpha);
 
       if (entity.hasComponent(Kind)) {
         if (entity.getComponent(Kind).value === Types.Entities.BULLET) {

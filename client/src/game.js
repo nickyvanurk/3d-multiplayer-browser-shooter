@@ -51,6 +51,7 @@ export default class Game {
     this.lastTime = performance.now();
     this.lastRenderTime = performance.now();
     this.updatesPerSecond = 60;
+    this.lastUpdate = performance.now();
 
     this.world = new World()
       .registerComponent(WebGlRenderer)
@@ -68,13 +69,11 @@ export default class Game {
       .registerSystem(NetworkEventSystem, this)
       .registerSystem(InputSystem)
       .registerSystem(ParticleSystem)
-      .registerSystem(WebGlRendererSystem, this)
+      .registerSystem(WebGlRendererSystem)
       .registerSystem(NetworkMessageSystem);
 
     this.updateSystems = this.world.getSystems();
     this.renderSystem = this.world.getSystem(WebGlRendererSystem);
-
-    this.alpha = 0;
 
     this.player = undefined;
     this.entities = [];
@@ -152,7 +151,7 @@ export default class Game {
       this.handleFixedUpdate.bind(this)
     );
 
-    workerInterval.setInterval(this.update.bind(this), 1000/60);
+    workerInterval.setInterval(this.update.bind(this), 1000/this.updatesPerSecond);
     requestAnimationFrame(this.render.bind(this));
 
     const geometry = new BoxGeometry(0.1, 0.1, 1);
@@ -173,7 +172,8 @@ export default class Game {
       delta = 250;
     }
 
-    this.alpha = this.fixedUpdate(delta, time);
+    this.fixedUpdate(delta, time);
+    this.lastUpdate = performance.now();
 
     if (document.hidden) {
       this.world.entityManager.processDeferredRemoval();
@@ -186,7 +186,8 @@ export default class Game {
     requestAnimationFrame(this.render.bind(this));
 
     if (!document.hidden) {
-      this.renderSystem.render();
+      const alpha = (performance.now() - this.lastUpdate)/(1000/this.updatesPerSecond);
+      this.renderSystem.render(alpha);
       this.world.entityManager.processDeferredRemoval();
     }
   }
