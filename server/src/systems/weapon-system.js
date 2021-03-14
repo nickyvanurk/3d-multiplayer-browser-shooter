@@ -27,8 +27,11 @@ export class WeaponSystem extends System {
 
   execute(_delta, time) {
     this.queries.inactiveWeapons.added.forEach((entity) => {
-      const weapon = entity.getMutableComponent(Weapon);
-      weapon.firing = false;
+      // Have to check for active, Not(Active) doesn't work properly for reactive queries.
+      if (entity.alive && !entity.hasComponent(Active)) {
+        const weapon = entity.getMutableComponent(Weapon);
+        weapon.firing = false;
+      }
     });
 
     this.queries.activeWeapons.added.forEach((entity) => {
