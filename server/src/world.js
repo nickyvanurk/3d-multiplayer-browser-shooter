@@ -26,6 +26,7 @@ import { Respawn } from './components/respawn';
 import { SufferDamage } from './components/suffer-damage';
 import { DestroyOnCollision } from './components/destroy-on-collision';
 import { RandomSpawn } from './components/random-spawn';
+import { Spawned } from './components/spawned';
 
 import { NetworkEventSystem } from './systems/network-event-system';
 import { NetworkMessageSystem } from './systems/network-message-system';
@@ -67,7 +68,8 @@ export default class World {
       .registerComponent(Respawn)
       .registerComponent(SufferDamage)
       .registerComponent(DestroyOnCollision)
-      .registerComponent(RandomSpawn);
+      .registerComponent(RandomSpawn)
+      .registerComponent(Spawned);
 
     Ammo().then((Ammo) => {
       this.world

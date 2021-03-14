@@ -7,6 +7,7 @@ import { Connection } from '../../../shared/components/connection';
 import { Transform } from '../components/transform';
 import { Kind } from '../../../shared/components/kind';
 import { Respawn } from '../components/respawn';
+import { Spawned } from '../components/spawned';
 
 export class NetworkMessageSystem extends System {
   static queries = {
@@ -21,6 +22,10 @@ export class NetworkMessageSystem extends System {
         removed: true,
         changed: [Transform]
       }
+    },
+    spawnedEntities: {
+      components: [Transform, Kind, Spawned],
+      listen: { removed: true }
     }
   };
 
@@ -45,14 +50,16 @@ export class NetworkMessageSystem extends System {
 
     this.queries.entities.added.forEach((entity) => {
       if (!entity.alive) return;
+
       const { position, rotation, scale } = entity.getComponent(Transform);
       const kind = entity.getComponent(Kind).value;
+      entity.addComponent(Spawned);
 
       logger.debug(`Broadcast: Spawn entity#${entity.worldId}`);
       this.broadcast(new Messages.Spawn(entity.worldId, kind, position, rotation, scale));
     });
 
-    this.queries.entities.removed.forEach((entity) => {
+    this.queries.spawnedEntities.removed.forEach((entity) => {
       if (entity.hasRemovedComponent(Transform)) {
         if (!entity.hasComponent(Respawn)) {
           delete this.world.entities[entity.worldId];
