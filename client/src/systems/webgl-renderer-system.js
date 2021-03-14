@@ -23,7 +23,7 @@ export class WebGlRendererSystem extends System {
 
   init() {
     this.needsResize = true;
-    window.onresize = this.onResize.bind(this);
+    window.addEventListener('resize', this.onResize.bind(this));
     this.dummy = new Object3D();
   }
 

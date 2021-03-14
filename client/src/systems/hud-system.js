@@ -9,8 +9,15 @@ import { WebGlRenderer } from '../components/webgl-renderer';
 
 export class HudSystem extends System {
   static queries = {
-    otherEntities: {
-      components: [Transform, Kind, Not(Player)]
+    player: {
+      components: [Transform, Kind, Player]
+    },
+    entities: {
+      components: [Transform, Kind],
+      listen: {
+        added: true,
+        removed: true
+      }
     },
     renderers: {
       components: [WebGlRenderer],
@@ -19,16 +26,16 @@ export class HudSystem extends System {
   };
 
   init() {
-    const width = window.innerWidth;
-    const height = window.innerHeight;
-    this.cameraOrtho = new OrthographicCamera(-width/2, width/2, height/2, -height/2, 1, 10);
+    this.width = window.innerWidth;
+    this.height = window.innerHeight;
+    this.cameraOrtho = new OrthographicCamera(-this.width/2, this.width/2, this.height/2, -this.height/2, 1, 10);
     this.cameraOrtho.position.z = 10;
     this.sceneOrtho = new Scene();
 
     new TextureLoader().load('textures/spaceship.png', this.handleLoad.bind(this));
     this.entityIndicators = {};
 
-    window.onresize = this.onWindowResize.bind(this);
+    window.addEventListener('resize', this.onWindowResize.bind(this));
 
     this.stop();
   }
@@ -39,16 +46,47 @@ export class HudSystem extends System {
   }
 
   execute(_delta, _time) {
-    //this.scene = this.queries.renderers.added.forEach((entity) => {
-      //const scene = entity.getComponent(WebGlRenderer).scene;
-    //});
+    this.queries.entities.added.forEach((entity) => {
+      if (entity.hasComponent(Player)) return;
 
-    this.queries.otherEntities.results.forEach((entity) => {
       const kind = entity.getComponent(Kind).value;
-
       if (kind === Types.Entities.SPACESHIP) {
-        const { position } = entity.getComponent(Transform);
         this.entityIndicators[entity.id] = this.createHudSprite(0, 0);
+      }
+    });
+
+    this.queries.entities.removed.forEach((entity) => {
+      if (entity.hasComponent(Player)) return;
+
+      const kind = entity.getRemovedComponent(Kind).value;
+      if (kind === Types.Entities.SPACESHIP) {
+        this.sceneOrtho.remove(this.entityIndicators[entity.id]);
+        delete this.entityIndicators[entity.id];
+      }
+    });
+
+    this.queries.entities.results.forEach((entity) => {
+      if (entity.hasComponent(Player)) return;
+
+      const kind = entity.getComponent(Kind).value;
+      if (kind === Types.Entities.SPACESHIP) {
+        const player = this.queries.player.results[0];
+        if (!player) return;
+
+        const { position: playerPosition } = player.getComponent(Transform);
+        const { position } = entity.getComponent(Transform);
+
+        const relativePosition = {
+          x: playerPosition.x - position.x,
+          y: playerPosition.y - position.y
+        };
+
+        const angle = Math.atan2(relativePosition.y, relativePosition.x);
+        const x = this.width/3 * Math.cos(angle);
+        const y = this.height/3 * Math.sin(angle);
+
+        const indicator = this.entityIndicators[entity.id];
+        indicator.position.set(-x, -y, 1);
       }
     });
   }
@@ -56,7 +94,6 @@ export class HudSystem extends System {
   render() {
     this.queries.renderers.results.forEach((entity) => {
       const renderer = entity.getComponent(WebGlRenderer).renderer;
-
       renderer.clearDepth();
       renderer.render(this.sceneOrtho, this.cameraOrtho);
     });
@@ -74,20 +111,18 @@ export class HudSystem extends System {
   }
 
   onWindowResize() {
-    const width = window.innerWidth;
-    const height = window.innerHeight;
+    this.width = window.innerWidth;
+    this.height = window.innerHeight;
 
-    this.cameraOrtho.left = -width / 2;
-    this.cameraOrtho.right = width / 2;
-    this.cameraOrtho.top = height / 2;
-    this.cameraOrtho.bottom = -height / 2;
+    this.cameraOrtho.left = -this.width/2;
+    this.cameraOrtho.right = this.width/2;
+    this.cameraOrtho.top = this.height/2;
+    this.cameraOrtho.bottom = -this.height/2;
     this.cameraOrtho.updateProjectionMatrix();
-
-    //updateHUDSprites();
 
     this.queries.renderers.results.forEach((entity) => {
       const renderer = entity.getComponent(WebGlRenderer).renderer;
-      renderer.setSize(width, height);
+      renderer.setSize(this.width, this.height);
     });
   }
 }
