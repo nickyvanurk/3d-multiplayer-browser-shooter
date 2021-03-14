@@ -47,6 +47,8 @@ export class NetworkMessageSystem extends System {
       if (!entity.alive) return;
       const { position, rotation, scale } = entity.getComponent(Transform);
       const kind = entity.getComponent(Kind).value;
+
+      logger.debug(`Broadcast: Spawn entity#${entity.worldId}`);
       this.broadcast(new Messages.Spawn(entity.worldId, kind, position, rotation, scale));
     });
 
@@ -56,6 +58,7 @@ export class NetworkMessageSystem extends System {
           delete this.world.entities[entity.worldId];
         }
 
+        logger.debug(`Broadcast: Despawn entity#${entity.worldId}`);
         this.broadcast(new Messages.Despawn(entity.worldId));
       }
     });
