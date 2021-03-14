@@ -53,7 +53,10 @@ export class NetworkMessageSystem extends System {
 
       const { position, rotation, scale } = entity.getComponent(Transform);
       const kind = entity.getComponent(Kind).value;
-      entity.addComponent(Spawned);
+
+      if (!entity.hasComponent(Respawn)) {
+        entity.addComponent(Spawned);
+      }
 
       logger.debug(`Broadcast: Spawn entity#${entity.worldId}`);
       this.broadcast(new Messages.Spawn(entity.worldId, kind, position, rotation, scale));
