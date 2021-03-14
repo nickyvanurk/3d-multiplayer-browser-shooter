@@ -115,7 +115,7 @@ export default class World {
   }
 
   handlePlayerConnect(connection) {
-    logger.debug(`Adding client${connection.id} to ${this.id}`);
+    logger.debug(`Adding player${connection.id} to ${this.id}`);
 
     this.world.createEntity()
       .addComponent(Connection, { value: connection })

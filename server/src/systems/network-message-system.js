@@ -7,7 +7,6 @@ import { Connection } from '../../../shared/components/connection';
 import { Transform } from '../components/transform';
 import { Kind } from '../../../shared/components/kind';
 import { Respawn } from '../components/respawn';
-import { Weapons } from '../components/weapons';
 
 export class NetworkMessageSystem extends System {
   static queries = {
@@ -85,21 +84,10 @@ export class NetworkMessageSystem extends System {
   }
 
   handlePlayerDisconnect(connection) {
-    logger.debug(`Deleting player ${connection.id}`);
-
     this.queries.connections.results.forEach((entity) => {
       const connectionId = entity.getComponent(Connection).value.id;
-
       if (connection.id === connectionId) {
-        if (entity.hasComponent(Weapons)) {
-          const weapons = entity.getComponent(Weapons);
-          weapons.primary.forEach((weaponEntity) => {
-            logger.debug(`${connectionId}: Deleting weaponEntity ${weaponEntity.id}`);
-            weaponEntity.remove()
-          });
-        }
-
-        logger.debug(`${connectionId}: Deleting playerEntity ${entity.id}`);
+        logger.debug(`Deleting player${connection.id}`);
         entity.remove()
       }
     });

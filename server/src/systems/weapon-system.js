@@ -37,6 +37,8 @@ export class WeaponSystem extends System {
     });
 
     this.queries.activeWeapons.results.forEach((entity) => {
+      if (!entity.alive) return;
+
       const weapon = entity.getMutableComponent(Weapon);
 
       if (!weapon.firing && (weapon.lastFiredTimestamp + weapon.delay < time)) {
@@ -52,8 +54,6 @@ export class WeaponSystem extends System {
           const damage = 5;
 
           Spawner.projectile(this.world, position, rotation, damage);
-        } else {
-          logger.error('Weapon parent needs transform');
         }
       }
     });

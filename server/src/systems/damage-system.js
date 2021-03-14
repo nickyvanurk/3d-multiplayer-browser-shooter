@@ -36,7 +36,8 @@ export class DamageSystem extends System {
     });
 
     this.queries.deaths.removed.forEach((entity) => {
-      if (entity.hasRemovedComponent(Health)) {
+      // Have to check for respawn, Not(Respawn) doesn't work properly for reactive queries.
+      if (entity.alive && !entity.hasRemovedComponent(Respawn) && entity.hasRemovedComponent(Health)) {
         entity.remove();
       }
     });

@@ -1,12 +1,15 @@
 import { System } from 'ecsy';
 import { Ray } from 'three';
 
+import logger from '../utils/logger';
+
 import { Input } from '../../../shared/components/input';
 import { RigidBody } from '../components/rigidbody';
 import { Weapons } from '../components/weapons';
 import { Active } from '../components/active';
 import { Aim } from '../components/aim';
 import { SpaceshipController } from '../../../shared/components/spaceship-controller';
+import { Connection } from '../../../shared/components/connection';
 
 export class SpaceshipControllerSystem extends System {
   static queries = {
@@ -30,6 +33,17 @@ export class SpaceshipControllerSystem extends System {
       const player = controller.player;
 
       if (!player.alive) {
+        const connectionId = controller.player.getRemovedComponent(Connection).value.id;
+
+        if (entity.hasComponent(Weapons)) {
+          const weapons = entity.getComponent(Weapons);
+          weapons.primary.forEach((weaponEntity) => {
+            logger.debug(`${connectionId}: Deleting weaponEntity ${weaponEntity.id}`);
+            weaponEntity.remove()
+          });
+        }
+
+        logger.debug(`${connectionId}: Deleting playerEntity ${entity.id}`);
         entity.remove();
         return;
       }
