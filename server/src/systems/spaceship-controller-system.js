@@ -9,6 +9,7 @@ import { Weapons } from '../components/weapons';
 import { Active } from '../components/active';
 import { Aim } from '../components/aim';
 import { SpaceshipController } from '../../../shared/components/spaceship-controller';
+import { Connection } from '../../../shared/components/connection';
 
 export class SpaceshipControllerSystem extends System {
   static queries = {
@@ -32,6 +33,11 @@ export class SpaceshipControllerSystem extends System {
       const player = controller.player;
 
       if (!player.alive) {
+        if (!player.hasRemovedComponent(Connection)) {
+          console.log(player);
+          logger.error('Player has no components');
+        }
+
         if (entity.hasComponent(Weapons)) {
           const weapons = entity.getComponent(Weapons);
           weapons.primary.forEach((weaponEntity) => {
