@@ -37,7 +37,9 @@ export class CollisionSystem extends System {
     });
 
     this.queries.destroyableCollisions.added.forEach((entity) => {
-      entity.remove();
+      if (entity.alive) {
+        entity.remove();
+      }
     });
   }
 }
