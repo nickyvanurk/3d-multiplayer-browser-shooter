@@ -45,6 +45,7 @@ import { NetworkMessageSystem } from './systems/network-message-system';
 import { TransformSystem } from './systems/transform-system';
 import { InputSystem } from './systems/input-system';
 import { ParticleSystem } from './systems/particle-system';
+import { HudSystem } from './systems/hud-system';
 
 export default class Game {
   constructor() {
@@ -70,10 +71,12 @@ export default class Game {
       .registerSystem(InputSystem)
       .registerSystem(ParticleSystem)
       .registerSystem(WebGlRendererSystem)
+      .registerSystem(HudSystem)
       .registerSystem(NetworkMessageSystem);
 
     this.updateSystems = this.world.getSystems();
     this.renderSystem = this.world.getSystem(WebGlRendererSystem);
+    this.hudSystem = this.world.getSystem(HudSystem);
 
     this.player = undefined;
     this.entities = [];
@@ -81,6 +84,7 @@ export default class Game {
     const renderer = new WebGlRenderer$1({ antialias: true });
     renderer.setClearColor(0x020207);
     renderer.shadowMap.enabled = true;
+    renderer.autoClear = false;
 
     document.body.appendChild(renderer.domElement);
 
@@ -188,6 +192,7 @@ export default class Game {
     if (!document.hidden) {
       const alpha = (performance.now() - this.lastUpdate)/(1000/this.updatesPerSecond);
       this.renderSystem.render(alpha);
+      this.hudSystem.render();
       this.world.entityManager.processDeferredRemoval();
     }
   }
