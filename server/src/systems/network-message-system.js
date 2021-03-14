@@ -7,7 +7,7 @@ import { Connection } from '../../../shared/components/connection';
 import { Transform } from '../components/transform';
 import { Kind } from '../../../shared/components/kind';
 import { Respawn } from '../components/respawn';
-import { Destroy } from '../components/destroy';
+import { Weapons } from '../components/weapons';
 
 export class NetworkMessageSystem extends System {
   static queries = {
@@ -27,16 +27,11 @@ export class NetworkMessageSystem extends System {
 
   init(worldServer) {
     this.worldServer = worldServer;
-    this.clients = [];
   }
 
   execute() {
     this.queries.connections.added.forEach((entity) => {
       const connection = entity.getComponent(Connection).value;
-
-      const clientId = this.getClientId();
-      connection.id = clientId;
-      this.clients[clientId] = entity;
       connection.onDisconnect(() => { this.handlePlayerDisconnect(connection) });
       connection.pushMessage(new Messages.Go());
 
@@ -80,31 +75,35 @@ export class NetworkMessageSystem extends System {
   }
 
   broadcast(message, ignoredPlayerId = null) {
-    for (const [id, entity] of this.clients.entries()) {
-      if (id == ignoredPlayerId || !entity || !entity.alive || entity.hasComponent(Destroy) ||
-          !entity.hasComponent(Connection)) {
-        continue;
-      }
-
+    this.queries.connections.results.forEach((entity) => {
       const connection = entity.getComponent(Connection).value;
-      connection.pushMessage(message);
-    }
+
+      if (connection.id !== ignoredPlayerId && entity.alive) {
+        connection.pushMessage(message);
+      }
+    });
   }
 
   handlePlayerDisconnect(connection) {
     logger.debug(`Deleting player ${connection.id}`);
-    this.clients[connection.id].remove();
-    this.worldServer.connectedClients--;
-    delete this.clients[connection.id];
-  }
 
-  getClientId() {
-    for (let i = 0; i < this.clients.length; ++i) {
-      if (!this.clients[i]) {
-        return i;
+    this.queries.connections.results.forEach((entity) => {
+      const connectionId = entity.getComponent(Connection).value.id;
+
+      if (connection.id === connectionId) {
+        if (entity.hasComponent(Weapons)) {
+          const weapons = entity.getComponent(Weapons);
+          weapons.primary.forEach((weaponEntity) => {
+            logger.debug(`${connectionId}: Deleting weaponEntity ${weaponEntity.id}`);
+            weaponEntity.remove()
+          });
+        }
+
+        logger.debug(`${connectionId}: Deleting playerEntity ${entity.id}`);
+        entity.remove()
       }
-    }
+    });
 
-    return this.clients.length;
+    this.worldServer.connectedClients--;
   }
 }
