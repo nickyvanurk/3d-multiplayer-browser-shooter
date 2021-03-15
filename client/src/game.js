@@ -43,6 +43,9 @@ import { GltfLoader } from './components/gltf-loader';
 import { Model } from './components/model';
 import { Loading } from '../../shared/components/loading';
 import { Loaded } from '../../shared/components/loaded';
+import { ResourceEntity } from '../../shared/components/resource-entity';
+import { Spaceship } from '../../shared/components/spaceship';
+import { Asteroid } from '../../shared/components/asteroid';
 
 import { ModelLoadingSystem } from './systems/model-loading-system';
 import { WebGlRendererSystem } from './systems/webgl-renderer-system';
@@ -75,7 +78,10 @@ export default class Game {
       .registerComponent(GltfLoader)
       .registerComponent(Model)
       .registerComponent(Loading)
-      .registerComponent(Loaded);
+      .registerComponent(Loaded)
+      .registerComponent(ResourceEntity)
+      .registerComponent(Spaceship)
+      .registerComponent(Asteroid);
 
     this.world
       .registerSystem(ModelLoadingSystem)
@@ -156,9 +162,15 @@ export default class Game {
     this.world.createEntity()
       .addComponent(GltfLoader, { value: new GLTFLoader().setPath('models/') });
 
-    // Model entities
-    this.world.createEntity().addComponent(Model, { path: 'spaceship.gltf' });
-    this.world.createEntity().addComponent(Model, { path: 'asteroid.gltf' });
+    this.world.createEntity()
+      .addComponent(ResourceEntity)
+      .addComponent(Spaceship)
+      .addComponent(Model, { path: 'spaceship.gltf' });
+
+    this.world.createEntity()
+      .addComponent(ResourceEntity)
+      .addComponent(Asteroid)
+      .addComponent(Model, { path: 'asteroid.gltf' });
 
     const loadingManager = new LoadingManager();
     loadingManager.onLoad = this.handleLoad.bind(this);
