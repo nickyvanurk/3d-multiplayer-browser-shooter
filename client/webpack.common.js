@@ -24,7 +24,7 @@ module.exports = {
   plugins: [
     new MiniCssExtractPlugin(),
     new CleanWebpackPlugin({
-      cleanOnceBeforeBuildPatterns: ['**/*', '!models', '!models/*.*']
+      cleanOnceBeforeBuildPatterns: ['**/*', '!models', '!models/*.*', '!textures', '!textures/*.*']
     }),
     new HtmlWebpackPlugin({
       title: 'Void',
