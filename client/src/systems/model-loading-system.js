@@ -1,7 +1,9 @@
-import { System } from 'ecsy';
+import { System, Not } from 'ecsy';
 
 import { GltfLoader } from '../components/gltf-loader';
 import { Model } from '../components/model';
+import { Loading } from '../../../shared/components/loading';
+import { Loaded } from '../../../shared/components/loaded';
 
 export class ModelLoadingSystem extends System {
   static queries = {
@@ -9,7 +11,7 @@ export class ModelLoadingSystem extends System {
       components: [GltfLoader]
     },
     models: {
-      components: [Model],
+      components: [Model, Not(Loading), Not(Loaded)],
       listen: { added: true }
     }
   };
@@ -31,11 +33,21 @@ export class ModelLoadingSystem extends System {
       gltfLoader.load(model.path, (gltf) => {
         const model = entity.getMutableComponent(Model);
         model.scene = gltf.scene;
-        model.isLoaded = true;
+
+        entity.addComponent(Loaded);
+        entity.removeComponent(Loading);
+
         console.log(`Loaded model ${model.path}`);
       }, (xhr) => {
-        const model = entity.getMutableComponent(Model);
-        model.loadingProgess = xhr.loaded / xhr.total * 100;
+        const loadingPercentage = xhr.loaded / xhr.total * 100;
+
+        if (!entity.hasComponent(Loading)) {
+          entity.addComponent(Loading, { progress: loadingPercentage });
+          return;
+        }
+
+        const loading = entity.getMutableComponent(Loading);
+        loading.progess = loadingPercentage;
       }, (error) => {
         console.error(`Failed loading model ${model.path}: ${error}`);
       });

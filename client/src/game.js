@@ -41,6 +41,8 @@ import { ParticleEffect } from './components/particle-effect';
 import { RaycasterReceiver } from './components/raycaster-receiver';
 import { GltfLoader } from './components/gltf-loader';
 import { Model } from './components/model';
+import { Loading } from '../../shared/components/loading';
+import { Loaded } from '../../shared/components/loaded';
 
 import { ModelLoadingSystem } from './systems/model-loading-system';
 import { WebGlRendererSystem } from './systems/webgl-renderer-system';
@@ -71,7 +73,9 @@ export default class Game {
       .registerComponent(ParticleEffect)
       .registerComponent(RaycasterReceiver)
       .registerComponent(GltfLoader)
-      .registerComponent(Model);
+      .registerComponent(Model)
+      .registerComponent(Loading)
+      .registerComponent(Loaded);
 
     this.world
       .registerSystem(ModelLoadingSystem)
