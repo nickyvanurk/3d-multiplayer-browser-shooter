@@ -32,6 +32,7 @@ export class HudSystem extends System {
     this.height = window.innerHeight;
     this.cameraOrtho = new OrthographicCamera(-this.width/2, this.width/2, this.height/2, -this.height/2, 1, 10);
     this.cameraOrtho.position.z = 10;
+    this.cameraOrtho.fov = 70;
     this.sceneOrtho = new Scene();
 
     new TextureLoader().load('textures/spaceship.png', this.handleLoad.bind(this));
@@ -79,8 +80,9 @@ export class HudSystem extends System {
         const camera = renderer.getComponent(WebGlRenderer).camera;
         const {
           position: cameraPosition,
-          quaternion: cameraRotation
+          quaternion: cameraRotation,
         } = camera.getComponent(Object3d).value;
+        const cameraObj = camera.getComponent(Object3d).value;
 
         const { position } = entity.getComponent(Transform);
 
@@ -90,24 +92,29 @@ export class HudSystem extends System {
         const dummy = new Object3D();
         dummy.quaternion.copy(cameraRotation);
         dummy.updateMatrixWorld();
-        const localPosition = dummy.worldToLocal(relativePosition).normalize();
+        const localPosition = dummy.worldToLocal(relativePosition);
 
-        const dotX = new Vector3(0, 0, 1)
-          .dot(new Vector3(localPosition.x, 0, localPosition.z)
-          .normalize());
-        const dotY = new Vector3(0, 0, 1)
-          .dot(new Vector3(0, localPosition.y, localPosition.z)
-          .normalize());
-
-        // TODO: Correct elliptical x,y
         const indicator = this.entityIndicators[entity.id];
         const angle = Math.atan2(localPosition.y, localPosition.x);
-        const radius = (this.width < this.height ? this.width : this.height)/3;
-        const x = radius * Math.cos(angle);
-        const y = radius * Math.sin(angle);
+
+        const a = this.width/3;
+        const b = this.height/3;
+
+        const t = Math.sqrt(Math.pow(b*Math.cos(angle), 2)+Math.pow(a*Math.sin(angle), 2));
+        const x = a*b*Math.cos(angle)/t;
+        const y = a*b*Math.sin(angle)/t;
+
+        const projectedPosition = position.clone().project(cameraObj);
+        const screenPosition = {
+          x: projectedPosition.x*this.width/2,
+          y: projectedPosition.y*this.height/2
+        };
+
+        const distanceToEllipse = Math.sqrt((x*x)+(y*y));
+        const distanceToEnemy = Math.sqrt(Math.pow(screenPosition.x, 2)+Math.pow(screenPosition.y, 2));
 
         indicator.position.set(-x, -y, 1);
-        indicator.visible = dotX < 0.9 || dotY < 0.9;
+        indicator.visible = distanceToEnemy > distanceToEllipse || localPosition.z < 0;
       }
     });
   }
