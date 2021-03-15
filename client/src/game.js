@@ -16,6 +16,7 @@ import {
   InstancedMesh,
   DynamicDrawUsage
 } from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass';
@@ -38,7 +39,10 @@ import { Player } from './components/player';
 import { Kind } from '../../shared/components/kind';
 import { ParticleEffect } from './components/particle-effect';
 import { RaycasterReceiver } from './components/raycaster-receiver';
+import { GltfLoader } from './components/gltf-loader';
+import { Model } from './components/model';
 
+import { ModelLoadingSystem } from './systems/model-loading-system';
 import { WebGlRendererSystem } from './systems/webgl-renderer-system';
 import { NetworkEventSystem } from './systems/network-event-system';
 import { NetworkMessageSystem } from './systems/network-message-system';
@@ -66,6 +70,11 @@ export default class Game {
       .registerComponent(Kind)
       .registerComponent(ParticleEffect)
       .registerComponent(RaycasterReceiver)
+      .registerComponent(GltfLoader)
+      .registerComponent(Model);
+
+    this.world
+      .registerSystem(ModelLoadingSystem)
       .registerSystem(TransformSystem)
       .registerSystem(NetworkEventSystem, this)
       .registerSystem(InputSystem)
@@ -138,6 +147,14 @@ export default class Game {
     this.world.stop();
 
     camera.position.z = 15;
+
+    // Loaders entity
+    this.world.createEntity()
+      .addComponent(GltfLoader, { value: new GLTFLoader().setPath('models/') });
+
+    // Model entities
+    this.world.createEntity().addComponent(Model, { path: 'spaceship.gltf' });
+    this.world.createEntity().addComponent(Model, { path: 'asteroid.gltf' });
 
     const loadingManager = new LoadingManager();
     loadingManager.onLoad = this.handleLoad.bind(this);
