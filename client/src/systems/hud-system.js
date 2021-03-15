@@ -50,7 +50,7 @@ export class HudSystem extends System {
 
   execute(_delta, _time) {
     this.queries.entities.added.forEach((entity) => {
-      if (entity.hasComponent(Player)) return;
+      if (entity.hasComponent(Player) || !entity.hasComponent(Kind)) return;
 
       const kind = entity.getComponent(Kind).value;
       if (kind === Types.Entities.SPACESHIP) {
@@ -59,7 +59,7 @@ export class HudSystem extends System {
     });
 
     this.queries.entities.removed.forEach((entity) => {
-      if (entity.hasComponent(Player)) return;
+      if (entity.hasComponent(Player) || !entity.hasRemovedComponent(Kind)) return;
 
       const kind = entity.getRemovedComponent(Kind).value;
       if (kind === Types.Entities.SPACESHIP) {
