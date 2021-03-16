@@ -12,7 +12,7 @@ import {
   Points,
   BoxGeometry,
   MeshBasicMaterial,
-  InstancedMesh,
+  InstancedMesh as InstancedMesh$1,
   DynamicDrawUsage
 } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
@@ -44,6 +44,11 @@ import { ResourceEntity } from '../../shared/components/resource-entity';
 import { Spaceship } from '../../shared/components/spaceship';
 import { Asteroid } from '../../shared/components/asteroid';
 import { MeshRenderer } from './components/mesh-renderer';
+import { Geometry } from '../../shared/components/geometry';
+import { Material } from './components/material';
+import { InstancedMesh } from './components/instanced-mesh';
+import { InstancedMeshRenderer } from './components/instanced-mesh-renderer';
+import { Bullet } from '../../shared/components/bullet';
 
 import { ModelLoadingSystem } from './systems/model-loading-system';
 import { WebGlRendererSystem } from './systems/webgl-renderer-system';
@@ -80,7 +85,12 @@ export default class Game {
       .registerComponent(ResourceEntity)
       .registerComponent(Spaceship)
       .registerComponent(Asteroid)
-      .registerComponent(MeshRenderer);
+      .registerComponent(Bullet)
+      .registerComponent(Geometry)
+      .registerComponent(Material)
+      .registerComponent(InstancedMesh)
+      .registerComponent(MeshRenderer)
+      .registerComponent(InstancedMeshRenderer);
 
     this.world
       .registerSystem(ModelLoadingSystem)
@@ -170,6 +180,14 @@ export default class Game {
       .addComponent(Asteroid)
       .addComponent(Model, { path: 'asteroid.gltf' });
 
+    this.world.createEntity()
+      .addComponent(ResourceEntity)
+      .addComponent(Bullet)
+      .addComponent(Geometry, { value: new BoxGeometry(0.1, 0.1, 1) })
+      .addComponent(Material, { value: new MeshBasicMaterial( { color: 0xffa900 } )})
+      .addComponent(InstancedMesh, { count: 2000 })
+      .addComponent(Loaded);
+
     this.addStars(scene, 1000, 4000);
   }
 
@@ -181,11 +199,6 @@ export default class Game {
 
     workerInterval.setInterval(this.update.bind(this), 1000/this.updatesPerSecond);
     requestAnimationFrame(this.render.bind(this));
-
-    const geometry = new BoxGeometry(0.1, 0.1, 1);
-    const material = new MeshBasicMaterial( {color: 0xffa900} );
-    this.bulletMesh = new InstancedMesh(geometry, material, 10000);
-    this.bulletMesh.instanceMatrix.setUsage(DynamicDrawUsage);
   }
 
   update() {
@@ -289,7 +302,9 @@ export default class Game {
         break;
       }
       case Types.Entities.BULLET: {
-        entity.addComponent(Object3d, { value: this.bulletMesh.clone() });
+        entity
+          .addComponent(Bullet)
+          .addComponent(MeshRenderer);
         break;
       }
     }

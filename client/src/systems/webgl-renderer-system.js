@@ -1,16 +1,17 @@
 import { System } from 'ecsy';
-import { Vector3, Quaternion, Object3D } from 'three';
+import { Vector3, Quaternion, Object3D, InstancedMesh as InstancedMesh$1 } from 'three';
 
-import Types from '../../../shared/types';
 import { WebGlRenderer } from '../components/webgl-renderer';
 import { Object3d } from '../components/object3d';
 import { Transform } from '../components/transform';
 import { Kind } from '../../../shared/components/kind';
-
 import { ResourceEntity } from '../../../shared/components/resource-entity';
 import { Model } from '../components/model';
 import { MeshRenderer } from '../components/mesh-renderer';
 import { Loaded } from '../../../shared/components/loaded';
+import { Geometry } from '../../../shared/components/geometry'
+import { Material } from '../components/material';
+import { InstancedMesh } from '../components/instanced-mesh';
 
 export class WebGlRendererSystem extends System {
   static queries = {
@@ -25,10 +26,17 @@ export class WebGlRendererSystem extends System {
       }
     },
     resourceEntities: {
-      components: [ResourceEntity, Model, Loaded]
+      components: [ResourceEntity, Loaded]
     },
     meshRenderers: {
       components: [MeshRenderer],
+      listen: {
+        added: true,
+        removed: true
+      }
+    },
+    instancedMeshes: {
+      components: [ResourceEntity, InstancedMesh, Geometry, Material],
       listen: {
         added: true,
         removed: true
@@ -58,10 +66,29 @@ export class WebGlRendererSystem extends System {
         return;
       }
 
-      const model = resource.getComponent(Model);
       const meshRenderer = entity.getMutableComponent(MeshRenderer);
-      meshRenderer.scene = model.scene.clone();
-      meshRenderer.scene.visible = false;
+
+      if (resource.hasComponent(Model)) {
+        const model = resource.getComponent(Model);
+        meshRenderer.scene = model.scene.clone();
+        meshRenderer.scene.visible = false;
+      } else if (resource.hasComponent(InstancedMesh)) {
+        const geometry = resource.getComponent(Geometry).value;
+        const material = resource.getComponent(Material).value;
+        const instancedMesh = resource.getMutableComponent(InstancedMesh);
+        instancedMesh.value = new InstancedMesh$1(geometry, material, instancedMesh.count);
+
+        this.dummy.scale.setScalar(0); // Make invisible, TODO: Move to shader
+        this.dummy.updateMatrix();
+
+        instancedMesh.value.setMatrixAt(entity.id, this.dummy.matrix);
+        instancedMesh.value.instanceMatrix.needsUpdate = true;
+
+        meshRenderer.scene = instancedMesh.value;
+      } else {
+        console.error('Failed adding mesh to MeshRenderer');
+        return;
+      }
 
       const webGlRenderer = this.tryGetWebGlRenderer();
 
@@ -86,10 +113,21 @@ export class WebGlRendererSystem extends System {
     });
 
     this.queries.objects.added.forEach((entity) => {
-      const meshRenderer = entity.getMutableComponent(MeshRenderer);
-      meshRenderer.scene.visible = true;
-
       const transform = entity.getComponent(Transform);
+      const meshRenderer = entity.getMutableComponent(MeshRenderer);
+
+      if (meshRenderer.scene instanceof InstancedMesh$1) {
+        this.dummy.position.copy(transform.position);
+        this.dummy.quaternion.copy(transform.rotation);
+        this.dummy.scale.setScalar(transform.scale); // Make invisible
+        this.dummy.updateMatrix();
+
+        meshRenderer.scene.setMatrixAt(entity.id, this.dummy.matrix);
+        meshRenderer.scene.instanceMatrix.needsUpdate = true;
+        return;
+      }
+
+      meshRenderer.scene.visible = true;
       meshRenderer.scene.position.copy(transform.position);
       meshRenderer.scene.quaternion.copy(transform.rotation);
       meshRenderer.scene.scale.copy(new Vector3().setScalar(transform.scale));
@@ -99,33 +137,17 @@ export class WebGlRendererSystem extends System {
       if (entity.hasRemovedComponent(MeshRenderer)) return;
 
       const meshRenderer = entity.getMutableComponent(MeshRenderer);
-      meshRenderer.scene.visible = false;
-    });
 
-    // TODO: Old code used for bullets, has to be removed!
-    this.queries.object3ds.added.forEach((entity) => {
-      if (!entity.alive) {
+      if (meshRenderer.scene instanceof InstancedMesh$1) {
+        this.dummy.scale.setScalar(0); // Make invisible
+        this.dummy.updateMatrix();
+
+        meshRenderer.scene.setMatrixAt(entity.id, this.dummy.matrix);
+        meshRenderer.scene.instanceMatrix.needsUpdate = true;
         return;
       }
 
-      const object3d = entity.getComponent(Object3d).value;
-      const transform = entity.getComponent(Transform);
-
-      object3d.scale.copy(new Vector3().setScalar(transform.scale));
-
-      this.queries.renderers.results.forEach((rendererEntity) => {
-        const scene = rendererEntity.getComponent(WebGlRenderer).scene;
-        scene.add(object3d);
-      });
-    });
-
-    // TODO: Old code used for bullets, has to be removed!
-    this.queries.object3ds.removed.forEach((entity) => {
-      const object3d = entity.getRemovedComponent(Object3d).value;
-      this.queries.renderers.results.forEach((rendererEntity) => {
-        const scene = rendererEntity.getComponent(WebGlRenderer).scene;
-        scene.remove(object3d);
-      });
+      meshRenderer.scene.visible = false;
     });
   }
 
@@ -140,12 +162,23 @@ export class WebGlRendererSystem extends System {
         .slerp(transform.rotation, alpha);
 
       const meshRenderer = entity.getMutableComponent(MeshRenderer);
+
+      if (meshRenderer.scene instanceof InstancedMesh$1) {
+        this.dummy.position.copy(transform.position);
+        this.dummy.quaternion.copy(transform.rotation);
+        this.dummy.updateMatrix();
+
+        meshRenderer.scene.setMatrixAt(entity.id, this.dummy.matrix);
+        meshRenderer.scene.instanceMatrix.needsUpdate = true;
+        return;
+      }
+
       meshRenderer.scene.position.copy(renderPosition);
       meshRenderer.scene.quaternion.copy(renderRotation);
       meshRenderer.scene.scale.copy(new Vector3().setScalar(transform.scale));
     });
 
-    // TODO: Old code used for bullets and camera, has to be removed!
+    // TODO: Old code used for camera, has to be removed!
     this.queries.object3ds.results.forEach((entity) => {
       const transform = entity.getComponent(Transform);
       const object3d = entity.getMutableComponent(Object3d).value;
@@ -158,16 +191,7 @@ export class WebGlRendererSystem extends System {
         .copy(transform.prevRotation)
         .slerp(transform.rotation, alpha);
 
-      if (entity.hasComponent(Kind)) {
-        if (entity.getComponent(Kind).value === Types.Entities.BULLET) {
-          this.dummy.position.copy(renderPosition);
-          this.dummy.quaternion.copy(renderRotation);
-          this.dummy.updateMatrix();
-
-          object3d.setMatrixAt(entity.id, this.dummy.matrix);
-          object3d.instanceMatrix.needsUpdate = true;
-        }
-      } else {
+      if (!entity.hasComponent(Kind)) {
         object3d.position.copy(renderPosition);
         object3d.quaternion.copy(renderRotation);
       }
