@@ -299,7 +299,6 @@ export default class Game {
         entity
           .addComponent(Spaceship)
           .addComponent(MeshRenderer)
-          .addComponent(Object3d, { value: this.assetManager.getModel('spaceship') })
           .addComponent(RaycasterReceiver);
         break;
       }
@@ -307,7 +306,6 @@ export default class Game {
         entity
           .addComponent(Asteroid)
           .addComponent(MeshRenderer)
-          .addComponent(Object3d, { value: this.assetManager.getModel('asteroid') })
           .addComponent(RaycasterReceiver);
         break;
       }
