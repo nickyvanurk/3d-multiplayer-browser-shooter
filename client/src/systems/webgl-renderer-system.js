@@ -159,8 +159,8 @@ export class WebGlRendererSystem extends System {
       const meshRenderer = entity.getMutableComponent(MeshRenderer);
 
       if (meshRenderer.scene instanceof InstancedMesh$1) {
-        this.dummy.position.copy(transform.position);
-        this.dummy.quaternion.copy(transform.rotation);
+        this.dummy.position.copy(renderPosition);
+        this.dummy.quaternion.copy(renderRotation);
         this.dummy.updateMatrix();
 
         meshRenderer.scene.setMatrixAt(entity.worldId, this.dummy.matrix);
