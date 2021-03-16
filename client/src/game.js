@@ -25,7 +25,6 @@ import Utils from '../../shared/utils';
 import Types from '../../shared/types';
 import { WebGlRenderer } from './components/webgl-renderer';
 import { Connection } from '../../shared/components/connection';
-import { Object3d } from './components/object3d';
 import { Transform } from './components/transform';
 import { Keybindings } from './components/keybindings';
 import { Input } from '../../shared/components/input';
@@ -67,7 +66,6 @@ export default class Game {
     this.world = new World()
       .registerComponent(WebGlRenderer)
       .registerComponent(Connection)
-      .registerComponent(Object3d)
       .registerComponent(Transform)
       .registerComponent(Keybindings)
       .registerComponent(Input)

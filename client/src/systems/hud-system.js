@@ -7,7 +7,6 @@ import { Transform } from '../components/transform';
 import { Kind } from '../../../shared/components/kind';
 import { Player } from '../components/player';
 import { WebGlRenderer } from '../components/webgl-renderer';
-import { Object3d } from '../components/object3d';
 import { Camera } from '../components/camera';
 
 export class HudSystem extends System {

@@ -4,7 +4,6 @@ import { Raycaster } from 'three';
 import { Input } from '../../../shared/components/input';
 import { Keybindings } from '../components/keybindings';
 import { Camera } from '../components/camera';
-import { Object3d } from '../components/object3d';
 import { MeshRenderer } from '../components/mesh-renderer';
 import { WebGlRenderer } from '../components/webgl-renderer';
 import { RaycasterReceiver } from '../components/raycaster-receiver';
