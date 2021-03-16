@@ -76,7 +76,7 @@ export class WebGlRendererSystem extends System {
         this.dummy.scale.setScalar(0); // Make invisible, TODO: Move to shader
         this.dummy.updateMatrix();
 
-        instancedMesh.value.setMatrixAt(entity.id, this.dummy.matrix);
+        instancedMesh.value.setMatrixAt(entity.worldId, this.dummy.matrix);
         instancedMesh.value.instanceMatrix.needsUpdate = true;
 
         meshRenderer.scene = instancedMesh.value;
@@ -117,7 +117,7 @@ export class WebGlRendererSystem extends System {
         this.dummy.scale.setScalar(transform.scale); // Make invisible
         this.dummy.updateMatrix();
 
-        meshRenderer.scene.setMatrixAt(entity.id, this.dummy.matrix);
+        meshRenderer.scene.setMatrixAt(entity.worldId, this.dummy.matrix);
         meshRenderer.scene.instanceMatrix.needsUpdate = true;
         return;
       }
@@ -137,7 +137,7 @@ export class WebGlRendererSystem extends System {
         this.dummy.scale.setScalar(0); // Make invisible
         this.dummy.updateMatrix();
 
-        meshRenderer.scene.setMatrixAt(entity.id, this.dummy.matrix);
+        meshRenderer.scene.setMatrixAt(entity.worldId, this.dummy.matrix);
         meshRenderer.scene.instanceMatrix.needsUpdate = true;
         return;
       }
@@ -163,7 +163,7 @@ export class WebGlRendererSystem extends System {
         this.dummy.quaternion.copy(transform.rotation);
         this.dummy.updateMatrix();
 
-        meshRenderer.scene.setMatrixAt(entity.id, this.dummy.matrix);
+        meshRenderer.scene.setMatrixAt(entity.worldId, this.dummy.matrix);
         meshRenderer.scene.instanceMatrix.needsUpdate = true;
         return;
       }
