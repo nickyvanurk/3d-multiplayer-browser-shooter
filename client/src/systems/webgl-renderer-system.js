@@ -27,6 +27,10 @@ export class WebGlRendererSystem extends System {
     resourceEntities: {
       components: [ResourceEntity, Model, Loaded]
     },
+    meshRenderers: {
+      components: [MeshRenderer],
+      listen: { added: true }
+    },
     entities: {
       components: [Transform, MeshRenderer],
       listen: {
@@ -44,7 +48,7 @@ export class WebGlRendererSystem extends System {
   }
 
   execute() {
-    this.queries.entities.added.forEach((entity) => {
+    this.queries.meshRenderers.added.forEach((entity) => {
       const resource = this.tryGetResourceEntity(entity);
 
       if (!resource) {
