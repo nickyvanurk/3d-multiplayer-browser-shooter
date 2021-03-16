@@ -46,6 +46,7 @@ import { Loaded } from '../../shared/components/loaded';
 import { ResourceEntity } from '../../shared/components/resource-entity';
 import { Spaceship } from '../../shared/components/spaceship';
 import { Asteroid } from '../../shared/components/asteroid';
+import { MeshRenderer } from './components/mesh-renderer';
 
 import { ModelLoadingSystem } from './systems/model-loading-system';
 import { WebGlRendererSystem } from './systems/webgl-renderer-system';
@@ -81,7 +82,8 @@ export default class Game {
       .registerComponent(Loaded)
       .registerComponent(ResourceEntity)
       .registerComponent(Spaceship)
-      .registerComponent(Asteroid);
+      .registerComponent(Asteroid)
+      .registerComponent(MeshRenderer);
 
     this.world
       .registerSystem(ModelLoadingSystem)
@@ -263,7 +265,9 @@ export default class Game {
     const entity = this.world.createEntity()
       .addComponent(Transform, { prevPosition: position, position, rotation, scale })
       .addComponent(Kind, { value: kind })
-      .addComponent(Player);
+      .addComponent(Player)
+      .addComponent(Spaceship)
+      .addComponent(MeshRenderer);
 
     entity.worldId = id;
 
@@ -293,12 +297,16 @@ export default class Game {
     switch (kind) {
       case Types.Entities.SPACESHIP: {
         entity
+          .addComponent(Spaceship)
+          .addComponent(MeshRenderer)
           .addComponent(Object3d, { value: this.assetManager.getModel('spaceship') })
           .addComponent(RaycasterReceiver);
         break;
       }
       case Types.Entities.ASTEROID: {
         entity
+          .addComponent(Asteroid)
+          .addComponent(MeshRenderer)
           .addComponent(Object3d, { value: this.assetManager.getModel('asteroid') })
           .addComponent(RaycasterReceiver);
         break;

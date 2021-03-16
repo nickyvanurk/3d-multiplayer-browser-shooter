@@ -51,6 +51,16 @@ export default {
       result /= 4294967296;
       return result;
     };
+  },
+
+  startWorldExecution(world) {
+    world.play();
+    world.getSystems().forEach(system => system.play());
+  },
+
+  stopWorldExecution(world) {
+    world.stop();
+    world.getSystems().forEach(system => system.stop());
   }
 };
 

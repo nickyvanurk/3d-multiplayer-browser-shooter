@@ -7,6 +7,11 @@ import { Object3d } from '../components/object3d';
 import { Transform } from '../components/transform';
 import { Kind } from '../../../shared/components/kind';
 
+import { ResourceEntity } from '../../../shared/components/resource-entity';
+import { Model } from '../components/model';
+import { MeshRenderer } from '../components/mesh-renderer';
+import { Loaded } from '../../../shared/components/loaded';
+
 export class WebGlRendererSystem extends System {
   static queries = {
     renderers: {
@@ -18,6 +23,17 @@ export class WebGlRendererSystem extends System {
         added: true,
         removed: true
       }
+    },
+    resourceEntities: {
+      components: [ResourceEntity, Model, Loaded]
+    },
+    entities: {
+      components: [Transform, MeshRenderer],
+      listen: {
+        added: true,
+        removed: true,
+        changed: [Transform]
+      }
     }
   };
 
@@ -28,6 +44,19 @@ export class WebGlRendererSystem extends System {
   }
 
   execute() {
+    this.queries.entities.added.forEach((entity) => {
+      const resource = this.tryGetResourceEntity(entity);
+
+      if (!resource) {
+        console.error('Resource entity not found');
+        return;
+      }
+
+      const model = resource.getComponent(Model);
+      const meshRenderer = entity.getMutableComponent(MeshRenderer);
+      meshRenderer.scene = model.scene.clone();
+    });
+
     this.queries.object3ds.added.forEach((entity) => {
       if (!entity.alive) {
         return;
@@ -113,6 +142,23 @@ export class WebGlRendererSystem extends System {
 
       composer.render(scene, camera);
     });
+  }
+
+  tryGetResourceEntity(entity) {
+    const resources = this.queries.resourceEntities.results;
+
+    if (resources.length == 0) return false;
+
+    let resource = false;
+
+    for (const resourceEntity of resources) {
+      if (resourceEntity.hasAnyComponents(entity.getComponentTypes())) {
+        resource = resourceEntity;
+        break;
+      }
+    }
+
+    return resource;
   }
 
   onResize() {
