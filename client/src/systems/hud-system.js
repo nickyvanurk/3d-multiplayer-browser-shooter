@@ -63,7 +63,6 @@ export class HudSystem extends System {
       const kind = entity.getComponent(Kind).value;
       if (kind === Types.Entities.SPACESHIP) {
         this.entityIndicators[entity.id] = this.createHudSprite(0, 0);
-        console.log(this.entityIndicators[entity.id]);
       }
     });
 
@@ -76,7 +75,9 @@ export class HudSystem extends System {
         delete this.entityIndicators[entity.id];
       }
     });
+  }
 
+  render() {
     this.queries.entities.results.forEach((entity) => {
       if (entity.hasComponent(Player)) return;
 
@@ -119,7 +120,6 @@ export class HudSystem extends System {
           y: projectedPosition.y*this.height/2
         };
 
-
         const distanceToEllipse = Math.sqrt((x*x)+(y*y));
         const distanceToEnemy = Math.sqrt(Math.pow(screenPosition.x, 2)+Math.pow(screenPosition.y, 2));
 
@@ -134,9 +134,7 @@ export class HudSystem extends System {
         }
       }
     });
-  }
 
-  render() {
     this.queries.renderers.results.forEach((entity) => {
       const renderer = entity.getComponent(WebGlRenderer).renderer;
       renderer.clearDepth();
