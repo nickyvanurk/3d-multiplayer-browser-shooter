@@ -11,9 +11,7 @@ import {
   PointsMaterial,
   Points,
   BoxGeometry,
-  MeshBasicMaterial,
-  InstancedMesh as InstancedMesh$1,
-  DynamicDrawUsage
+  MeshBasicMaterial
 } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer';
@@ -126,8 +124,7 @@ export default class Game {
     );
     const cameraEntity = this.world
       .createEntity()
-      .addComponent(Camera)
-      .addComponent(Object3d, { value: camera })
+      .addComponent(Camera, { value: camera })
       .addComponent(Transform);
 
     scene.add(camera);

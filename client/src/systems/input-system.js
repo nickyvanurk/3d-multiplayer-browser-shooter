@@ -15,7 +15,7 @@ export class InputSystem extends System {
       listen: { added: true }
     },
     camera: {
-      components: [Camera, Object3d]
+      components: [Camera]
     },
     renderers: {
       components: [WebGlRenderer]
@@ -102,7 +102,7 @@ export class InputSystem extends System {
       const input = entity.getMutableComponent(Input);
 
       const cameraEntity = this.queries.camera.results[0];
-      const camera = cameraEntity.getComponent(Object3d).value;
+      const camera = cameraEntity.getComponent(Camera).value;
 
       this.raycaster.setFromCamera(input.aim.mouse, camera);
       const { origin, direction } = this.raycaster.ray;

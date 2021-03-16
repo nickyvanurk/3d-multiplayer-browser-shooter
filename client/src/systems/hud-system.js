@@ -8,6 +8,7 @@ import { Kind } from '../../../shared/components/kind';
 import { Player } from '../components/player';
 import { WebGlRenderer } from '../components/webgl-renderer';
 import { Object3d } from '../components/object3d';
+import { Camera } from '../components/camera';
 
 export class HudSystem extends System {
   static queries = {
@@ -78,11 +79,11 @@ export class HudSystem extends System {
 
         const renderer = this.queries.renderers.results[0];
         const camera = renderer.getComponent(WebGlRenderer).camera;
+        const cameraObj = camera.getComponent(Camera).value;
         const {
           position: cameraPosition,
           quaternion: cameraRotation,
-        } = camera.getComponent(Object3d).value;
-        const cameraObj = camera.getComponent(Object3d).value;
+        } = cameraObj;
 
         const { position } = entity.getComponent(Transform);
 

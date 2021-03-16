@@ -1,10 +1,9 @@
 import { System } from 'ecsy';
-import { Vector3, Quaternion, Object3D, InstancedMesh as InstancedMesh$1 } from 'three';
+import { Vector3, Object3D, InstancedMesh as InstancedMesh$1 } from 'three';
 
 import { WebGlRenderer } from '../components/webgl-renderer';
-import { Object3d } from '../components/object3d';
 import { Transform } from '../components/transform';
-import { Kind } from '../../../shared/components/kind';
+import { Camera } from '../components/camera';
 import { ResourceEntity } from '../../../shared/components/resource-entity';
 import { Model } from '../components/model';
 import { MeshRenderer } from '../components/mesh-renderer';
@@ -18,12 +17,8 @@ export class WebGlRendererSystem extends System {
     renderers: {
       components: [WebGlRenderer]
     },
-    object3ds: {
-      components: [Object3d, Transform],
-      listen: {
-        added: true,
-        removed: true
-      }
+    cameras: {
+      components: [Transform, Camera]
     },
     resourceEntities: {
       components: [ResourceEntity, Loaded]
@@ -178,28 +173,23 @@ export class WebGlRendererSystem extends System {
       meshRenderer.scene.scale.copy(new Vector3().setScalar(transform.scale));
     });
 
-    // TODO: Old code used for camera, has to be removed!
-    this.queries.object3ds.results.forEach((entity) => {
+    this.queries.cameras.results.forEach((entity) => {
       const transform = entity.getComponent(Transform);
-      const object3d = entity.getMutableComponent(Object3d).value;
+      const camera = entity.getMutableComponent(Camera).value;
 
-      const renderPosition = new Vector3()
-        .copy(transform.position)
+      const renderPosition = transform.position.clone()
         .multiplyScalar(alpha)
-        .add(new Vector3().copy(transform.prevPosition).multiplyScalar(1 - alpha));
-      const renderRotation = new Quaternion()
-        .copy(transform.prevRotation)
+        .add(transform.prevPosition.clone().multiplyScalar(1 - alpha));
+      const renderRotation = transform.prevRotation.clone()
         .slerp(transform.rotation, alpha);
 
-      if (!entity.hasComponent(Kind)) {
-        object3d.position.copy(renderPosition);
-        object3d.quaternion.copy(renderRotation);
-      }
+      camera.position.copy(renderPosition);
+      camera.quaternion.copy(renderRotation);
     });
 
     this.queries.renderers.results.forEach((entity) => {
       const component = entity.getComponent(WebGlRenderer);
-      const camera = component.camera.getComponent(Object3d).value;
+      const camera = component.camera.getComponent(Camera).value;
       const scene = component.scene;
       const renderer = component.renderer;
       const composer = component.composer;
