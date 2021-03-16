@@ -5,6 +5,7 @@ import { Input } from '../../../shared/components/input';
 import { Keybindings } from '../components/keybindings';
 import { Camera } from '../components/camera';
 import { Object3d } from '../components/object3d';
+import { MeshRenderer } from '../components/mesh-renderer';
 import { WebGlRenderer } from '../components/webgl-renderer';
 import { RaycasterReceiver } from '../components/raycaster-receiver';
 
@@ -21,7 +22,7 @@ export class InputSystem extends System {
       components: [WebGlRenderer]
     },
     raycastReceivers: {
-      components: [RaycasterReceiver, Object3d]
+      components: [RaycasterReceiver, MeshRenderer]
     }
   };
 
@@ -112,16 +113,17 @@ export class InputSystem extends System {
 
       // create raycaster system
       if (renderers.length > 0 && raycastReceivers.length > 0) {
-        const objects = raycastReceivers.map(entity => entity.getComponent(Object3d).value);
+        const receivers = raycastReceivers.filter(entity => entity.getComponent(MeshRenderer).scene);
+        const objects = receivers.map(entity => entity.getComponent(MeshRenderer).scene);
 
-        this.raycaster.far = 200;
+        this.raycaster.far = 100;
         const intersects = this.raycaster.intersectObjects(objects, true);
 
         if (intersects.length > 0) {
           const intersection = intersects[0].object.parent ? intersects[0] : intersects[1];
           input.aim.distance = intersection.distance;
         } else {
-          input.aim.distance = 200;
+          input.aim.distance = 100;
         }
       }
     });

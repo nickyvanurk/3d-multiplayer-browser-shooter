@@ -168,6 +168,11 @@ export class WebGlRendererSystem extends System {
         return;
       }
 
+      if (!meshRenderer.scene) {
+        console.log(false);
+        return;
+      }
+
       meshRenderer.scene.position.copy(renderPosition);
       meshRenderer.scene.quaternion.copy(renderRotation);
       meshRenderer.scene.scale.copy(new Vector3().setScalar(transform.scale));
