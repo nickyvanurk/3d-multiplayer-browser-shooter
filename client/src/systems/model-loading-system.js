@@ -1,5 +1,7 @@
 import { System, Not } from 'ecsy';
 
+import Utils from '../../../shared/utils';
+
 import { GltfLoader } from '../components/gltf-loader';
 import { Model } from '../components/model';
 import { Loading } from '../../../shared/components/loading';
@@ -11,46 +13,81 @@ export class ModelLoadingSystem extends System {
       components: [GltfLoader]
     },
     models: {
+      components: [Model]
+    },
+    unloadedModels: {
       components: [Model, Not(Loading), Not(Loaded)],
       listen: { added: true }
-    }
+    },
+    loadedModels: {
+      components: [Model, Loaded]
+    },
   };
 
   execute() {
-    this.queries.models.added.forEach((entity) => {
-      const loaders = this.queries.loader.results;
+    this.queries.unloadedModels.added.forEach((entity) => {
+      const loader = this.tryGetLoader();
 
-      if (loaders.length == 0) {
+      if (!loader) {
         console.error('Loader entity not found');
         return;
-      } else if (loaders.length > 1) {
-        console.error('Multiple loader entities found');
       }
 
-      const gltfLoader = loaders[0].getComponent(GltfLoader).value;
+      const gltfLoader = loader.getComponent(GltfLoader).value;
       const model = entity.getComponent(Model);
 
       gltfLoader.load(model.path, (gltf) => {
-        const model = entity.getMutableComponent(Model);
-        model.scene = gltf.scene;
+        this.handleLoaded(entity, gltf);
 
-        entity.addComponent(Loaded);
-        entity.removeComponent(Loading);
-
-        console.log(`Loaded model ${model.path}`);
-      }, (xhr) => {
-        const loadingPercentage = xhr.loaded / xhr.total * 100;
-
-        if (!entity.hasComponent(Loading)) {
-          entity.addComponent(Loading, { progress: loadingPercentage });
-          return;
+        if (this.loadedAllModels()) {
+          Utils.startWorldExecution(this.world);
+          this.stop();
         }
-
-        const loading = entity.getMutableComponent(Loading);
-        loading.progess = loadingPercentage;
+      }, (xhr) => {
+        this.handleProgress(entity, xhr);
       }, (error) => {
         console.error(`Failed loading model ${model.path}: ${error}`);
       });
     });
+
+    if (!this.loadedAllModels()) {
+      Utils.stopWorldExecution(this.world);
+    }
+  }
+
+  handleLoaded(entity, gltf) {
+    const model = entity.getMutableComponent(Model);
+    model.scene = gltf.scene;
+
+    entity.addComponent(Loaded);
+    entity.removeComponent(Loading);
+
+    console.log(`Loaded model ${model.path}`);
+  }
+
+  handleProgress(entity, xhr) {
+    const loadingPercentage = xhr.loaded / xhr.total * 100;
+
+    if (!entity.hasComponent(Loading)) {
+      entity.addComponent(Loading, { progress: loadingPercentage });
+      return;
+    }
+
+    const loading = entity.getMutableComponent(Loading);
+    loading.progess = loadingPercentage;
+  }
+
+  tryGetLoader() {
+    const loaders = this.queries.loader.results;
+
+    if (!loaders.length) return false;
+
+    return loaders[0];
+  }
+
+  loadedAllModels() {
+    const numModels = this.queries.models.results.length;
+    const numLoadedModels = this.queries.loadedModels.results.length;
+    return numModels === numLoadedModels;
   }
 }
