@@ -3,7 +3,6 @@ import {
   PerspectiveCamera,
   Scene,
   WebGLRenderer as WebGlRenderer$1,
-  LoadingManager,
   AmbientLight,
   DirectionalLight,
   Fog,
@@ -23,8 +22,6 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass';
 import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader';
 import * as workerInterval from 'worker-interval';
-
-import { AssetManager } from '../../shared/asset-manager';
 
 import Utils from '../../shared/utils';
 import Types from '../../shared/types';
@@ -156,7 +153,6 @@ export default class Game {
         renderer: renderer,
         composer: composer
       });
-    this.world.stop();
 
     camera.position.z = 15;
 
@@ -174,13 +170,6 @@ export default class Game {
       .addComponent(Asteroid)
       .addComponent(Model, { path: 'asteroid.gltf' });
 
-    const loadingManager = new LoadingManager();
-    loadingManager.onLoad = this.handleLoad.bind(this);
-
-    this.assetManager = new AssetManager(loadingManager);
-    this.assetManager.loadModel({name: 'spaceship', url: 'models/spaceship.gltf'});
-    this.assetManager.loadModel({name: 'asteroid', url: 'models/asteroid.gltf'});
-
     this.addStars(scene, 1000, 4000);
   }
 
@@ -197,10 +186,6 @@ export default class Game {
     const material = new MeshBasicMaterial( {color: 0xffa900} );
     this.bulletMesh = new InstancedMesh(geometry, material, 10000);
     this.bulletMesh.instanceMatrix.setUsage(DynamicDrawUsage);
-  }
-
-  handleLoad() {
-    this.world.play();
   }
 
   update() {
@@ -270,12 +255,6 @@ export default class Game {
       .addComponent(MeshRenderer);
 
     entity.worldId = id;
-
-    switch (kind) {
-      case Types.Entities.SPACESHIP:
-        entity.addComponent(Object3d, { value: this.assetManager.getModel('spaceship') });
-        break;
-    }
 
     this.entities[id] = entity;
   }
