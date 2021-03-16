@@ -110,21 +110,22 @@ export class InputSystem extends System {
       input.aim.origin = origin;
       input.aim.direction = direction;
 
+      // DISABLE FOR NOW
       // create raycaster system
-      if (renderers.length > 0 && raycastReceivers.length > 0) {
-        const receivers = raycastReceivers.filter(entity => entity.getComponent(MeshRenderer).scene);
-        const objects = receivers.map(entity => entity.getComponent(MeshRenderer).scene);
+      //if (renderers.length > 0 && raycastReceivers.length > 0) {
+      //  const receivers = raycastReceivers.filter(entity => entity.getComponent(MeshRenderer).scene);
+      //  const objects = receivers.map(entity => entity.getComponent(MeshRenderer).scene);
 
-        this.raycaster.far = 100;
-        const intersects = this.raycaster.intersectObjects(objects, true);
+      //  this.raycaster.far = 200;
+      //  const intersects = this.raycaster.intersectObjects(objects, true);
 
-        if (intersects.length > 0) {
-          const intersection = intersects[0].object.parent ? intersects[0] : intersects[1];
-          input.aim.distance = intersection.distance;
-        } else {
-          input.aim.distance = 100;
-        }
-      }
+      //  if (intersects.length > 0) {
+      //    const intersection = intersects[0].object.parent ? intersects[0] : intersects[1];
+      //    input.aim.distance = intersection.distance;
+      //  } else {
+      //    input.aim.distance = 200;
+      //  }
+      //}
     });
   }
 }

@@ -35,17 +35,25 @@ export class HudSystem extends System {
     this.cameraOrtho.fov = 70;
     this.sceneOrtho = new Scene();
 
-    new TextureLoader().load('textures/spaceship.png', this.handleLoad.bind(this));
+    const loader = new TextureLoader()
+    const texture = Promise.all([
+      loader.load('textures/spaceship.png'),
+      loader.load('textures/target.png')
+    ], (resolve, _) => {
+      resolve(texture);
+    }).then(result => {
+      this.textures = {
+        spaceship: result[0],
+        target: result[1]
+      };
+      this.play();
+    });
+
     this.entityIndicators = {};
 
     window.addEventListener('resize', this.onWindowResize.bind(this));
 
     this.stop();
-  }
-
-  handleLoad(texture) {
-    this.texture = texture;
-    this.play();
   }
 
   execute(_delta, _time) {
@@ -55,6 +63,7 @@ export class HudSystem extends System {
       const kind = entity.getComponent(Kind).value;
       if (kind === Types.Entities.SPACESHIP) {
         this.entityIndicators[entity.id] = this.createHudSprite(0, 0);
+        console.log(this.entityIndicators[entity.id]);
       }
     });
 
@@ -110,11 +119,19 @@ export class HudSystem extends System {
           y: projectedPosition.y*this.height/2
         };
 
+
         const distanceToEllipse = Math.sqrt((x*x)+(y*y));
         const distanceToEnemy = Math.sqrt(Math.pow(screenPosition.x, 2)+Math.pow(screenPosition.y, 2));
 
-        indicator.position.set(-x, -y, 1);
-        indicator.visible = distanceToEnemy > distanceToEllipse || localPosition.z < 0;
+        if (distanceToEnemy < distanceToEllipse && localPosition.z > 0 && relativePosition.length() > 80) {
+          indicator.material = new SpriteMaterial({ map: this.textures.target });
+          indicator.position.set(screenPosition.x, screenPosition.y, 1);
+          indicator.visible = true;
+        } else {
+          indicator.material = new SpriteMaterial({ map: this.textures.spaceship });
+          indicator.position.set(-x, -y, 1);
+          indicator.visible = distanceToEnemy > distanceToEllipse || localPosition.z < 0;
+        }
       }
     });
   }
@@ -128,7 +145,7 @@ export class HudSystem extends System {
   }
 
   createHudSprite(x, y) {
-    const material = new SpriteMaterial({ map: this.texture });
+    const material = new SpriteMaterial({ map: this.textures.spaceship });
     const enemyIndicator = new Sprite(material);
     enemyIndicator.center.set(0.5, 0.5);
     enemyIndicator.position.set(x, y, 1); // top left

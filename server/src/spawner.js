@@ -79,7 +79,7 @@ export function asteroid(ecs, position, rotation, scale = 1) {
   return asteroid;
 }
 
-export function projectile(ecs, position, rotation, damage, speed = 0.1,  timer = 500) {
+export function projectile(ecs, position, rotation, damage, speed = 0.1,  timer = 800) {
   const projectile = ecs.createEntity()
     .addComponent(Kind, { value: Types.Entities.BULLET })
     .addComponent(Transform, { position, rotation })
