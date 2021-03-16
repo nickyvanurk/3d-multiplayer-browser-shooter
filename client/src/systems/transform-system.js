@@ -10,6 +10,10 @@ export class TransformSystem extends System {
     }
   };
 
+  init() {
+    this.stop();
+  }
+
   execute() {
     this.queries.objects.changed.forEach((entity) => {
       if (!entity.alive) {

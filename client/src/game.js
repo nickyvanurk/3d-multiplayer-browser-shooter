@@ -98,7 +98,10 @@ export default class Game {
       .registerSystem(HudSystem)
       .registerSystem(NetworkMessageSystem);
 
-    this.updateSystems = this.world.getSystems();
+    this.updateSystems = this.world.getSystems().filter((system) => {
+      return !(system instanceof TransformSystem);
+    });
+    this.transformSystem = this.world.getSystem(TransformSystem);
     this.renderSystem = this.world.getSystem(WebGlRendererSystem);
     this.hudSystem = this.world.getSystem(HudSystem);
 
@@ -204,6 +207,7 @@ export default class Game {
       delta = 250;
     }
 
+    this.world.systemManager.executeSystem(this.transformSystem, delta, time);
     this.fixedUpdate(delta, time);
     this.lastUpdate = performance.now();
 
