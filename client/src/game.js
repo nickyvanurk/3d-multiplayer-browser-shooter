@@ -120,6 +120,7 @@ export default class Game {
       return !(system instanceof TransformSystem);
     });
     this.transformSystem = this.world.getSystem(TransformSystem);
+    this.projectionSystem = this.world.getSystem(ProjectionSystem);
     this.renderSystem = this.world.getSystem(WebGlRendererSystem);
     this.hudSystem = this.world.getSystem(HudSystem);
 
@@ -242,6 +243,7 @@ export default class Game {
     if (!document.hidden) {
       const alpha = (performance.now() - this.lastUpdate)/(1000/this.updatesPerSecond);
       this.renderSystem.render(alpha);
+      this.projectionSystem.render();
       this.hudSystem.render();
       this.world.entityManager.processDeferredRemoval();
     }

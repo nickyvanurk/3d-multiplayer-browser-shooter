@@ -21,6 +21,9 @@ export class ProjectionSystem extends System {
   }
 
   execute() {
+  }
+
+  render() {
     this.queries.entities.results.forEach((entity) => {
       let camera = this.tryGetCamera();
 

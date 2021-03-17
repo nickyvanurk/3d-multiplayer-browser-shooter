@@ -8,14 +8,15 @@ import { Kind } from '../../../shared/components/kind';
 import { Player } from '../components/player';
 import { WebGlRenderer } from '../components/webgl-renderer';
 import { Camera } from '../components/camera';
+import { ScreenPosition } from '../components/screen-position';
 
 export class HudSystem extends System {
   static queries = {
     player: {
       components: [Transform, Kind, Player]
     },
-    entities: {
-      components: [Transform, Kind],
+    hudEntities: {
+      components: [Transform, ScreenPosition],
       listen: {
         added: true,
         removed: true
@@ -57,81 +58,41 @@ export class HudSystem extends System {
   }
 
   execute(_delta, _time) {
-    this.queries.entities.added.forEach((entity) => {
-      if (entity.hasComponent(Player) || !entity.hasComponent(Kind)) return;
-
-      const kind = entity.getComponent(Kind).value;
-      if (kind === Types.Entities.SPACESHIP) {
-        this.entityIndicators[entity.id] = this.createHudSprite(0, 0);
-      }
+    this.queries.hudEntities.added.forEach((entity) => {
+      this.entityIndicators[entity.id] = this.createHudSprite(0, 0);
     });
 
-    this.queries.entities.removed.forEach((entity) => {
-      if (entity.hasComponent(Player) || !entity.hasRemovedComponent(Kind)) return;
-
-      const kind = entity.getRemovedComponent(Kind).value;
-      if (kind === Types.Entities.SPACESHIP) {
-        this.sceneOrtho.remove(this.entityIndicators[entity.id]);
-        delete this.entityIndicators[entity.id];
-      }
+    this.queries.hudEntities.removed.forEach((entity) => {
+      this.sceneOrtho.remove(this.entityIndicators[entity.id]);
+      delete this.entityIndicators[entity.id];
     });
   }
 
   render() {
-    this.queries.entities.results.forEach((entity) => {
-      if (entity.hasComponent(Player)) return;
+    this.queries.hudEntities.results.forEach((entity) => {
+      const screenPosition = entity.getComponent(ScreenPosition);
 
-      const kind = entity.getComponent(Kind).value;
-      if (kind === Types.Entities.SPACESHIP) {
-        const player = this.queries.player.results[0];
-        if (!player) return;
+      const indicator = this.entityIndicators[entity.id];
+      const angle = Math.atan2(screenPosition.y, screenPosition.x);
 
-        const renderer = this.queries.renderers.results[0];
-        const camera = renderer.getComponent(WebGlRenderer).camera;
-        const cameraObj = camera.getComponent(Camera).value;
-        const {
-          position: cameraPosition,
-          quaternion: cameraRotation,
-        } = cameraObj;
+      const a = this.width/3;
+      const b = this.height/3;
 
-        const { position } = entity.getComponent(Transform);
+      const t = Math.sqrt(Math.pow(b*Math.cos(angle), 2)+Math.pow(a*Math.sin(angle), 2));
+      const x = a*b*Math.cos(angle)/t;
+      const y = a*b*Math.sin(angle)/t;
 
-        let relativePosition = new Vector3();
-        relativePosition.subVectors(cameraPosition, position);
+      const distanceToEllipse = Math.sqrt((x*x)+(y*y));
+      const distanceToEnemy = Math.sqrt(Math.pow(screenPosition.x, 2)+Math.pow(screenPosition.y, 2));
 
-        const dummy = new Object3D();
-        dummy.quaternion.copy(cameraRotation);
-        dummy.updateMatrixWorld();
-        const localPosition = dummy.worldToLocal(relativePosition);
-
-        const indicator = this.entityIndicators[entity.id];
-        const angle = Math.atan2(localPosition.y, localPosition.x);
-
-        const a = this.width/3;
-        const b = this.height/3;
-
-        const t = Math.sqrt(Math.pow(b*Math.cos(angle), 2)+Math.pow(a*Math.sin(angle), 2));
-        const x = a*b*Math.cos(angle)/t;
-        const y = a*b*Math.sin(angle)/t;
-
-        const projectedPosition = position.clone().project(cameraObj);
-        const screenPosition = {
-          x: projectedPosition.x*this.width/2,
-          y: projectedPosition.y*this.height/2
-        };
-
-        const distanceToEllipse = Math.sqrt((x*x)+(y*y));
-        const distanceToEnemy = Math.sqrt(Math.pow(screenPosition.x, 2)+Math.pow(screenPosition.y, 2));
-
-        if (distanceToEnemy < distanceToEllipse && localPosition.z > 0 && relativePosition.length() > 80) {
-          indicator.material = new SpriteMaterial({ map: this.textures.target });
-          indicator.position.set(screenPosition.x, screenPosition.y, 1);
-          indicator.visible = true;
-        } else {
-          indicator.material = new SpriteMaterial({ map: this.textures.spaceship });
-          indicator.position.set(-x, -y, 1);
-          indicator.visible = distanceToEnemy > distanceToEllipse || localPosition.z < 0;
-        }
+      if (distanceToEnemy < distanceToEllipse) {
+        indicator.material = new SpriteMaterial({ map: this.textures.target });
+        indicator.position.set(screenPosition.x, screenPosition.y, 1);
+        //indicator.visible = true;
+      } else {
+        indicator.material = new SpriteMaterial({ map: this.textures.spaceship });
+        indicator.position.set(x, y, 1);
+        //indicator.visible = distanceToEnemy > distanceToEllipse || localPosition.z < 0;
       }
     });
 
