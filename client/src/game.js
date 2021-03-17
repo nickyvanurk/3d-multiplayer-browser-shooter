@@ -47,6 +47,8 @@ import { InstancedMesh } from './components/instanced-mesh';
 import { InstancedMeshRenderer } from './components/instanced-mesh-renderer';
 import { Bullet } from '../../shared/components/bullet';
 import { ScreenPosition } from './components/screen-position';
+import { Range } from '../../shared/components/range';
+import { RangeTarget } from '../../shared/components/range-target';
 
 import { ModelLoadingSystem } from './systems/model-loading-system';
 import { WebGlRendererSystem } from './systems/webgl-renderer-system';
@@ -57,6 +59,7 @@ import { InputSystem } from './systems/input-system';
 import { ParticleSystem } from './systems/particle-system';
 import { HudSystem } from './systems/hud-system';
 import { ProjectionSystem } from './systems/projection-system';
+import { RangeSystem } from '../../shared/systems/range-system';
 
 export default class Game {
   constructor() {
@@ -89,7 +92,9 @@ export default class Game {
       .registerComponent(InstancedMesh)
       .registerComponent(MeshRenderer)
       .registerComponent(InstancedMeshRenderer)
-      .registerComponent(ScreenPosition);
+      .registerComponent(ScreenPosition)
+      .registerComponent(Range)
+      .registerComponent(RangeTarget);
 
     this.world
       .registerSystem(ModelLoadingSystem)
@@ -98,6 +103,7 @@ export default class Game {
       .registerSystem(NetworkEventSystem, this)
       .registerSystem(InputSystem)
       .registerSystem(ParticleSystem)
+      .registerSystem(RangeSystem)
       .registerSystem(WebGlRendererSystem)
       .registerSystem(HudSystem)
       .registerSystem(NetworkMessageSystem);
@@ -145,7 +151,8 @@ export default class Game {
     const cameraEntity = this.world
       .createEntity()
       .addComponent(Camera, { value: camera })
-      .addComponent(Transform);
+      .addComponent(Transform)
+      .addComponent(Range, { radius: 50 });
 
     scene.add(camera);
 
@@ -311,7 +318,8 @@ export default class Game {
           .addComponent(Spaceship)
           .addComponent(MeshRenderer)
           .addComponent(RaycasterReceiver)
-          .addComponent(ScreenPosition);
+          .addComponent(ScreenPosition)
+          .addComponent(RangeTarget);
         break;
       }
       case Types.Entities.ASTEROID: {
