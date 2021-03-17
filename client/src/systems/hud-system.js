@@ -105,7 +105,7 @@ export class HudSystem extends System {
       const distanceToEllipse = Math.sqrt((x*x)+(y*y));
       const distanceToEnemy = Math.sqrt(Math.pow(screenPosition.x, 2)+Math.pow(screenPosition.y, 2));
 
-      if (distanceToEnemy < distanceToEllipse && !range.inRange.includes(entity)) {
+      if (distanceToEnemy < distanceToEllipse && localPosition.z < 0 && !range.inRange.includes(entity)) {
         indicator.material = new SpriteMaterial({ map: this.textures.target });
         indicator.position.set(screenPosition.x, screenPosition.y, 1);
         indicator.visible = true;
