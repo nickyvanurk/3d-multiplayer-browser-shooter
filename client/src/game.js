@@ -131,7 +131,7 @@ export default class Game {
     const camera = new PerspectiveCamera(
       70,
       window.innerWidth / window.innerHeight,
-      0.1,
+      1,
       4100
     );
     const cameraEntity = this.world
