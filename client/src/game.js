@@ -46,6 +46,7 @@ import { Material } from './components/material';
 import { InstancedMesh } from './components/instanced-mesh';
 import { InstancedMeshRenderer } from './components/instanced-mesh-renderer';
 import { Bullet } from '../../shared/components/bullet';
+import { ScreenPosition } from './components/screen-position';
 
 import { ModelLoadingSystem } from './systems/model-loading-system';
 import { WebGlRendererSystem } from './systems/webgl-renderer-system';
@@ -55,6 +56,7 @@ import { TransformSystem } from './systems/transform-system';
 import { InputSystem } from './systems/input-system';
 import { ParticleSystem } from './systems/particle-system';
 import { HudSystem } from './systems/hud-system';
+import { ProjectionSystem } from './systems/projection-system';
 
 export default class Game {
   constructor() {
@@ -86,17 +88,33 @@ export default class Game {
       .registerComponent(Material)
       .registerComponent(InstancedMesh)
       .registerComponent(MeshRenderer)
-      .registerComponent(InstancedMeshRenderer);
+      .registerComponent(InstancedMeshRenderer)
+      .registerComponent(ScreenPosition);
 
     this.world
       .registerSystem(ModelLoadingSystem)
       .registerSystem(TransformSystem)
+      .registerSystem(ProjectionSystem)
       .registerSystem(NetworkEventSystem, this)
       .registerSystem(InputSystem)
       .registerSystem(ParticleSystem)
       .registerSystem(WebGlRendererSystem)
       .registerSystem(HudSystem)
       .registerSystem(NetworkMessageSystem);
+
+
+    // Clickable
+    // ClickRect
+    // Clicked
+    //
+    //
+    // ProjectionSystem
+    // ScreenPosition
+    //
+    // ClickSystem
+    //
+    //
+    //
 
     this.updateSystems = this.world.getSystems().filter((system) => {
       return !(system instanceof TransformSystem);
@@ -290,7 +308,8 @@ export default class Game {
         entity
           .addComponent(Spaceship)
           .addComponent(MeshRenderer)
-          .addComponent(RaycasterReceiver);
+          .addComponent(RaycasterReceiver)
+          .addComponent(ScreenPosition);
         break;
       }
       case Types.Entities.ASTEROID: {
