@@ -108,20 +108,6 @@ export default class Game {
       .registerSystem(HudSystem)
       .registerSystem(NetworkMessageSystem);
 
-
-    // Clickable
-    // ClickRect
-    // Clicked
-    //
-    //
-    // ProjectionSystem
-    // ScreenPosition
-    //
-    // ClickSystem
-    //
-    //
-    //
-
     this.updateSystems = this.world.getSystems().filter((system) => {
       return !(system instanceof TransformSystem);
     });
@@ -152,7 +138,7 @@ export default class Game {
       .createEntity()
       .addComponent(Camera, { value: camera })
       .addComponent(Transform)
-      .addComponent(Range, { radius: 50 });
+      .addComponent(Range, { radius: 80 });
 
     scene.add(camera);
 

@@ -35,20 +35,12 @@ export class ProjectionSystem extends System {
       camera = camera.getComponent(Camera).value;
       const { position } = entity.getComponent(Transform);
 
-      if (this.isPointBehindCamera(camera, position)) return;
-
       const projection = position.clone().project(camera);
       const screenPosition = entity.getMutableComponent(ScreenPosition);
 
       screenPosition.x = projection.x * window.innerWidth / 2;
       screenPosition.y = projection.y * window.innerHeight / 2;
     });
-  }
-
-  isPointBehindCamera(camera, position) {
-    this.point.copy(position);
-    this.point.applyMatrix4(camera.matrixWorldInverse);
-    return this.point.z > 0;
   }
 
   tryGetCamera() {

@@ -1,17 +1,19 @@
 import { System } from 'ecsy';
 import { TextureLoader, SpriteMaterial, Sprite, OrthographicCamera, Scene } from 'three';
-import { Vector3, Object3D } from 'three';
 
-import Types from '../../../shared/types';
 import { Transform } from '../components/transform';
 import { Kind } from '../../../shared/components/kind';
 import { Player } from '../components/player';
 import { WebGlRenderer } from '../components/webgl-renderer';
 import { Camera } from '../components/camera';
 import { ScreenPosition } from '../components/screen-position';
+import { Range } from '../../../shared/components/range';
 
 export class HudSystem extends System {
   static queries = {
+    cameras: {
+      components: [Camera, Transform, Range]
+    },
     player: {
       components: [Transform, Kind, Player]
     },
@@ -70,10 +72,23 @@ export class HudSystem extends System {
 
   render() {
     this.queries.hudEntities.results.forEach((entity) => {
+      let camera = this.tryGetCamera();
+
+      if (!camera) {
+        console.error('No camera found');
+        return;
+
+      }
+
+      const range = camera.getComponent(Range);
+      camera = camera.getComponent(Camera).value;
+
+      const position = entity.getComponent(Transform).position;
+      const localPosition = position.clone().applyMatrix4(camera.matrixWorldInverse);
       const screenPosition = entity.getComponent(ScreenPosition);
 
       const indicator = this.entityIndicators[entity.id];
-      const angle = Math.atan2(screenPosition.y, screenPosition.x);
+      const angle = Math.atan2(localPosition.y, localPosition.x);
 
       const a = this.width/3;
       const b = this.height/3;
@@ -85,14 +100,14 @@ export class HudSystem extends System {
       const distanceToEllipse = Math.sqrt((x*x)+(y*y));
       const distanceToEnemy = Math.sqrt(Math.pow(screenPosition.x, 2)+Math.pow(screenPosition.y, 2));
 
-      if (distanceToEnemy < distanceToEllipse) {
+      if (distanceToEnemy < distanceToEllipse && !range.inRange.includes(entity)) {
         indicator.material = new SpriteMaterial({ map: this.textures.target });
         indicator.position.set(screenPosition.x, screenPosition.y, 1);
-        //indicator.visible = true;
+        indicator.visible = true;
       } else {
         indicator.material = new SpriteMaterial({ map: this.textures.spaceship });
         indicator.position.set(x, y, 1);
-        //indicator.visible = distanceToEnemy > distanceToEllipse || localPosition.z < 0;
+        indicator.visible = distanceToEnemy > distanceToEllipse || localPosition.z > 0
       }
     });
 
@@ -128,5 +143,10 @@ export class HudSystem extends System {
       const renderer = entity.getComponent(WebGlRenderer).renderer;
       renderer.setSize(this.width, this.height);
     });
+  }
+
+  tryGetCamera() {
+    const cameras = this.queries.cameras.results;
+    return cameras.length ? cameras[0] : false;
   }
 }
