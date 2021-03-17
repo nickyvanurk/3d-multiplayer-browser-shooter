@@ -1,5 +1,5 @@
 import { System } from 'ecsy';
-import { TextureLoader, SpriteMaterial, Sprite, OrthographicCamera, Scene } from 'three';
+import { TextureLoader, SpriteMaterial, Sprite, OrthographicCamera, Scene, Object3D } from 'three';
 
 import { Transform } from '../components/transform';
 import { Kind } from '../../../shared/components/kind';
@@ -56,6 +56,8 @@ export class HudSystem extends System {
 
     window.addEventListener('resize', this.onWindowResize.bind(this));
 
+    this.dummy = new Object3D();
+
     this.stop();
   }
 
@@ -77,15 +79,18 @@ export class HudSystem extends System {
       if (!camera) {
         console.error('No camera found');
         return;
-
       }
 
       const range = camera.getComponent(Range);
       camera = camera.getComponent(Camera).value;
 
       const position = entity.getComponent(Transform).position;
-      const localPosition = position.clone().applyMatrix4(camera.matrixWorldInverse);
       const screenPosition = entity.getComponent(ScreenPosition);
+
+      this.dummy.quaternion.copy(camera.quaternion);
+      this.dummy.position.copy(position);
+      this.dummy.applyMatrix4(camera.matrixWorldInverse);
+      const localPosition = this.dummy.position;
 
       const indicator = this.entityIndicators[entity.id];
       const angle = Math.atan2(localPosition.y, localPosition.x);
