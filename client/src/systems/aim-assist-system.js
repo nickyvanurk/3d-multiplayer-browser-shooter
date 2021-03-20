@@ -1,4 +1,5 @@
 import { System } from 'ecsy';
+import { Vector3 } from 'three';
 
 import { Input } from '../../../shared/components/input';
 import { Camera } from '../components/camera';
@@ -18,6 +19,10 @@ export class AimAssistSystem extends System {
       components: [Transform, Transform2D, Onscreen]
     }
   };
+
+  init() {
+    this.lastVel = new Vector3();
+  }
 
   execute() {
     const camera = this.tryGetCamera();
@@ -53,12 +58,21 @@ export class AimAssistSystem extends System {
 
       const distance = entity.getComponent(Transform).position.clone()
             .sub(camera.getComponent(Transform).position).length();
-      const radius = Math.max(32, targetRadius*10/distance);
+      const radius = Math.max(64, targetRadius*10/distance);
 
       if (mp.x*mp.x + mp.y*mp.y < radius*radius) {
         const { aim } = input.getMutableComponent(Input);
         aim.distance = entity.getComponent(Transform).position.clone()
             .sub(camera.getComponent(Transform).position).length();
+
+      //  const cameraObj = camera.getComponent(Camera).value;
+      //  const transform = entity.getComponent(Transform);
+      //  const velocity = transform.position.clone().sub(transform.prevPosition);
+
+      //  const bulletSpeed = 0.1;
+      //  const target = transform.position.clone().add(velocity.multiplyScalar(distance/(bulletSpeed*16.66666666666)));
+      //  const newDirection = target.sub(cameraObj.position).normalize();
+      //  aim.direction = newDirection;
       }
     });
   }
