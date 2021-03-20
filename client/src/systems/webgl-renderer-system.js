@@ -104,12 +104,23 @@ export class WebGlRendererSystem extends System {
       }
 
       const meshRenderer = entity.getRemovedComponent(MeshRenderer);
+
+      if (!meshRenderer) { // TODO: Fix bug, monkeypatched
+        console.error('MeshRenderer undefined');
+        return;
+      }
+
       webGlRenderer.scene.remove(meshRenderer.scene);
     });
 
     this.queries.objects.added.forEach((entity) => {
       const transform = entity.getComponent(Transform);
       const meshRenderer = entity.getMutableComponent(MeshRenderer);
+
+      if (!meshRenderer) { // TODO: Fix bug, monkeypatched
+        console.error('MeshRenderer undefined');
+        return;
+      }
 
       if (meshRenderer.scene instanceof InstancedMesh$1) {
         this.dummy.position.copy(transform.position);
@@ -132,6 +143,11 @@ export class WebGlRendererSystem extends System {
       if (entity.hasRemovedComponent(MeshRenderer)) return;
 
       const meshRenderer = entity.getMutableComponent(MeshRenderer);
+
+      if (!meshRenderer) { // TODO: Fix bug, monkeypatched
+        console.error('MeshRenderer undefined');
+        return;
+      }
 
       if (meshRenderer.scene instanceof InstancedMesh$1) {
         this.dummy.scale.setScalar(0); // Make invisible
@@ -158,6 +174,11 @@ export class WebGlRendererSystem extends System {
 
       const meshRenderer = entity.getMutableComponent(MeshRenderer);
 
+      if (!meshRenderer) { // TODO: Fix bug, monkeypatched
+        console.error('MeshRenderer undefined');
+        return;
+      }
+
       if (meshRenderer.scene instanceof InstancedMesh$1) {
         this.dummy.position.copy(renderPosition);
         this.dummy.quaternion.copy(renderRotation);
@@ -165,11 +186,6 @@ export class WebGlRendererSystem extends System {
 
         meshRenderer.scene.setMatrixAt(entity.worldId, this.dummy.matrix);
         meshRenderer.scene.instanceMatrix.needsUpdate = true;
-        return;
-      }
-
-      if (!meshRenderer.scene) {
-        console.log(false);
         return;
       }
 
