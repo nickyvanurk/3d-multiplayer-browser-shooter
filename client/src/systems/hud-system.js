@@ -8,7 +8,7 @@ import { Player } from '../components/player';
 import { WebGlRenderer } from '../components/webgl-renderer';
 import { Camera } from '../components/camera';
 import { Range } from '../../../shared/components/range';
-import { Offscreen } from '../components/offscreen';
+import { Onscreen } from '../components/onscreen';
 
 export class HudSystem extends System {
   static queries = {
@@ -84,7 +84,7 @@ export class HudSystem extends System {
       const y = a*b*Math.sin(angle)/t;
 
       const indicator = this.entityIndicators[entity.id];
-      if (!entity.hasComponent(Offscreen)) {
+      if (entity.hasComponent(Onscreen)) {
         indicator.material = new SpriteMaterial({ map: this.textures.target });
         indicator.position.set(transform2d.position.x, transform2d.position.y, 1);
       } else {

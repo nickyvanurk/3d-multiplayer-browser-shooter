@@ -51,7 +51,7 @@ import { ScreenPosition } from './components/screen-position';
 import { Range } from '../../shared/components/range';
 import { RangeTarget } from '../../shared/components/range-target';
 import { Hostile } from '../../shared/components/hostile';
-import { Offscreen } from './components/offscreen';
+import { Onscreen } from './components/onscreen';
 
 import { ModelLoadingSystem } from './systems/model-loading-system';
 import { WebGlRendererSystem } from './systems/webgl-renderer-system';
@@ -100,7 +100,7 @@ export default class Game {
       .registerComponent(RangeTarget)
       .registerComponent(Hostile)
       .registerComponent(Transform2D)
-      .registerComponent(Offscreen);
+      .registerComponent(Onscreen);
 
     this.world
       .registerSystem(ModelLoadingSystem)

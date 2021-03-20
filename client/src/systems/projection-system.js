@@ -5,7 +5,7 @@ import { Object3D } from 'three';
 import { Transform } from '../components/transform';
 import { Transform2D } from '../components/transform2d';
 import { Camera } from '../components/camera';
-import { Offscreen } from '../components/offscreen';
+import { Onscreen } from '../components/onscreen';
 
 export class ProjectionSystem extends System {
   static queries = {
@@ -53,11 +53,11 @@ export class ProjectionSystem extends System {
       if (localPosition.z > 0 ||
           Math.abs(transform2d.position.x) >= halfWidth ||
           Math.abs(transform2d.position.y) >= halfHeight) {
-        if (!entity.hasComponent(Offscreen)) {
-          entity.addComponent(Offscreen);
+        if (entity.hasComponent(Onscreen)) {
+          entity.removeComponent(Onscreen);
         }
-      } else if (entity.hasComponent(Offscreen)) {
-        entity.removeComponent(Offscreen);
+      } else if (!entity.hasComponent(Onscreen)) {
+        entity.addComponent(Onscreen);
       }
     });
   }
