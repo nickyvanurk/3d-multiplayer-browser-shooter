@@ -41,8 +41,8 @@ export class ProjectionSystem extends System {
       const halfHeight = window.innerHeight / 2;
 
       const transform2d = entity.getMutableComponent(Transform2D);
-      transform2d.x = projection.x * halfWidth;
-      transform2d.y = projection.y * halfHeight;
+      transform2d.position.x = projection.x * halfWidth;
+      transform2d.position.y = projection.y * halfHeight;
 
       this.dummy.quaternion.copy(camera.quaternion);
       this.dummy.position.copy(transform.position);
@@ -51,8 +51,8 @@ export class ProjectionSystem extends System {
       transform2d.rotation = Math.atan2(localPosition.y, localPosition.x);
 
       if (localPosition.z > 0 ||
-          Math.abs(transform2d.x) >= halfWidth ||
-          Math.abs(transform2d.y) >= halfHeight) {
+          Math.abs(transform2d.position.x) >= halfWidth ||
+          Math.abs(transform2d.position.y) >= halfHeight) {
         if (!entity.hasComponent(Offscreen)) {
           entity.addComponent(Offscreen);
         }

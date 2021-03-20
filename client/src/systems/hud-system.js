@@ -8,6 +8,7 @@ import { Player } from '../components/player';
 import { WebGlRenderer } from '../components/webgl-renderer';
 import { Camera } from '../components/camera';
 import { Range } from '../../../shared/components/range';
+import { Offscreen } from '../components/offscreen';
 
 export class HudSystem extends System {
   static queries = {
@@ -31,9 +32,9 @@ export class HudSystem extends System {
   };
 
   init() {
-    this.width = window.innerWidth;
-    this.height = window.innerHeight;
-    this.cameraOrtho = new OrthographicCamera(-this.width/2, this.width/2, this.height/2, -this.height/2, 1, 10);
+    this.halfWidth = window.innerWidth / 2;
+    this.halfHeight = window.innerHeight / 2;
+    this.cameraOrtho = new OrthographicCamera(-this.halfWidth, this.halfWidth, this.halfHeight, -this.halfHeight, 1, 10);
     this.cameraOrtho.position.z = 10;
     this.cameraOrtho.fov = 70;
     this.sceneOrtho = new Scene();
@@ -56,8 +57,6 @@ export class HudSystem extends System {
 
     window.addEventListener('resize', this.onWindowResize.bind(this));
 
-    this.dummy = new Object3D();
-
     this.stop();
   }
 
@@ -74,45 +73,23 @@ export class HudSystem extends System {
 
   render() {
     this.queries.hudEntities.results.forEach((entity) => {
-      let camera = this.tryGetCamera();
+      const transform2d = entity.getComponent(Transform2D);
+      const angle = transform2d.rotation;
 
-      if (!camera) {
-        console.error('No camera found');
-        return;
-      }
-
-      const range = camera.getComponent(Range);
-      camera = camera.getComponent(Camera).value;
-
-      const position = entity.getComponent(Transform).position;
-      const screenPosition = entity.getComponent(Transform2D);
-
-      this.dummy.quaternion.copy(camera.quaternion);
-      this.dummy.position.copy(position);
-      this.dummy.applyMatrix4(camera.matrixWorldInverse);
-      const localPosition = this.dummy.position;
-
-      const indicator = this.entityIndicators[entity.id];
-      const angle = Math.atan2(localPosition.y, localPosition.x);
-
-      const a = this.width/3;
-      const b = this.height/3;
+      const a = this.halfWidth/1.5;
+      const b = this.halfHeight/1.5;
 
       const t = Math.sqrt(Math.pow(b*Math.cos(angle), 2)+Math.pow(a*Math.sin(angle), 2));
       const x = a*b*Math.cos(angle)/t;
       const y = a*b*Math.sin(angle)/t;
 
-      const distanceToEllipse = Math.sqrt((x*x)+(y*y));
-      const distanceToEnemy = Math.sqrt(Math.pow(screenPosition.x, 2)+Math.pow(screenPosition.y, 2));
-
-      if (distanceToEnemy < distanceToEllipse && localPosition.z < 0 && !range.inRange.includes(entity)) {
+      const indicator = this.entityIndicators[entity.id];
+      if (!entity.hasComponent(Offscreen)) {
         indicator.material = new SpriteMaterial({ map: this.textures.target });
-        indicator.position.set(screenPosition.x, screenPosition.y, 1);
-        indicator.visible = true;
+        indicator.position.set(transform2d.position.x, transform2d.position.y, 1);
       } else {
         indicator.material = new SpriteMaterial({ map: this.textures.spaceship });
         indicator.position.set(x, y, 1);
-        indicator.visible = distanceToEnemy > distanceToEllipse || localPosition.z > 0
       }
     });
 
@@ -135,23 +112,18 @@ export class HudSystem extends System {
   }
 
   onWindowResize() {
-    this.width = window.innerWidth;
-    this.height = window.innerHeight;
+    this.halfWidth = window.innerWidth / 2;
+    this.halfHeight = window.innerHeight / 2;
 
-    this.cameraOrtho.left = -this.width/2;
-    this.cameraOrtho.right = this.width/2;
-    this.cameraOrtho.top = this.height/2;
-    this.cameraOrtho.bottom = -this.height/2;
+    this.cameraOrtho.left = -this.halfWidth;
+    this.cameraOrtho.right = this.halfWidth;
+    this.cameraOrtho.top = this.halfHeight;
+    this.cameraOrtho.bottom = -this.halfHeight;
     this.cameraOrtho.updateProjectionMatrix();
 
     this.queries.renderers.results.forEach((entity) => {
       const renderer = entity.getComponent(WebGlRenderer).renderer;
-      renderer.setSize(this.width, this.height);
+      renderer.setSize(this.halfWidth*2, this.halfHeight*2);
     });
-  }
-
-  tryGetCamera() {
-    const cameras = this.queries.cameras.results;
-    return cameras.length ? cameras[0] : false;
   }
 }
