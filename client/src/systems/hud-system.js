@@ -1,5 +1,5 @@
 import { System } from 'ecsy';
-import { TextureLoader, SpriteMaterial, Sprite, OrthographicCamera, Scene, Object3D } from 'three';
+import { TextureLoader, SpriteMaterial, Sprite, OrthographicCamera, Scene } from 'three';
 
 import { Transform } from '../components/transform';
 import { Transform2D } from '../components/transform2d';
