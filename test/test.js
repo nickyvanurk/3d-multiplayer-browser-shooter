@@ -3,7 +3,7 @@
  */
 
 const puppeteer = require('puppeteer');
-const playerCount = 10;
+const playerCount = 1;
 
 process.stdin.setRawMode(true);
 process.stdin.resume();
@@ -28,7 +28,7 @@ process.stdin.resume();
     await page.keyboard.down('KeyS');
     await page.waitForTimeout(randomTime());
   };
-  
+
   const goUp = async page => {
     await page.keyboard.up('Delete');
     await page.keyboard.down('Backspace');
@@ -48,11 +48,12 @@ process.stdin.resume();
       await page.goto('http://localhost:8080/');
 
       await page.waitForTimeout(randomTime() + 5000);
-      
+
       let run = true;
 
       while (run) {
         await page.keyboard.down('KeyE');
+        await page.keyboard.down('ShiftLeft');
         await page.mouse.move(200, 275);
         await page.waitForTimeout(2000);
         await page.mouse.move(100, 275);
