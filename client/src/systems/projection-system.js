@@ -1,30 +1,30 @@
 import { System } from 'ecsy';
 
-import { Vector3 } from 'three';
+import { Object3D } from 'three';
 
 import { Transform } from '../components/transform';
+import { Transform2D } from '../components/transform2d';
 import { Camera } from '../components/camera';
-import { ScreenPosition } from '../components/screen-position';
 
 export class ProjectionSystem extends System {
   static queries = {
     cameras: {
       components: [Camera, Transform]
     },
-    entities: {
-      components: [Transform, ScreenPosition]
+    objects: {
+      components: [Transform, Transform2D]
     }
   };
 
   init() {
-    this.point = new Vector3();
+    this.dummy = new Object3D();
   }
 
   execute() {
   }
 
   render() {
-    this.queries.entities.results.forEach((entity) => {
+    this.queries.objects.results.forEach((entity) => {
       let camera = this.tryGetCamera();
 
       if (!camera) {
@@ -33,13 +33,21 @@ export class ProjectionSystem extends System {
       }
 
       camera = camera.getComponent(Camera).value;
-      const { position } = entity.getComponent(Transform);
+      const transform = entity.getComponent(Transform);
+      const projection = transform.position.clone().project(camera);
 
-      const projection = position.clone().project(camera);
-      const screenPosition = entity.getMutableComponent(ScreenPosition);
+      const transform2d = entity.getMutableComponent(Transform2D);
+      transform2d.x = projection.x * window.innerWidth / 2;
+      transform2d.y = projection.y * window.innerHeight / 2;
 
-      screenPosition.x = projection.x * window.innerWidth / 2;
-      screenPosition.y = projection.y * window.innerHeight / 2;
+
+      console.log(transform2d.x);
+
+      this.dummy.quaternion.copy(camera.quaternion);
+      this.dummy.position.copy(transform.position);
+      this.dummy.applyMatrix4(camera.matrixWorldInverse);
+      const localPosition = this.dummy.position;
+      transform2d.rotation = Math.atan2(localPosition.y, localPosition.x);
     });
   }
 

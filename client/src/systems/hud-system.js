@@ -2,11 +2,11 @@ import { System } from 'ecsy';
 import { TextureLoader, SpriteMaterial, Sprite, OrthographicCamera, Scene, Object3D } from 'three';
 
 import { Transform } from '../components/transform';
+import { Transform2D } from '../components/transform2d';
 import { Kind } from '../../../shared/components/kind';
 import { Player } from '../components/player';
 import { WebGlRenderer } from '../components/webgl-renderer';
 import { Camera } from '../components/camera';
-import { ScreenPosition } from '../components/screen-position';
 import { Range } from '../../../shared/components/range';
 
 export class HudSystem extends System {
@@ -18,7 +18,7 @@ export class HudSystem extends System {
       components: [Transform, Kind, Player]
     },
     hudEntities: {
-      components: [Transform, ScreenPosition],
+      components: [Transform, Transform2D],
       listen: {
         added: true,
         removed: true
@@ -85,7 +85,7 @@ export class HudSystem extends System {
       camera = camera.getComponent(Camera).value;
 
       const position = entity.getComponent(Transform).position;
-      const screenPosition = entity.getComponent(ScreenPosition);
+      const screenPosition = entity.getComponent(Transform2D);
 
       this.dummy.quaternion.copy(camera.quaternion);
       this.dummy.position.copy(position);

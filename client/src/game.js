@@ -26,6 +26,7 @@ import Types from '../../shared/types';
 import { WebGlRenderer } from './components/webgl-renderer';
 import { Connection } from '../../shared/components/connection';
 import { Transform } from './components/transform';
+import { Transform2D } from './components/transform2d';
 import { Keybindings } from './components/keybindings';
 import { Input } from '../../shared/components/input';
 import { Camera } from './components/camera';
@@ -96,7 +97,8 @@ export default class Game {
       .registerComponent(ScreenPosition)
       .registerComponent(Range)
       .registerComponent(RangeTarget)
-      .registerComponent(Hostile);
+      .registerComponent(Hostile)
+      .registerComponent(Transform2D);
 
     this.world
       .registerSystem(ModelLoadingSystem)
@@ -307,6 +309,7 @@ export default class Game {
           .addComponent(MeshRenderer)
           .addComponent(RaycasterReceiver)
           .addComponent(ScreenPosition)
+          .addComponent(Transform2D)
           .addComponent(RangeTarget)
           .addComponent(Hostile);
         break;
