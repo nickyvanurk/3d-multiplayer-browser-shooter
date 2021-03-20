@@ -16,6 +16,7 @@ export class Input extends Component {
     aim: { type: Types.Ref, default: { origin: new Vector3(),
                                        direction: new Vector3(),
                                        distance: 100,
+                                       maxDistance: 100,
                                        mouse: new Vector3() } }
   };
 }

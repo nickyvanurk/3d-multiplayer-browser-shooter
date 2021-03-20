@@ -63,6 +63,7 @@ import { ParticleSystem } from './systems/particle-system';
 import { HudSystem } from './systems/hud-system';
 import { ProjectionSystem } from './systems/projection-system';
 import { RangeSystem } from '../../shared/systems/range-system';
+import { AimAssistSystem } from './systems/aim-assist-system';
 
 export default class Game {
   constructor() {
@@ -108,6 +109,7 @@ export default class Game {
       .registerSystem(ProjectionSystem)
       .registerSystem(NetworkEventSystem, this)
       .registerSystem(InputSystem)
+      .registerSystem(AimAssistSystem)
       .registerSystem(ParticleSystem)
       .registerSystem(RangeSystem)
       .registerSystem(WebGlRendererSystem)
