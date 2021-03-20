@@ -49,6 +49,7 @@ import { Bullet } from '../../shared/components/bullet';
 import { ScreenPosition } from './components/screen-position';
 import { Range } from '../../shared/components/range';
 import { RangeTarget } from '../../shared/components/range-target';
+import { Hostile } from '../../shared/components/hostile';
 
 import { ModelLoadingSystem } from './systems/model-loading-system';
 import { WebGlRendererSystem } from './systems/webgl-renderer-system';
@@ -94,7 +95,8 @@ export default class Game {
       .registerComponent(InstancedMeshRenderer)
       .registerComponent(ScreenPosition)
       .registerComponent(Range)
-      .registerComponent(RangeTarget);
+      .registerComponent(RangeTarget)
+      .registerComponent(Hostile);
 
     this.world
       .registerSystem(ModelLoadingSystem)
@@ -305,7 +307,8 @@ export default class Game {
           .addComponent(MeshRenderer)
           .addComponent(RaycasterReceiver)
           .addComponent(ScreenPosition)
-          .addComponent(RangeTarget);
+          .addComponent(RangeTarget)
+          .addComponent(Hostile);
         break;
       }
       case Types.Entities.ASTEROID: {
