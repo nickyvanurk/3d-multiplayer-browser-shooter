@@ -17,6 +17,7 @@ export class NetworkEventSystem extends System {
 
   init(worldServer) {
     this.worldServer = worldServer;
+    this.t = true;
   }
 
   execute() {
@@ -39,8 +40,14 @@ export class NetworkEventSystem extends System {
         }
       }
 
-      while (connection.hasInputs()) {
-        const input = connection.popInput();
+      if (connection.hasInputs()) {
+        let input = connection.popInput();
+
+        while (input && input.seq < connection.lastProcessedInput + 1) {
+          input = connection.popInput();
+        }
+
+        if (!input) return;
 
         const {
           forward, backward,
@@ -62,6 +69,8 @@ export class NetworkEventSystem extends System {
         component.weaponPrimary = weaponPrimary;
         component.aim = aim;
       }
+
+      connection.lastProcessedInput++;
     });
   }
 }

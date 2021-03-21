@@ -12,6 +12,7 @@ export default class Connection {
     this.outgoingMessageQueue = [];
     this.inputBuffer = [];
     this.sequenceNumber = 0;
+    this.lastProcessedInput = -1;
 
     this.connection.on('message', (message) => {
       let data = JSON.parse(message);
