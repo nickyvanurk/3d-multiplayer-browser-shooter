@@ -36,29 +36,31 @@ export class NetworkEventSystem extends System {
             connection.pushMessage(new Messages.Welcome(spaceship.worldId, name));
             break;
           }
-          case Types.Messages.INPUT: {
-            const {
-              forward, backward,
-              rollLeft, rollRight,
-              strafeLeft, strafeRight, strafeUp, strafeDown,
-              boost, weaponPrimary, aim
-            } = message.data;
-            const component = entity.getMutableComponent(Input);
-
-            component.forward = forward;
-            component.backward = backward;
-            component.rollLeft = rollLeft;
-            component.rollRight = rollRight;
-            component.strafeLeft = strafeLeft;
-            component.strafeRight = strafeRight;
-            component.strafeUp = strafeUp;
-            component.strafeDown = strafeDown;
-            component.boost = boost;
-            component.weaponPrimary = weaponPrimary;
-            component.aim = aim;
-            break;
-          }
         }
+      }
+
+      while (connection.hasInputs()) {
+        const input = connection.popInput();
+
+        const {
+          forward, backward,
+          rollLeft, rollRight,
+          strafeLeft, strafeRight, strafeUp, strafeDown,
+          boost, weaponPrimary, aim
+        } = input.data;
+        const component = entity.getMutableComponent(Input);
+
+        component.forward = forward;
+        component.backward = backward;
+        component.rollLeft = rollLeft;
+        component.rollRight = rollRight;
+        component.strafeLeft = strafeLeft;
+        component.strafeRight = strafeRight;
+        component.strafeUp = strafeUp;
+        component.strafeDown = strafeDown;
+        component.boost = boost;
+        component.weaponPrimary = weaponPrimary;
+        component.aim = aim;
       }
     });
   }

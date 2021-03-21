@@ -10,17 +10,23 @@ export default class Connection {
 
     this.incomingMessageQueue = [];
     this.outgoingMessageQueue = [];
+    this.inputBuffer = [];
+    this.sequenceNumber = 0;
 
     this.connection.on('message', (message) => {
       let data = JSON.parse(message);
       const type = data.shift();
 
       switch (type) {
-        case Types.Messages.HELLO: data = Messages.Hello.deserialize(data); break;
-        case Types.Messages.INPUT: data = Messages.Input.deserialize(data); break;
+        case Types.Messages.HELLO:
+          data = Messages.Hello.deserialize(data);
+          this.incomingMessageQueue.push({ type, data });
+          break;
+        case Types.Messages.INPUT:
+          data = Messages.Input.deserialize(data);
+          this.inputBuffer.push({ type, data, seq: this.sequenceNumber++ });
+          break;
       }
-
-      this.incomingMessageQueue.push({ type, data });
     });
 
     this.connection.on('close', () => {
@@ -61,6 +67,14 @@ export default class Connection {
 
   hasOutgoingMessage() {
     return this.outgoingMessageQueue.length > 0;
+  }
+
+  popInput() {
+    return this.inputBuffer.shift();
+  }
+
+  hasInputs() {
+    return this.inputBuffer.length > 0;
   }
 
   close(error) {
