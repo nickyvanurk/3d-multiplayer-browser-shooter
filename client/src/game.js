@@ -182,7 +182,8 @@ export default class Game {
         composer: composer
       });
 
-    camera.position.z = 15;
+    camera.position.z = -14;
+    camera.rotation.y += Math.PI;
 
     // Loaders entity
     this.world.createEntity()
@@ -191,7 +192,7 @@ export default class Game {
     this.world.createEntity()
       .addComponent(ResourceEntity)
       .addComponent(Spaceship)
-      .addComponent(Model, { path: 'spaceship.gltf' });
+      .addComponent(Model, { path: 'fighter.glb' });
 
     this.world.createEntity()
       .addComponent(ResourceEntity)

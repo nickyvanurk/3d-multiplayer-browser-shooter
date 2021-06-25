@@ -55,8 +55,9 @@ export class NetworkEventSystem extends System {
               const obj = new Object3D();
               obj.position.copy(position);
               obj.quaternion.copy(rotation);
-              obj.translateY(1);
-              obj.translateZ(4);
+              obj.translateY(4);
+              obj.translateZ(-14);
+              obj.rotateY(Math.PI);
 
               cameraTransform.position.copy(obj.position);
               cameraTransform.rotation.copy(obj.quaternion);
@@ -97,8 +98,9 @@ export class NetworkEventSystem extends System {
                 const obj = new Object3D();
                 obj.position.copy(mainPlayerTransform.position);
                 obj.quaternion.copy(mainPlayerTransform.rotation);
-                obj.translateY(1);
-                obj.translateZ(4);
+                obj.translateY(4);
+                obj.translateZ(-14);
+                obj.rotateY(Math.PI);
 
                 cameraTransform.position.lerp(obj.position, 1 - Math.exp(-10 * (delta/1000)));
                 cameraTransform.rotation.slerp(obj.quaternion, 1 - Math.exp(-10 * (delta/1000)));

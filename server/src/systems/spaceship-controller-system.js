@@ -63,12 +63,12 @@ export class SpaceshipControllerSystem extends System {
       const acceleration = boost ? rigidBody.acceleration*2 : rigidBody.acceleration;
 
       const movement = {
-        x: strafeLeft ? -1 : strafeRight ? 1 : 0,
+        x: strafeLeft ? 1 : strafeRight ? -1 : 0,
         y: strafeDown ? -1 : strafeUp ? 1 : 0,
-        z: forward ? -1 : backward ? 1 : 0,
-        roll: rollLeft ? -1 : rollRight ? 1 : 0,
+        z: forward ? 1 : backward ? -1 : 0,
+        roll: rollLeft ? 1 : rollRight ? -1 : 0,
         yaw: aim.mouse.x,
-        pitch: aim.mouse.y
+        pitch: -aim.mouse.y
       };
 
       rigidBody.velocity.x = acceleration*delta * movement.x;

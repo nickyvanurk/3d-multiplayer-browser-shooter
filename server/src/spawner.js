@@ -40,7 +40,7 @@ export function controllableSpaceship(ecs, player) {
 
   const weaponLeft = ecs.createEntity()
     .addComponent(Weapon, {
-      offset: new Vector3(-0.5, 0, -0.5),
+      offset: new Vector3(1.3, 0.9, 3),
       delay: 50,
       fireInterval: 100,
       parent: spaceship
@@ -48,7 +48,7 @@ export function controllableSpaceship(ecs, player) {
 
   const weaponRight = ecs.createEntity()
     .addComponent(Weapon, {
-      offset: new Vector3(0.5, 0, -0.5),
+      offset: new Vector3(-1.3, 0.9, 3),
       fireInterval: 100,
       parent: spaceship
     });
