@@ -78,7 +78,7 @@ function getWeaponTransform(weapon) {
     new Ray(ray.position, ray.direction).at(ray.distance, target);
 
     const direction = new Vector3();
-    direction.subVectors(position, target).normalize();
+    direction.subVectors(target, position).normalize();
 
     const mx = new Matrix4().lookAt(direction, new Vector3(0,0,0), new Vector3(0,1,0));
     const qt = new Quaternion().setFromRotationMatrix(mx);

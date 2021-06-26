@@ -1,4 +1,5 @@
 import { System, Not } from 'ecsy';
+import { MeshBasicMaterial } from 'three';
 
 import Utils from '../../../shared/utils';
 
@@ -6,6 +7,8 @@ import { GltfLoader } from '../components/gltf-loader';
 import { Model } from '../components/model';
 import { Loading } from '../../../shared/components/loading';
 import { Loaded } from '../../../shared/components/loaded';
+import { Bullet } from '../../../shared/components/bullet';
+
 
 export class ModelLoadingSystem extends System {
   static queries = {
@@ -37,6 +40,14 @@ export class ModelLoadingSystem extends System {
       const model = entity.getComponent(Model);
 
       gltfLoader.load(model.path, (gltf) => {
+        if (entity.hasComponent(Bullet)) {
+          gltf.scene.traverse((child) => {
+            if (child.isMesh) {
+              child.material = new MeshBasicMaterial( { color: 0xffa900 } );
+            }
+          });
+        }
+
         this.handleLoaded(entity, gltf);
 
         if (this.loadedAllModels()) {

@@ -202,9 +202,9 @@ export default class Game {
     this.world.createEntity()
       .addComponent(ResourceEntity)
       .addComponent(Bullet)
-      .addComponent(Geometry, { value: new BoxGeometry(0.1, 0.1, 1) })
-      .addComponent(Material, { value: new MeshBasicMaterial( { color: 0xffa900 } )})
-      .addComponent(InstancedMesh, { count: 2000 })
+      .addComponent(Model, { path: 'projectile.glb' })
+      // TODO: Allow models to become InstancedMeshes
+      //.addComponent(InstancedMesh, { count: 2000 })
       .addComponent(Loaded);
 
     this.addStars(scene, 1000, 4000);

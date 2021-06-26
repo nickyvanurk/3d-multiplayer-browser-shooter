@@ -84,7 +84,7 @@ export function projectile(ecs, position, rotation, damage, speed = 0.5,  timer 
     .addComponent(Kind, { value: Types.Entities.BULLET })
     .addComponent(Transform, { position, rotation })
     .addComponent(RigidBody, {
-      velocity: new Vector3(0, 0, -speed),
+      velocity: new Vector3(0, 0, speed),
       kinematic: true
     })
     .addComponent(Timeout, {

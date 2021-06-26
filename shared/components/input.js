@@ -15,8 +15,8 @@ export class Input extends Component {
     weaponPrimary: { type: Types.Boolean },
     aim: { type: Types.Ref, default: { origin: new Vector3(),
                                        direction: new Vector3(),
-                                       distance: 100,
-                                       maxDistance: 100,
+                                       distance: 1000,
+                                       maxDistance: 1000,
                                        mouse: new Vector3() } }
   };
 }
