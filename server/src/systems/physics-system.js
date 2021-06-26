@@ -30,14 +30,13 @@ export class PhysicsSystem extends System {
     this.quaternion = new this.ammo.btQuaternion(0, 0, 0, 1);
     this.vector3 = new this.ammo.btVector3(0, 0, 0);
     this.threeVector3 = new Vector3();
-
     const loadingManager = new LoadingManager();
     loadingManager.onLoad = this.handleLoad.bind(this);
 
     this.assetManager = new AssetManager(loadingManager);
     this.assetManager.loadModel({
       name: 'spaceship',
-      url: path.join(__dirname, '../../../client/public/models/spaceship.gltf')
+      url: path.join(__dirname, '../../models/fighter.glb')
     });
     this.assetManager.loadModel({
       name: 'asteroid',
@@ -101,7 +100,6 @@ export class PhysicsSystem extends System {
       const angularVelocity = rigidBody.angularVelocity;
 
       const vec = this.vector3;
-
 
       vec.setX(velocity.x);
       vec.setY(velocity.y);
