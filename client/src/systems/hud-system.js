@@ -84,9 +84,12 @@ export class HudSystem extends System {
       const y = a*b*Math.sin(angle)/t;
 
       const indicator = this.entityIndicators[entity.id];
-      if (entity.hasComponent(Onscreen)) {
-        indicator.material = new SpriteMaterial({ map: this.textures.target });
-        indicator.position.set(transform2d.position.x, transform2d.position.y, 1);
+
+      const position = transform2d.position;
+
+      if (entity.hasComponent(Onscreen) && (position.x*position.x + position.y*position.y <= x*x + y*y)) {
+          indicator.material = new SpriteMaterial({ map: this.textures.target });
+          indicator.position.set(transform2d.position.x, transform2d.position.y, 1);
       } else {
         indicator.material = new SpriteMaterial({ map: this.textures.spaceship });
         indicator.position.set(x, y, 1);
