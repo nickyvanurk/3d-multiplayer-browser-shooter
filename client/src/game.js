@@ -160,7 +160,7 @@ export default class Game {
     light.position.set(-1, -1, -1);
     scene.add(light);
 
-    scene.fog = new Fog(0x020207, 0.04);
+    scene.fog = new Fog(0x020207, 10, 2000);
 
     const fxaaPass = new ShaderPass(FXAAShader);
     const pixelRatio = renderer.getPixelRatio();
@@ -197,7 +197,7 @@ export default class Game {
     this.world.createEntity()
       .addComponent(ResourceEntity)
       .addComponent(Asteroid)
-      .addComponent(Model, { path: 'asteroid.gltf' });
+      .addComponent(Model, { path: 'asteroid.glb' });
 
     this.world.createEntity()
       .addComponent(ResourceEntity)

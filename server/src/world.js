@@ -87,7 +87,7 @@ export default class World {
 
     this.world.entities = [];
 
-    this.asteroidFieldSize = 800;
+    this.asteroidFieldSize = 4000;
 
     logger.info(`${this.id} running`);
   }
@@ -127,13 +127,13 @@ export default class World {
   }
 
   spawnAsteroids(count) {
-    const rng = Utils.randomNumberGenerator(5);
+    const rng = Utils.randomNumberGenerator(1);
 
     for (let i = 0; i < count; ++i) {
       const position = Utils.getRandomPosition(this.asteroidFieldSize, rng);
       const rotation = Utils.getRandomQuaternion(rng);
 
-      const scaleValue = [1, 5, 10, 20, 40, 60, /*120, 240, 560*/];
+      const scaleValue = [1, 5, 10, 20, 40, 60, 120, /*240, /*560*/];
       const scale = scaleValue[Math.floor(rng() * scaleValue.length)];
 
       Spawner.asteroid(this.world, position, rotation, scale);

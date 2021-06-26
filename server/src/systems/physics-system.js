@@ -40,7 +40,7 @@ export class PhysicsSystem extends System {
     });
     this.assetManager.loadModel({
       name: 'asteroid',
-      url: path.join(__dirname, '../../../client/public/models/asteroid.gltf')
+      url: path.join(__dirname, '../../../client/public/models/asteroid.glb')
     });
 
     this.stop();
