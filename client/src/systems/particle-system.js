@@ -31,7 +31,7 @@ export class ParticleSystem extends System {
       orange: new MeshBasicMaterial({ color: 'orange', transparent: true, opacity: 1, fog: true }),
     };
 
-    const geometry = new DodecahedronBufferGeometry(0.8, 0);
+    const geometry = new DodecahedronBufferGeometry(3.2, 0);
     this.meshes = {
       dodecahedronWhite: new InstancedMesh(geometry, this.materials.white, 1000),
       dodecahedronOrange: new InstancedMesh(geometry, this.materials.orange, 1000),
@@ -56,8 +56,8 @@ export class ParticleSystem extends System {
 
       switch (effect.type) {
         case ParticleEffect.Types.Explosion:
-          const whiteParticles = this.generateParticleBurst(40, 0.1125);
-          const orangeParticles = this.generateParticleBurst(40, 0.075);
+          const whiteParticles = this.generateParticleBurst(40, 0.5);
+          const orangeParticles = this.generateParticleBurst(40, 0.4);
           effect.particles.push(whiteParticles, orangeParticles);
           break;
       }
