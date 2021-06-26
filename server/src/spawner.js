@@ -41,15 +41,15 @@ export function controllableSpaceship(ecs, player) {
   const weaponLeft = ecs.createEntity()
     .addComponent(Weapon, {
       offset: new Vector3(1.3, 0.9, 5),
-      delay: 50,
-      fireInterval: 100,
+      delay: 125,
+      fireInterval: 250,
       parent: spaceship
     });
 
   const weaponRight = ecs.createEntity()
     .addComponent(Weapon, {
       offset: new Vector3(-1.3, 0.9, 5),
-      fireInterval: 100,
+      fireInterval: 250,
       parent: spaceship
     });
 
@@ -79,7 +79,7 @@ export function asteroid(ecs, position, rotation, scale = 1) {
   return asteroid;
 }
 
-export function projectile(ecs, position, rotation, damage, speed = 0.5,  timer = 800) {
+export function projectile(ecs, position, rotation, damage, speed = 0.5,  timer = 2000) {
   const projectile = ecs.createEntity()
     .addComponent(Kind, { value: Types.Entities.BULLET })
     .addComponent(Transform, { position, rotation })
