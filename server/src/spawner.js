@@ -29,8 +29,8 @@ export function controllableSpaceship(ecs, player) {
     .addComponent(Transform)
     .addComponent(RandomSpawn)
     .addComponent(RigidBody, {
-      acceleration: 0.8,
-      angularAcceleration: new Euler(0.15, 0.3, 0.05),
+      acceleration: 3,
+      angularAcceleration: new Euler(6, 12, 2),
       damping: 0.5,
       angularDamping: 0.99
     })
@@ -40,7 +40,7 @@ export function controllableSpaceship(ecs, player) {
 
   const weaponLeft = ecs.createEntity()
     .addComponent(Weapon, {
-      offset: new Vector3(1.3, 0.9, 3),
+      offset: new Vector3(1.3, 0.9, 5),
       delay: 50,
       fireInterval: 100,
       parent: spaceship
@@ -48,7 +48,7 @@ export function controllableSpaceship(ecs, player) {
 
   const weaponRight = ecs.createEntity()
     .addComponent(Weapon, {
-      offset: new Vector3(-1.3, 0.9, 3),
+      offset: new Vector3(-1.3, 0.9, 5),
       fireInterval: 100,
       parent: spaceship
     });
@@ -79,7 +79,7 @@ export function asteroid(ecs, position, rotation, scale = 1) {
   return asteroid;
 }
 
-export function projectile(ecs, position, rotation, damage, speed = 0.1,  timer = 800) {
+export function projectile(ecs, position, rotation, damage, speed = 0.5,  timer = 800) {
   const projectile = ecs.createEntity()
     .addComponent(Kind, { value: Types.Entities.BULLET })
     .addComponent(Transform, { position, rotation })
