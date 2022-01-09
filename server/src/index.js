@@ -1,15 +1,10 @@
 require('dotenv').config();
-import express from 'express';
-import path from 'path';
 
 import logger from './utils/logger';
+import Server from './server';
 
-const app = express();
+const server = new Server(+process.env.PORT || 1337, process.env.MAX_PLAYERS);
 
-if (process.env.PRODUCTION) {
-  app
-    .use(express.static(path.join(__dirname, '../../client/public')))
-    .get('*', (_req, res) => res.sendFile(path.join(__dirname, '../../client/public/index.html')));
-}
-
-app.listen(3000, () => logger.info('Server listening on port 3000!'));
+server.onConnection((_connection) => {
+  logger.info('New connection');
+});
