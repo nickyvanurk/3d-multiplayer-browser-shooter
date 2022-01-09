@@ -11,12 +11,14 @@
   "extends": [
     "eslint:recommended",
   ],
+  "ignorePatterns": ["test.js"],
   "rules": {
     "no-console": "warn",
     "curly": "error",
     "quotes": ["error", "single"],
     "indent": ["error", 2, { "SwitchCase": 1 }],
-    "semi": "error"
+    "semi": "error",
+    "no-unused-vars": "off",
   }
 }
 
