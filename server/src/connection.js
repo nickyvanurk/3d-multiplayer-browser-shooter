@@ -1,26 +1,31 @@
 import logger from './utils/logger';
 
 export default class Connection {
-  constructor(id, connection) {
+  constructor(id, ws) {
     this.id = id;
-    this.connection = connection;
+    this.ws = ws;
+    this.isAlive = true;
 
-    this.connection.on('message', (message) => {
+    this.ws.on('message', (message) => {
       if (this.onMessageCallback) {
         this.onMessageCallback(message);
       }
     });
 
-    this.connection.on('close', () => {
+    this.ws.on('close', () => {
       if (this.onCloseCallback) {
         this.onCloseCallback();
       }
+    });
+
+    this.ws.on('pong', () => {
+      this.isAlive = true
     });
   }
 
   terminate() {
     logger.info(`Client #${id} terminated`);
-    this.connection.terminate();
+    this.ws.terminate();
   }
 
   onMessage(callback) {

@@ -1,5 +1,5 @@
-export function findFreeIndex(array) {
-  for (let i = 0; i < array.length; ++i) {
+export function findFreeIndex(array, length) {
+  for (let i = 0; i < length; ++i) {
     if (!array[i]) {
       return i;
     }
