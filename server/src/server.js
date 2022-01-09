@@ -30,17 +30,9 @@ export default class Server {
         return ws.close();
       }
 
-      const client = new Client(clientId, ws);
+      const client = this.createClient(clientId, ws);
 
-      client.onClose(() => {
-        this.removeClient(client);
-
-        if (this.onClientDisconnectCallback) {
-          this.onClientDisconnectCallback(client);
-        }
-      });
-
-      this.addClient(client);
+      logger.info(`Client#${client.id} connected`);
 
       if (this.onClientConnectCallback) {
         this.onClientConnectCallback(client);
@@ -51,7 +43,7 @@ export default class Server {
       this.clients.forEach((client) => {
         if (!client.hasHeartbeat()) {
           client.terminate();
-          logger.info(`Client #${this.id} terminated`);
+          logger.info(`Client#${this.id} terminated`);
         }
       });
     }, 1000); // 30 seconds
@@ -61,16 +53,28 @@ export default class Server {
     });
   }
 
-  addClient(client) {
+  createClient(id, ws) {
+    const client = new Client(id, ws);
+
+    client.onClose(() => {
+      this.destroyClient(id);
+
+      logger.info(`Client#${id} disconnected`);
+
+      if (this.onClientDisconnectCallback) {
+        this.onClientDisconnectCallback(client);
+      }
+    });
+
     this.clients[client.id] = client;
     this.connectedClients++;
-    logger.info(`Client #${client.id} connected`);
+
+    return client;
   }
 
-  removeClient(client) {
-    delete this.clients[client.id];
+  destroyClient(id) {
+    delete this.clients[id];
     this.connectedClients--;
-    logger.info(`Client #${client.id} disconnected`);
   }
 
   onClientConnect(callback) {

@@ -5,6 +5,7 @@ export default class Client {
     this.id = id;
     this.ws = ws;
     this.isConnected = true;
+    this.worldId = -1;
 
     this.ws.on('message', (message) => {
       logger.debug(`Client #${cient.id}: ${message}`);
