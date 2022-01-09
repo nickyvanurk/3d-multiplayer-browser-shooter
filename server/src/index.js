@@ -1,35 +1,15 @@
-import dotenv from 'dotenv';
+require('dotenv').config();
+import express from 'express';
+import path from 'path';
 
 import logger from './utils/logger';
-import Server from './server';
-import World from './world';
 
-dotenv.config();
+const app = express();
 
-function main() {
-  const server = new Server(+process.env.PORT || 1337, process.env.MAX_PLAYERS);
-  const worlds = [];
-
-  server.onConnection((connection) => {
-    logger.debug('New connection');
-    
-    for (const world of worlds) {
-      if (world.connectedClients < world.maxClients) {
-        world.handlePlayerConnect(connection);
-        return;
-      }
-    }
-  });
-
-  server.onError((error) => {
-    logger.error(error);
-  });
-
-  for (let i = 0; i < process.env.WORLDS; ++i) {
-    const world = new World(`world${i}`, process.env.PLAYERS_PER_WORLD, server);
-    world.init();
-    worlds.push(world);
-  }
+if (process.env.PRODUCTION) {
+  app
+    .use(express.static(path.join(__dirname, '../../client/public')))
+    .get('*', (_req, res) => res.sendFile(path.join(__dirname, '../../client/public/index.html')));
 }
 
-main();
+app.listen(3000, () => logger.info('Server listening on port 3000!'));

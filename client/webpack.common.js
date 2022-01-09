@@ -27,7 +27,7 @@ module.exports = {
       cleanOnceBeforeBuildPatterns: ['**/*', '!models', '!models/*.*', '!textures', '!textures/*.*']
     }),
     new HtmlWebpackPlugin({
-      title: 'Void',
+      title: 'Multiplayer Game',
       template: path.resolve(__dirname, 'src/index.html')
     }),
     new Dotenv()
@@ -39,8 +39,6 @@ module.exports = {
     filename: '[name].bundle.js',
     path: path.resolve(__dirname, 'public')
   },
-  node: {
-    fs: 'empty'
-  },
   target: 'web'
 };
+
