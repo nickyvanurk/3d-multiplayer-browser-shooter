@@ -10,20 +10,20 @@ for (let i = 0; i < process.env.WORLDS; ++i) {
   worlds.push(new World(i, +process.env.PLAYERS_PER_WORLD));
 }
 
-server.onConnection((connection) => {
+server.onClientConnect((client) => {
   for (const world of worlds) {
     if (world.currentPlayers < world.maxPlayers) {
-      world.addPlayer(connection);
+      world.addPlayer(client);
       return;
     }
   }
 
-  // TODO: Send worlds full message
+  // TODO: Send worlds full message to client
 });
 
-server.onDisconnect((connection) => {
+server.onClientDisconnect((client) => {
   for (const world of worlds) {
-    if (world.removePlayer(connection)) {
+    if (world.removePlayer(client)) {
       return;
     }
   }

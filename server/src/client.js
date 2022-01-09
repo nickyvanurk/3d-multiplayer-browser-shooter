@@ -1,12 +1,14 @@
 import logger from './utils/logger';
 
-export default class Connection {
+export default class Client {
   constructor(id, ws) {
     this.id = id;
     this.ws = ws;
-    this.isAlive = true;
+    this.isConnected = true;
 
     this.ws.on('message', (message) => {
+      logger.debug(`Client #${cient.id}: ${message}`);
+
       if (this.onMessageCallback) {
         this.onMessageCallback(message);
       }
@@ -19,12 +21,22 @@ export default class Connection {
     });
 
     this.ws.on('pong', () => {
-      this.isAlive = true
+      this.isConnected = true
     });
   }
 
+  hasHeartbeat() {
+    if (!this.isConnected) {
+      return false;
+    }
+
+    this.isConnected = false;
+    this.ws.ping();
+
+    return true;
+  }
+
   terminate() {
-    logger.info(`Client #${id} terminated`);
     this.ws.terminate();
   }
 

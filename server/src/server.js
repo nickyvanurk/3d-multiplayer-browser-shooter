@@ -3,7 +3,7 @@ import path from 'path';
 import WebSocket from 'ws';
 
 import logger from './utils/logger';
-import Connection from './connection';
+import Client from './client';
 import Utils from './utils';
 
 const app = express();
@@ -30,59 +30,54 @@ export default class Server {
         return ws.close();
       }
 
-      const connection = new Connection(clientId, ws);
+      const client = new Client(clientId, ws);
 
-      connection.onClose(() => {
-        this.removeConnection(connection);
+      client.onClose(() => {
+        this.removeClient(client);
 
-        if (this.onDisconnectCallback) {
-          this.onDisconnectCallback(connection);
+        if (this.onClientDisconnectCallback) {
+          this.onClientDisconnectCallback(client);
         }
       });
 
-      // For testing
-      connection.onMessage((message) => {
-        logger.debug(`Client #${connection.id}: ${message}`);
-      });
+      this.addClient(client);
 
-      this.addConnection(connection);
-
-      if (this.onConnectionCallback) {
-        this.onConnectionCallback(connection);
+      if (this.onClientConnectCallback) {
+        this.onClientConnectCallback(client);
       }
     });
 
     const interval = setInterval(() => {
-      this.clients.forEach((connection) => {
-        if (connection.isAlive === false) return connection.terminate();
-
-        connection.isAlive = false;
-        connection.ws.ping();
+      this.clients.forEach((client) => {
+        if (!client.hasHeartbeat()) {
+          client.terminate();
+          logger.info(`Client #${this.id} terminated`);
+        }
       });
-    }, 30000); // 30 seconds
+    }, 1000); // 30 seconds
 
     this.wss.on('close', () => {
       clearInterval(interval);
     });
   }
 
-  addConnection(connection) {
-    this.clients[connection.id] = connection;
+  addClient(client) {
+    this.clients[client.id] = client;
     this.connectedClients++;
-    logger.info(`Client #${connection.id} connected`);
+    logger.info(`Client #${client.id} connected`);
   }
 
-  removeConnection(connection) {
-    delete this.clients[connection.id];
+  removeClient(client) {
+    delete this.clients[client.id];
     this.connectedClients--;
-    logger.info(`Client #${connection.id} disconnected`);
+    logger.info(`Client #${client.id} disconnected`);
   }
 
-  onConnection(callback) {
-    this.onConnectionCallback = callback;
+  onClientConnect(callback) {
+    this.onClientConnectCallback = callback;
   }
 
-  onDisconnect(callback) {
-    this.onDisconnectCallback = callback;
+  onClientDisconnect(callback) {
+    this.onClientDisconnectCallback = callback;
   }
 }

@@ -10,22 +10,22 @@ export default class World {
     logger.info(`World #${this.id} created`);
   }
 
-  addPlayer(connection) {
-    this.players[connection.id] = {};
+  addPlayer(client) {
+    this.players[client.id] = {};
     this.currentPlayers++;
 
-    logger.debug(`World #${this.id}: add player for client #${connection.id}`);
+    logger.debug(`World #${this.id}: add player for client #${client.id}`);
   }
 
-  removePlayer(connection) {
-    if (!this.players[connection.id]) {
+  removePlayer(client) {
+    if (!this.players[client.id]) {
       return false;
     }
 
-    delete this.players[connection.id];
+    delete this.players[client.id];
     this.currentPlayers--;
 
-    logger.debug(`World #${this.id}: remove player for client #${connection.id}`);
+    logger.debug(`World #${this.id}: remove player for client #${client.id}`);
 
     return true;
   }
