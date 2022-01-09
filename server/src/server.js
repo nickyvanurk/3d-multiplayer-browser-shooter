@@ -34,6 +34,10 @@ export default class Server {
 
       connection.onClose(() => {
         this.removeConnection(connection);
+
+        if (this.onDisconnectCallback) {
+          this.onDisconnectCallback(connection);
+        }
       });
 
       // For testing
@@ -76,5 +80,9 @@ export default class Server {
 
   onConnection(callback) {
     this.onConnectionCallback = callback;
+  }
+
+  onDisconnect(callback) {
+    this.onDisconnectCallback = callback;
   }
 }

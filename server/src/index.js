@@ -1,9 +1,30 @@
 require('dotenv').config();
 
-import logger from './utils/logger';
 import Server from './server';
+import World from './world';
 
 const server = new Server(+process.env.PORT || 1337, +process.env.MAX_PLAYERS);
+const worlds = [];
 
-server.onConnection((_connection) => {
+for (let i = 0; i < process.env.WORLDS; ++i) {
+  worlds.push(new World(i, +process.env.PLAYERS_PER_WORLD));
+}
+
+server.onConnection((connection) => {
+  for (const world of worlds) {
+    if (world.currentPlayers < world.maxPlayers) {
+      world.addPlayer(connection);
+      return;
+    }
+  }
+
+  // TODO: Send worlds full message
+});
+
+server.onDisconnect((connection) => {
+  for (const world of worlds) {
+    if (world.removePlayer(connection)) {
+      return;
+    }
+  }
 });
