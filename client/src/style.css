@@ -12,3 +12,61 @@ canvas {
   height: 100vh;
 }
 
+/* Menu */
+
+#menu {
+  position: fixed;
+  margin: 5px;
+}
+
+/* Modal */
+
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.modal-content {
+  background: #fefefe;
+  margin: 15% auto;
+  padding: 20px;
+  border: 1px solid #888;
+  width: 80%;
+}
+
+.modal-content h2 {
+  margin-bottom: 20px;
+}
+
+.close {
+  color: #aaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+  color: black;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* Keybindings */
+
+#keybindings div {
+  margin-bottom: 10px;
+}
+
+#keybindings input {
+  float: right;
+  text-align: center;
+  text-transform: capitalize;
+}

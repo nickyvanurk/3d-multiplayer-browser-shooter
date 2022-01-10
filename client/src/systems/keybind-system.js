@@ -14,7 +14,5 @@ export default (world) => {
     Keybindings.backward[eid] = 'S'.charCodeAt(0);
     Keybindings.strafeLeft[eid] = 'A'.charCodeAt(0);
     Keybindings.strafeRight[eid] = 'D'.charCodeAt(0);
-
-    console.log(eid);
   }
 }

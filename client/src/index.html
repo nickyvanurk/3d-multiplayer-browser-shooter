@@ -6,5 +6,56 @@
   <title><%= htmlWebpackPlugin.options.title %></title>
 </head>
 <body>
+  <div id="menu">
+    <button id="keybindings-btn">Keybindings</button>
+  </div>
+
+  <div id="keybindings" class="modal">
+    <div class="modal-content">
+      <span id="close">&times;</span>
+
+      <h2>Keybindings</h2>
+
+      <div>
+        <label class="label" for="forward">Move Forward</label>
+        <input id="forward" type="text" class="keybindings" autocomplete="off">
+      </div>
+
+      <div>
+        <label class="label" for="backward">Move Backward</label>
+        <input id="backward" type="text" class="keybindings" autocomplete="off">
+      </div>
+
+      <div>
+        <label class="label" for="strafe-left">Strafe Left</label>
+        <input id="strafe-right" type="text" class="keybindings" autocomplete="off">
+      </div>
+
+      <div>
+        <label class="label" for="strafe-right">Strafe Right</label>
+        <input id="strafe-right" type="text" class="keybindings" autocomplete="off">
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const modal = document.getElementById('keybindings');
+    const btn = document.getElementById('keybindings-btn');
+    const close = document.getElementById('close');
+
+    btn.onclick = () => {
+      modal.style.display = 'block';
+    }
+
+    close.onclick = () => {
+      modal.style.display = 'none';
+    }
+
+    window.onclick = (event) => {
+      if (event.target === modal) {
+        modal.style.display = 'none';
+      }
+    }
+  </script>
 </body>
 </html>

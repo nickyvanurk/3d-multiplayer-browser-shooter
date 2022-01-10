@@ -1,3 +1,4 @@
+import './style.css';
 import Client from './client';
 import Game from './game';
 
