@@ -1,8 +1,8 @@
 import { defineComponent, Types } from 'bitecs';
 
 export default defineComponent({
-  forward: Types.ui8,
-  backward: Types.ui8,
-  strafeLeft: Types.ui8,
-  strafeRight: Types.ui8,
+  forward: Types.i16,
+  backward: Types.i16,
+  strafeLeft: Types.i16,
+  strafeRight: Types.i16,
 });
