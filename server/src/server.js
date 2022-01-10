@@ -43,10 +43,10 @@ export default class Server {
       this.clients.forEach((client) => {
         if (!client.hasHeartbeat()) {
           client.terminate();
-          logger.info(`Client#${this.id} terminated`);
+          logger.info(`Client#${client.id} terminated`);
         }
       });
-    }, 1000); // 30 seconds
+    }, 30000); // 30 seconds
 
     this.wss.on('close', () => {
       clearInterval(interval);
