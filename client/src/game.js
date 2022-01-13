@@ -1,6 +1,6 @@
 import { createWorld, addEntity, addComponent, pipe } from 'bitecs';
-import { Input, Keybindings } from './components';
-import { InputSystem } from './systems';
+import { Input, Keybindings, Position } from './components';
+import { InputSystem, ControllerSystem } from './systems';
 
 export default class Game {
   constructor() {
@@ -8,6 +8,7 @@ export default class Game {
 
     const systems = pipe(
       InputSystem,
+      ControllerSystem,
     );
 
     setInterval(() => {
@@ -20,5 +21,6 @@ export default class Game {
 
     addComponent(this.world, Keybindings, this.playerId);
     addComponent(this.world, Input, this.playerId);
+    addComponent(this.world, Position, this.playerId);
   }
 }
