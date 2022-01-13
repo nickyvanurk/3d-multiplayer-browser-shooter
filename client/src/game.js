@@ -1,13 +1,12 @@
 import { createWorld, addEntity, addComponent, pipe } from 'bitecs';
 import { Input, Keybindings } from './components/components';
-import { KeybindSystem, InputSystem } from './systems/systems';
+import { InputSystem } from './systems/systems';
 
 export default class Game {
   constructor() {
     this.world = createWorld();
 
     const systems = pipe(
-      KeybindSystem,
       InputSystem,
     );
 
