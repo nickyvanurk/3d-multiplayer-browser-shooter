@@ -5,5 +5,5 @@ export default defineComponent({
   backward: Types.i8,
   strafeLeft: Types.i8,
   strafeRight: Types.i8,
-  mouseDelta: [Types.f32, Types.f32],
+  mouseDelta: [Types.i16, 2],
 });

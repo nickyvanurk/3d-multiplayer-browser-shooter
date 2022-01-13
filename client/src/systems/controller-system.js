@@ -1,6 +1,8 @@
 import { defineQuery } from 'bitecs';
 import { Input, Position } from '../components';
 
+const speed = 10;
+
 const inputQuery = defineQuery([Input]);
 const positionQuery = defineQuery([Position]);
 
@@ -10,15 +12,18 @@ export default (world) => {
     return world;
   }
 
+  const { time: { delta } } = world;
+
   const ents = positionQuery(world);
   for (let i = 0; i < ents.length; i++) {
     const eid = ents[i];
 
-    if (Input.forward[inputId]) {
-      Position.y[eid] += 1;
-    }
+    const inputZ = Input.backward[eid] - Input.forward[eid];
+    const inputX = Input.strafeRight[eid] - Input.strafeLeft[eid];
+    if (inputZ === 0 && inputX === 0) continue;
 
-    console.log(Position.y[eid]);
+    Position.z[eid] += inputZ * speed * delta;
+    Position.x[eid] += inputX * speed * delta;
   }
 
   return world;
