@@ -43,6 +43,8 @@ export default (world) => {
       });
     }
   }
+
+  return world;
 }
 
 function getKeybindingInputElements() {
