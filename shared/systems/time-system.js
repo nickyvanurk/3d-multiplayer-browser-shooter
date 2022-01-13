@@ -1,6 +1,5 @@
-export default (world) => {
+export default (world, now = performance.now()) => {
     const { time } = world;
-    const now = performance.now();
     const delta = (now - time.then) / 1000;
     time.delta = delta;
     time.elapsed += delta;

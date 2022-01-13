@@ -6,13 +6,11 @@ const speed = 10;
 const inputQuery = defineQuery([Input]);
 const positionQuery = defineQuery([Position]);
 
-export default (world) => {
+export default (world, delta) => {
   const inputId = inputQuery(world)[0];
   if (inputId === undefined) {
     return world;
   }
-
-  const { time: { delta } } = world;
 
   const ents = positionQuery(world);
   for (let i = 0; i < ents.length; i++) {
