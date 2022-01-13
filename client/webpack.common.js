@@ -24,7 +24,14 @@ module.exports = {
   plugins: [
     new MiniCssExtractPlugin(),
     new CleanWebpackPlugin({
-      cleanOnceBeforeBuildPatterns: ['**/*', '!models', '!models/*.*', '!textures', '!textures/*.*']
+      cleanOnceBeforeBuildPatterns: [
+        '**/*',
+        '!models',
+        '!models/*.*',
+        '!textures',
+        '!textures/*.*',
+        '!favicon.ico',
+      ]
     }),
     new HtmlWebpackPlugin({
       title: 'Multiplayer Game',

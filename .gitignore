@@ -2,3 +2,4 @@ node_modules
 client/public/*
 !client/public/models
 !client/public/textures
+!client/public/favicon*
