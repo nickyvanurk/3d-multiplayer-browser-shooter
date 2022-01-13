@@ -1,6 +1,6 @@
 import { defineQuery, enterQuery } from 'bitecs';
 import * as KeyCode from 'keycode';
-import { Input, Keybindings } from '../components/components';
+import { Input, Keybindings } from '../components';
 
 const defaultKbs = {
   forward: 'W'.charCodeAt(0),
