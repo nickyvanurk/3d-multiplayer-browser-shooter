@@ -1,4 +1,4 @@
-# [3D Multiplayer Browser Shooter](https://urk-void.herokuapp.com/)
+# [3D Multiplayer Browser Shooter](https://urk-void.onrender.com/)
 
 A 3D multiplayer space dogfight game made with three.js and ws.
 
