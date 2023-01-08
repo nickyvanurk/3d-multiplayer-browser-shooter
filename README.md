@@ -4,6 +4,12 @@ A 3D multiplayer space dogfight game made with three.js and ws.
 
 <img src="docs/screenshot-v3.png">
 
+## Versions
+
+* [V3](https://github.com/nickyvanurk/3d-multiplayer-browser-shooter/tree/v3)
+* [V2](https://github.com/nickyvanurk/3d-multiplayer-browser-shooter/tree/v2)
+* [V1](https://github.com/nickyvanurk/3d-multiplayer-browser-shooter/tree/v1)
+
 ## Getting Started
 
 These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
