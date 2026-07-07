@@ -14,7 +14,8 @@
     "lint-and-fix": "eslint . --ext .js --fix"
   },
   "author": "N. van Urk",
-  "license": "MIT",
+  "license": "UNLICENSED",
+  "private": true,
   "devDependencies": {
     "eslint": "^7.9.0",
     "nodemon": "^2.0.4",

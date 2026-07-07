@@ -52,4 +52,6 @@ client, and reloads the pm2 app. nginx serves the game under `/voidfall`.
 
 ## License
 
-This project is licensed under the [MIT License](./LICENSE).
+Copyright (c) 2020-2026 Nick van Urk. All Rights Reserved. This project is
+proprietary — the source is public for reference only and may not be used,
+copied, or distributed without written permission. See [LICENSE](./LICENSE).
