@@ -66,12 +66,6 @@ $ npm run client:start:dev   # web client on port 3000
 
 If everything went well the game will be available at http://localhost:3000
 
-## Deployment
-
-Deploys run via the **Deploy** GitHub Action (`workflow_dispatch`): it SSHes into
-the server and runs `restart-voidfall.sh`, which pulls `master`, installs, builds
-the client, and reloads the pm2 app. nginx serves the game under `/voidfall`.
-
 ## License
 
 Copyright (c) 2020-2026 Nick van Urk. All Rights Reserved. This project is
