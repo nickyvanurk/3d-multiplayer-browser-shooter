@@ -1,6 +1,6 @@
-import logger from './utils/logger';
-import Types from '../../shared/types';
-import Messages from '../../shared/messages';
+import logger from './utils/logger.js';
+import Types from '../../shared/types.js';
+import Messages from '../../shared/messages.js';
 
 export default class Connection {
   constructor(id, connection, server) {

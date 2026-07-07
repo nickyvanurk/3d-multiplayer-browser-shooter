@@ -8,7 +8,7 @@ worker.onmessage = (event) => {
   const { name, id } = event.data || {};
   if (name === 'runCallback') {
     const callback = callbacks.get(id);
-    if (callback) callback();
+    if (callback) {callback();}
   }
 };
 
@@ -20,7 +20,7 @@ export function setInterval(callback, delay) {
 }
 
 export function clearInterval(id) {
-  if (!callbacks.has(id)) return;
+  if (!callbacks.has(id)) {return;}
   callbacks.delete(id);
   worker.postMessage({ name: 'clearInterval', id });
 }

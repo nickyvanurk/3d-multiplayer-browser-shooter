@@ -1,8 +1,8 @@
 import dotenv from 'dotenv';
 
-import logger from './utils/logger';
-import Server from './server';
-import World from './world';
+import logger from './utils/logger.js';
+import Server from './server.js';
+import { GameServer } from './game-server.js';
 
 dotenv.config();
 
@@ -26,7 +26,7 @@ function main() {
   });
 
   for (let i = 0; i < process.env.WORLDS; ++i) {
-    const world = new World(`world${i}`, process.env.PLAYERS_PER_WORLD, server);
+    const world = new GameServer(`world${i}`, process.env.PLAYERS_PER_WORLD, server);
     world.init();
     worlds.push(world);
   }

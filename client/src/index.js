@@ -1,25 +1,9 @@
 import './style.css';
-import Connection from './connection';
-import Game from './game';
+import Game from './game.js';
 
 function main() {
-  const connection = new Connection();
   const game = new Game();
-
   game.init();
-
-  connection.onConnection(() => {
-    console.log('Connected to server');
-    game.handleConnect(connection);
-  });
-
-  connection.onDisconnect(() => {
-    console.log('Disconnected from server');
-  });
-
-  connection.onError((error) => {
-    console.log(error);
-  });
 }
 
 main();

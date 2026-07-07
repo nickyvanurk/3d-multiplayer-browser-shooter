@@ -1,9 +1,12 @@
 import fs from 'fs';
+import { TextDecoder } from 'node:util';
+import atob from 'atob';
 
-import { GLTFLoader } from './gltf-loader';
-import { BufferGeometryUtils } from './buffer-geometry-utils';
-global.TextDecoder = require('util').TextDecoder;
-global.atob = require('atob');
+import { GLTFLoader } from './gltf-loader.js';
+import { BufferGeometryUtils } from './buffer-geometry-utils.js';
+
+global.TextDecoder = TextDecoder;
+global.atob = atob;
 
 export class AssetManager {
   constructor(loadingManager) {
@@ -58,11 +61,11 @@ export class AssetManager {
     const triangles = [];
 
     for (let i = 0; i < vertices.length; i += 9) {
-        triangles.push([
-          { x: vertices[i], y: vertices[i+1], z: vertices[i+2] },
-          { x: vertices[i+3], y: vertices[i+4], z: vertices[i+5] },
-          { x: vertices[i+6], y: vertices[i+7], z: vertices[i+8] }
-        ]);
+      triangles.push([
+        { x: vertices[i], y: vertices[i+1], z: vertices[i+2] },
+        { x: vertices[i+3], y: vertices[i+4], z: vertices[i+5] },
+        { x: vertices[i+6], y: vertices[i+7], z: vertices[i+8] }
+      ]);
     }
 
     return triangles;

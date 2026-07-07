@@ -62,9 +62,13 @@ import {
   VectorKeyframeTrack,
   sRGBEncoding
 } from 'three';
-global.XMLHttpRequest = require('xmlhttprequest').XMLHttpRequest;
-global.Blob = require("cross-blob");
-global.blobUtil = require("blob-util");
+import xmlhttprequest from 'xmlhttprequest';
+import Blob from 'cross-blob';
+import blobUtil from 'blob-util';
+
+global.XMLHttpRequest = xmlhttprequest.XMLHttpRequest;
+global.Blob = Blob;
+global.blobUtil = blobUtil;
 
 var GLTFLoader = ( function () {
 

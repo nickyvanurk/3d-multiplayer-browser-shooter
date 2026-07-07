@@ -1,7 +1,6 @@
 import { Vector3, Quaternion } from 'three';
 
-import Types from './types';
-import { Transform } from '../server/src/components/transform';
+import Types from './types.js';
 
 class Go {
   constructor() {}
@@ -177,22 +176,8 @@ class World {
   serialize() {
     const data = [Types.Messages.WORLD];
 
-    for (let i = 0; i < this.entities.length; ++i) {
-      if (!this.entities[i]) {
-        continue;
-      }
-
-      data.push(this.entities[i].worldId);
-
-      const transform = this.entities[i].getComponent(Transform);
-
-      data.push(transform.position.x);
-      data.push(transform.position.y);
-      data.push(transform.position.z);
-      data.push(transform.rotation.x);
-      data.push(transform.rotation.y);
-      data.push(transform.rotation.z);
-      data.push(transform.rotation.w);
+    for (const { id, state } of this.entities) {
+      data.push(id, state[0], state[1], state[2], state[3], state[4], state[5], state[6]);
     }
 
     return data;

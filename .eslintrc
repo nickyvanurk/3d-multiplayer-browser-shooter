@@ -1,12 +1,12 @@
 {
-  "parser": "@babel/eslint-parser",
   "env": {
-    "es6": true,
+    "es2022": true,
     "browser": true,
     "node": true
   },
   "parserOptions": {
     "sourceType": "module",
+    "ecmaVersion": "latest",
   },
   "extends": [
     "eslint:recommended",
@@ -16,7 +16,8 @@
     "curly": "error",
     "quotes": ["error", "single"],
     "indent": ["error", 2, { "SwitchCase": 1 }],
-    "semi": "error"
+    "semi": "error",
+    "no-unused-vars": ["error", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }]
   }
 }
 

@@ -9,7 +9,6 @@ module.exports = {
     {
       name: 'voidfall',
       script: 'server/src/index.js',
-      interpreter: './node_modules/.bin/babel-node',
       cwd: __dirname,
       env: {
         PRODUCTION: 'true',

@@ -15,7 +15,7 @@ export default {
   },
 
   getRandomQuaternion(rng = Math.random) {
-    rng = !!rng ? rng : Math.random;
+    rng = rng ? rng : Math.random;
     const quaternion = new Quaternion();
     quaternion.setFromAxisAngle(new Vector3(1, 0, 0), rng() * Math.PI * 2);
     quaternion.setFromAxisAngle(new Vector3(0, 1, 0), rng() * Math.PI * 2);
@@ -51,16 +51,6 @@ export default {
       result /= 4294967296;
       return result;
     };
-  },
-
-  startWorldExecution(world) {
-    world.play();
-    world.getSystems().forEach(system => system.play());
-  },
-
-  stopWorldExecution(world) {
-    world.stop();
-    world.getSystems().forEach(system => system.stop());
   }
 };
 

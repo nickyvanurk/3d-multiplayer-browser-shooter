@@ -1,14 +1,17 @@
 import WebSocket from 'ws';
-const express = require('express');
-const app = express();
-const path = require('path');
+import express from 'express';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-import Connection from './connection';
+import Connection from './connection.js';
+
+const app = express();
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 if (process.env.PRODUCTION) {
   app
     .use(express.static(path.join(__dirname, '../../client/dist')))
-    .get('*', (_req, res) => res.sendFile(path.join(__dirname, '../../client/dist/index.html')))
+    .get('*', (_req, res) => res.sendFile(path.join(__dirname, '../../client/dist/index.html')));
 }
 
 export default class Server {

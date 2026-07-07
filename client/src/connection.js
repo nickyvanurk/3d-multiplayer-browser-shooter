@@ -6,7 +6,7 @@ export default class Connection {
     let host = location.origin.replace(/^http/, 'ws') + '/voidfall/';
 
     if (import.meta.env.DEV) {
-      host = 'ws://localhost:1337'
+      host = 'ws://localhost:1337';
     }
 
     this.connection = new WebSocket(host);
