@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   root: __dirname,
+  base: '/space-game/',
   publicDir: 'public',
   build: {
     outDir: 'dist',

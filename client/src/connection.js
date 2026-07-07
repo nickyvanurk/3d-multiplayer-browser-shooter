@@ -3,7 +3,7 @@ import Messages from '../../shared/messages';
 
 export default class Connection {
   constructor() {
-    let host = location.origin.replace(/^http/, 'ws');
+    let host = location.origin.replace(/^http/, 'ws') + '/space-game/';
 
     if (import.meta.env.DEV) {
       host = 'ws://localhost:1337'
