@@ -1,54 +1,76 @@
 # [Voidfall](https://nickvanurk.com/voidfall)
 
-A 3D multiplayer space dogfight game made with three.js and ws.
+Voidfall is a 3D multiplayer space dogfight game that runs in the browser. Jump
+into an arena, chase down other pilots, and blast them out of the void. The
+project doubles as a study in real-time netcode for fast-paced multiplayer
+shooters.
 
-Play it at **[nickvanurk.com/voidfall](https://nickvanurk.com/voidfall)**.
+![Screenshot](docs/screenshot-v3.png)
 
-<img src="docs/screenshot-v3.png">
+> 🌟 If you find this project interesting, please consider giving it a star — it
+> helps others discover it too!
 
-## Getting Started
+🎮 **Play it now at [nickvanurk.com/voidfall](https://nickvanurk.com/voidfall)** —
+also coming soon to [CrazyGames](https://www.crazygames.com/).
 
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
+## :blush: **Why?**
 
-### Prerequisites
+I've always been fascinated by how fast-paced multiplayer games stay responsive
+while every player sees a consistent world. Space shooters are the perfect
+playground for that problem: fast ships, projectiles, and split-second aiming
+leave nowhere to hide a laggy netcode. Voidfall started as my sandbox for
+digging into that architecture, and it grew into a game I actually want to ship.
 
-* [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
-* [Node.js](https://nodejs.org/en/download/package-manager/)
-* [npm](https://www.npmjs.com/get-npm)
+## 🧪 What's Included
 
-### Installing
+- Real-time multiplayer dogfights over WebSockets
+- Full 3D space flight with keyboard and mouse controls
+- Weapons, projectiles, and aim assist
+- Health, damage, ship destruction, and respawning
+- Asteroid fields to weave through
+- A HUD with a targeting reticle and on-screen indicators
+- Server-authoritative worlds that scale to many concurrent players
 
-Clone Git repository
+The heart of this project is the netcode. The server owns the simulation and
+broadcasts world state to every client, keeping all players in sync and cheating
+in check. The ongoing focus is tightening that loop toward the responsiveness of
+AAA multiplayer shooters — prediction, interpolation, and a game that still
+feels good at 300ms of latency.
 
+## :rocket: Technologies Used
+
+- Three.js
+- JavaScript
+- ws (WebSockets)
+- ECSY (entity-component-system)
+- ammo.js (physics)
+- Vite
+- Node.js
+
+## 🛠️ Installation
+
+To run Voidfall locally, execute the following commands in your terminal:
+
+```bash
+$ git clone https://github.com/nickyvanurk/voidfall
+$ cd voidfall
+$ npm install
 ```
-git clone https://github.com/nickyvanurk/voidfall.git
+
+Then start the game server and the web client in two separate terminals:
+
+```bash
+$ npm run server:start:dev   # game server on port 1337
+$ npm run client:start:dev   # web client on port 3000
 ```
 
-Install required npm modules
-
-```
-npm install
-```
-
-Start the game server
-
-```
-npm run server:start:dev
-```
-
-Start the web server
-
-```
-npm run client:start:dev
-```
-
-Surf to localhost:3000!
+If everything went well the game will be available at http://localhost:3000
 
 ## Deployment
 
-Deploys run via the **Deploy** GitHub Action (`workflow_dispatch`): it SSHes into the
-server and runs `restart-voidfall.sh`, which pulls `master`, installs, builds the
-client, and reloads the pm2 app. nginx serves the game under `/voidfall`.
+Deploys run via the **Deploy** GitHub Action (`workflow_dispatch`): it SSHes into
+the server and runs `restart-voidfall.sh`, which pulls `master`, installs, builds
+the client, and reloads the pm2 app. nginx serves the game under `/voidfall`.
 
 ## License
 
