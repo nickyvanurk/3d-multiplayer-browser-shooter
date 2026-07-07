@@ -16,7 +16,7 @@ jobs:
           ssh-keyscan -H ${{ secrets.SSH_HOST }} > ~/.ssh/known_hosts
 
       - name: Connect and deploy
-        run: ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "source ~/.nvm/nvm.sh && cd ${{ secrets.WORK_DIR }} && ./restart-space-game.sh"
+        run: ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "source ~/.nvm/nvm.sh && cd ${{ secrets.WORK_DIR }} && ./restart-voidfall.sh"
 
       - name: Cleanup
         run: rm -rf ~/.ssh
