@@ -7,8 +7,8 @@ import Connection from './connection';
 
 if (process.env.PRODUCTION) {
   app
-    .use(express.static(path.join(__dirname, '../../client/public')))
-    .get('*', (_req, res) => res.sendFile(path.join(__dirname, '../../client/public/index.html')))
+    .use(express.static(path.join(__dirname, '../../client/dist')))
+    .get('*', (_req, res) => res.sendFile(path.join(__dirname, '../../client/dist/index.html')))
 }
 
 export default class Server {

@@ -5,7 +5,7 @@ export default class Connection {
   constructor() {
     let host = location.origin.replace(/^http/, 'ws');
 
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       host = 'ws://localhost:1337'
     }
 
