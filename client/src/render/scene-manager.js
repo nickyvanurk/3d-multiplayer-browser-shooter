@@ -67,6 +67,9 @@ export class SceneManager {
     this.renderer = renderer;
     this.composer = composer;
 
+    this.needsResize = true;
+    window.addEventListener('resize', () => { this.needsResize = true; });
+
     this.addStars(scene, 1000, 4000);
   }
 
@@ -94,6 +97,25 @@ export class SceneManager {
   }
 
   render(_alpha) {
+    if (this.needsResize) {
+      const renderer = this.renderer;
+
+      if (renderer.getPixelRatio() !== window.devicePixelRatio) {
+        renderer.setPixelRatio(window.devicePixelRatio);
+      }
+
+      const canvas = renderer.domElement;
+      const width = canvas.clientWidth;
+      const height = canvas.clientHeight;
+
+      this.camera.aspect = width / height;
+      this.camera.updateProjectionMatrix();
+      renderer.setSize(width, height, false);
+      this.composer.setSize(width, height);
+
+      this.needsResize = false;
+    }
+
     this.composer.render();
   }
 }
