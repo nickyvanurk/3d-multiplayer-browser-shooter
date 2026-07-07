@@ -1,6 +1,8 @@
-# [3D Multiplayer Browser Shooter](https://urk-void.herokuapp.com/)
+# [Voidfall](https://nickvanurk.com/voidfall)
 
 A 3D multiplayer space dogfight game made with three.js and ws.
+
+Play it at **[nickvanurk.com/voidfall](https://nickvanurk.com/voidfall)**.
 
 <img src="docs/screenshot-v3.png">
 
@@ -19,7 +21,7 @@ These instructions will get you a copy of the project up and running on your loc
 Clone Git repository
 
 ```
-git clone https://github.com/nickyvanurk/3d-multiplayer-browser-shooter.git
+git clone https://github.com/nickyvanurk/voidfall.git
 ```
 
 Install required npm modules
@@ -40,7 +42,13 @@ Start the web server
 npm run client:start:dev
 ```
 
-Surf to localhost:8080!
+Surf to localhost:3000!
+
+## Deployment
+
+Deploys run via the **Deploy** GitHub Action (`workflow_dispatch`): it SSHes into the
+server and runs `restart-voidfall.sh`, which pulls `master`, installs, builds the
+client, and reloads the pm2 app. nginx serves the game under `/voidfall`.
 
 ## License
 
