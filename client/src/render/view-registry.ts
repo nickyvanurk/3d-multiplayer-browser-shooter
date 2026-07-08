@@ -141,16 +141,16 @@ export class ViewRegistry {
 
       const transform = entity.transform;
 
-      const renderPosition = transform.position
-        .clone()
-        .multiplyScalar(alpha)
-        .add(transform.prevPosition.clone().multiplyScalar(1 - alpha));
-      const renderRotation = transform.prevRotation
-        .clone()
+      // Interpolate prev -> current directly into the mesh's own vectors. No
+      // per-entity/per-frame allocations (was 3 clones each) — with hundreds of
+      // asteroids the old path churned ~90k temp objects/sec, causing periodic
+      // GC hitches.
+      mesh.position
+        .copy(transform.prevPosition)
+        .lerp(transform.position, alpha);
+      mesh.quaternion
+        .copy(transform.prevRotation)
         .slerp(transform.rotation, alpha);
-
-      mesh.position.copy(renderPosition);
-      mesh.quaternion.copy(renderRotation);
       mesh.scale.setScalar(transform.scale);
     }
   }

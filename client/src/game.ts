@@ -1,7 +1,11 @@
-import * as workerInterval from './worker-interval.ts';
-
+import Utils from '../../shared/utils.ts';
 import { World } from '../../shared/sim/world.ts';
+import { InputCommand } from '../../shared/sim/input.ts';
+import { RapierPhysicsWorld } from '../../shared/sim/physics/rapier-physics-world.ts';
 import Connection from './connection.ts';
+
+import { BrowserMeshProvider } from './physics/browser-mesh-provider.ts';
+import { ClientSim } from './client-sim.ts';
 
 import { SceneManager } from './render/scene-manager.ts';
 import { ViewRegistry } from './render/view-registry.ts';
@@ -14,15 +18,21 @@ import { InputController } from './input/input-controller.ts';
 import { DEFAULT_KEYBINDINGS } from './input/keybindings.ts';
 import { NetworkClient } from './net/network-client.ts';
 
-// Plain OOP game. Owns the sim mirror World, the presentation layer,
-// and the NetworkClient. The client does NOT simulate: entities only hold the
-// latest server transform, and rendering interpolates between the last two.
+// Plain OOP game. Owns the mirror World, the presentation layer, the client
+// physics world, the NetworkClient, and the client-authoritative ClientSim.
+//
+// A single requestAnimationFrame loop drives everything: it advances the sim in
+// fixed-dt sub-steps (a shared accumulator, matching the server) and renders,
+// interpolating between the last two sim states by the leftover accumulator
+// fraction. There is no separate worker interval; a backgrounded tab (rAF
+// paused) simply pauses the sim.
 export default class Game {
   updatesPerSecond: number;
   lastTime: number;
-  lastUpdate: number;
   world: World;
   connection: Connection;
+  physics!: RapierPhysicsWorld;
+  clientSim!: ClientSim;
   sceneManager: SceneManager;
   viewRegistry: ViewRegistry;
   inputController: InputController;
@@ -32,11 +42,15 @@ export default class Game {
   aimAssist: AimAssistService;
   range: RangeService;
   networkClient: NetworkClient;
+  fixedStep = 1000 / 60;
+  fixedUpdate!: (delta: number, time: number) => number;
+  currentInput: InputCommand = InputCommand.empty();
+  // Accumulator remainder / fixedStep — the render interpolation fraction [0,1).
+  leftoverFrac = 0;
 
   constructor() {
     this.updatesPerSecond = 60;
     this.lastTime = performance.now();
-    this.lastUpdate = performance.now();
 
     this.world = new World();
     this.connection = new Connection();
@@ -78,44 +92,86 @@ export default class Game {
   async init(): Promise<void> {
     await this.viewRegistry.load();
 
-    this.lastTime = performance.now();
-    this.lastUpdate = performance.now();
-
-    workerInterval.setInterval(
-      this.update.bind(this),
-      1000 / this.updatesPerSecond,
+    // The client runs its own Rapier world (all ships + the static asteroid
+    // field). Meshes come from the GLTF scenes the renderer already loaded.
+    // reconcileShips is off: the client manages ship bodies itself.
+    this.physics = new RapierPhysicsWorld(
+      new BrowserMeshProvider(this.viewRegistry.models),
     );
-    requestAnimationFrame(this.render.bind(this));
+    this.physics.reconcileShips = false;
+    await this.physics.init();
+    this.world.physics = this.physics;
+
+    this.clientSim = new ClientSim(this.world, this.physics);
+    this.clientSim.onFire = (bullet) => this.networkClient.sendFire(bullet);
+    this.networkClient.onLocalShip = (ship) =>
+      this.clientSim.setOwnedShip(ship);
+
+    // Compose the client physics/ownership hooks on top of ViewRegistry's
+    // (attached in the constructor): every spawn/despawn drives both.
+    const viewSpawn = this.world.onSpawn;
+    const viewDespawn = this.world.onDespawn;
+    this.world.onSpawn = (entity) => {
+      viewSpawn?.(entity);
+      this.clientSim.onSpawn(entity);
+    };
+    this.world.onDespawn = (entity) => {
+      viewDespawn?.(entity);
+      this.clientSim.onDespawn(entity);
+    };
+
+    // Fixed-timestep accumulator (same pattern as the server): steps the sim by
+    // a constant dt as many times as real elapsed time allows — even motion, and
+    // it catches up after a hitch instead of taking one giant variable step.
+    // State is reported once per sim step (not per rendered frame).
+    this.fixedStep = 1000 / this.updatesPerSecond;
+    this.fixedUpdate = Utils.createFixedTimestep(this.fixedStep, (dt, time) => {
+      this.clientSim.update(dt, time, this.currentInput);
+      const ship = this.clientSim.ownedShip;
+      if (ship) {
+        this.networkClient.sendState(ship);
+      }
+    });
+
+    this.lastTime = performance.now();
+    requestAnimationFrame(this.frame.bind(this));
   }
 
-  update(): void {
+  frame(): void {
+    requestAnimationFrame(this.frame.bind(this));
+
     const time = performance.now();
-    let delta = time - this.lastTime;
-
-    if (delta > 250) {
-      delta = 250;
-    }
-
-    this.networkClient.processMessages(delta);
-    const input = this.inputController.sample();
-    this.aimAssist.update();
-    this.particles.update();
-    this.range.update();
-    this.networkClient.sendInput(input);
-
-    this.lastUpdate = performance.now();
-    this.lastTime = time;
-  }
-
-  render(): void {
-    requestAnimationFrame(this.render.bind(this));
-
     if (document.hidden) {
+      // rAF is throttled while hidden; don't accumulate the gap into one huge
+      // catch-up burst when the tab comes back.
+      this.lastTime = time;
       return;
     }
 
-    const alpha =
-      (performance.now() - this.lastUpdate) / (1000 / this.updatesPerSecond);
+    let delta = time - this.lastTime;
+    if (delta > 250) {
+      delta = 250;
+    }
+    this.lastTime = time;
+
+    this.networkClient.processMessages();
+
+    this.inputController.sample();
+    this.aimAssist.update();
+    this.currentInput = new InputCommand(this.inputController.input);
+
+    // Advance the sim in fixed sub-steps; leftoverFrac is the interpolation
+    // fraction into the next step, always in [0,1).
+    this.leftoverFrac = this.fixedUpdate(delta, time);
+
+    const alpha = Math.min(1, this.leftoverFrac);
+
+    // Camera follows the ship's interpolated pose (same alpha as the mesh) so
+    // the ship holds a constant screen offset instead of surging.
+    this.networkClient.updateCamera(delta, alpha);
+
+    this.particles.update();
+    this.range.update();
 
     this.viewRegistry.update(alpha);
     this.sceneManager.render(alpha);

@@ -4,8 +4,9 @@ export const Messages = {
   WELCOME: 2,
   SPAWN: 3,
   DESPAWN: 4,
-  INPUT: 5,
   WORLD: 6,
+  STATE: 7,
+  FIRE: 8,
 } as const;
 
 export const Entities = {

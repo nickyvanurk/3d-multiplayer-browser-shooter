@@ -1,32 +1,26 @@
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import RAPIER from '@dimforge/rapier3d-compat';
-import { Vector3, Quaternion, LoadingManager } from 'three';
+import { Vector3, Quaternion } from 'three';
 
-import { AssetManager } from '../asset-manager.ts';
-
-import Types from '../../../shared/types.ts';
-import type { EntityKind } from '../../../shared/types.ts';
-import type { Entity, PhysicsBody } from '../../../shared/sim/entity.ts';
-import type { World } from '../../../shared/sim/world.ts';
-import type {
-  PhysicsWorld,
-  Collision,
-} from '../../../shared/sim/physics/physics-world.ts';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+import Types from '../../types.ts';
+import type { EntityKind } from '../../types.ts';
+import type { Entity, PhysicsBody } from '../entity.ts';
+import type { World } from '../world.ts';
+import type { PhysicsWorld, Collision } from './physics-world.ts';
+import type { MeshProvider } from './mesh-provider.ts';
 
 // Bullets integrate their own position (pos += velocity * delta) instead of
 // being driven by the solver, so they collide as sensors. KINEMATIC_FIXED lets
-// them still register hits against the static (weight 0) asteroids on top of
-// the default dynamic/kinematic pairs.
+// them still register hits against the static (weight 0) asteroids, and
+// KINEMATIC_KINEMATIC lets them hit player ships, which are now kinematic bodies
+// driven by client-authoritative state (both bullet and ship are kinematic).
 const BULLET_COLLISION_TYPES =
   RAPIER.ActiveCollisionTypes.DEFAULT |
-  RAPIER.ActiveCollisionTypes.KINEMATIC_FIXED;
+  RAPIER.ActiveCollisionTypes.KINEMATIC_FIXED |
+  RAPIER.ActiveCollisionTypes.KINEMATIC_KINEMATIC;
 
-// The server's fixed timestep (GameServer.updatesPerSecond = 60), in seconds.
-// Used to convert damping coefficients; the conversion barely moves across the
-// 30–60 Hz range, so a nominal value is fine.
+// The fixed timestep (updatesPerSecond = 60), in seconds. Used to convert
+// damping coefficients; the conversion barely moves across the 30–60 Hz range,
+// so a nominal value is fine.
 const NOMINAL_STEP_S = 1 / 60;
 
 // Ammo damps velocity by (1 - d)^dt per step; Rapier by 1/(1 + c·dt). The same
@@ -71,11 +65,15 @@ export class RapierPhysicsWorld implements PhysicsWorld {
   ready: boolean;
   collisions: Collision[];
   onReady: (() => void) | null;
+  meshProvider: MeshProvider;
+  // Server owns ship-body lifecycle via alive-transitions (respawn). The client
+  // manages the single owned ship's body itself and must NOT auto-body remote
+  // ships, so it disables this.
+  reconcileShips: boolean;
   world!: RAPIER.World;
   eventQueue!: RAPIER.EventQueue;
-  assetManager!: AssetManager;
   // Convex-hull point clouds cached by `${kind}:${scale}`; extracting/merging
-  // triangles from the GLB is the expensive part, so it's done once per shape.
+  // triangles is the expensive part, so it's done once per shape.
   vertices: Map<string, Float32Array>;
   // Collider handle -> entity, to recover game entities from collision events.
   handleToEntity: Map<number, Entity>;
@@ -85,10 +83,12 @@ export class RapierPhysicsWorld implements PhysicsWorld {
   private readonly scratchVec: Vector3;
   private readonly scratchQuat: Quaternion;
 
-  constructor() {
+  constructor(meshProvider: MeshProvider) {
     this.ready = false;
     this.collisions = [];
     this.onReady = null;
+    this.meshProvider = meshProvider;
+    this.reconcileShips = true;
     this.vertices = new Map();
     this.handleToEntity = new Map();
     this.bodies = new Set();
@@ -101,24 +101,10 @@ export class RapierPhysicsWorld implements PhysicsWorld {
     this.world = new RAPIER.World({ x: 0, y: 0, z: 0 });
     this.eventQueue = new RAPIER.EventQueue(true);
 
-    await new Promise<void>((resolve) => {
-      const loadingManager = new LoadingManager();
-      loadingManager.onLoad = () => {
-        this.getConvexVertices(Types.Entities.SPACESHIP, 1);
-        this.getConvexVertices(Types.Entities.ASTEROID, 1);
-        resolve();
-      };
-
-      this.assetManager = new AssetManager(loadingManager);
-      this.assetManager.loadModel({
-        name: 'spaceship',
-        url: path.join(__dirname, '../../models/fighter.glb'),
-      });
-      this.assetManager.loadModel({
-        name: 'asteroid',
-        url: path.join(__dirname, '../../../client/public/models/asteroid.glb'),
-      });
-    });
+    await this.meshProvider.init();
+    // Prewarm the convex-hull caches for the two hulled shapes.
+    this.getConvexVertices(Types.Entities.SPACESHIP, 1);
+    this.getConvexVertices(Types.Entities.ASTEROID, 1);
 
     this.ready = true;
     if (this.onReady) {
@@ -154,7 +140,9 @@ export class RapierPhysicsWorld implements PhysicsWorld {
   }
 
   applyAll(world: World, delta: number): void {
-    this.reconcile(world);
+    if (this.reconcileShips) {
+      this.reconcile(world);
+    }
 
     for (const entity of world.entities.values()) {
       if (entity.destroyed || entity.alive === false || !entity.body) {
@@ -165,13 +153,20 @@ export class RapierPhysicsWorld implements PhysicsWorld {
 
       if (entity.kinematic) {
         const rot = entity.transform.rotation;
-        // Next pose: current position + world-space velocity * delta (ms).
-        this.scratchVec
-          .copy(entity.velocity)
-          .applyQuaternion(rot)
-          .multiplyScalar(delta)
-          .add(entity.transform.position);
-        body.setNextKinematicTranslation(this.scratchVec);
+
+        // Player ships are kinematic bodies driven by client-authoritative
+        // state: place the body at exactly the reported pose (no extrapolation).
+        // Bullets integrate their own straight-line motion from local velocity.
+        if (entity.type === Types.Entities.BULLET) {
+          this.scratchVec
+            .copy(entity.velocity)
+            .applyQuaternion(rot)
+            .multiplyScalar(delta)
+            .add(entity.transform.position);
+          body.setNextKinematicTranslation(this.scratchVec);
+        } else {
+          body.setNextKinematicTranslation(entity.transform.position);
+        }
         body.setNextKinematicRotation(rot);
         continue;
       }
@@ -262,6 +257,11 @@ export class RapierPhysicsWorld implements PhysicsWorld {
       if (entity.weight === 0 && !entity.kinematic) {
         continue;
       }
+      // Player ships are authoritative on the client that owns them; their pose
+      // comes from client state, not the solver, so don't overwrite it here.
+      if (entity.kinematic && entity.type === Types.Entities.SPACESHIP) {
+        continue;
+      }
 
       const body = entity.body as unknown as RAPIER.RigidBody;
       const o = body.translation();
@@ -305,7 +305,10 @@ export class RapierPhysicsWorld implements PhysicsWorld {
       .setFriction(0)
       .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
 
-    if (entity.kinematic) {
+    // Only bullets are sensors (they integrate their own motion and just need to
+    // report hits). Player ships are kinematic on the server but remain solid
+    // bodies so bullet↔ship detection matches the old dynamic-ship behavior.
+    if (entity.type === Types.Entities.BULLET) {
       desc.setSensor(true).setActiveCollisionTypes(BULLET_COLLISION_TYPES);
     } else if (entity.weight !== 0) {
       // Ammo approximated a convex hull's rotational inertia from its bounding
@@ -349,10 +352,7 @@ export class RapierPhysicsWorld implements PhysicsWorld {
       return cached;
     }
 
-    const triangles = this.assetManager.getTriangles(
-      this.modelName(kind),
-      scale,
-    );
+    const triangles = this.meshProvider.getTriangles(kind, scale);
     // Some source meshes (the asteroid GLB) carry NaN vertices. Ammo's hull
     // builder silently tolerated them; Rapier's qhull yields an invalid shape
     // that createCollider rejects, so drop any non-finite points.
@@ -372,15 +372,5 @@ export class RapierPhysicsWorld implements PhysicsWorld {
     const points = new Float32Array(coords);
     this.vertices.set(key, points);
     return points;
-  }
-
-  modelName(kind: EntityKind): string {
-    if (kind === Types.Entities.SPACESHIP) {
-      return 'spaceship';
-    }
-    if (kind === Types.Entities.ASTEROID) {
-      return 'asteroid';
-    }
-    throw new Error(`No model for entity type ${kind}`);
   }
 }

@@ -181,7 +181,7 @@ export class InputController {
   }
 
   // Update the aim ray from the current mouse + camera and return the input
-  // payload consumed by the server (Messages.Input): all movement booleans plus
+  // payload fed to the owned ship each tick: all movement booleans plus
   // aim = { mouse:{x,y}, origin, direction, distance }.
   sample() {
     this.raycaster.setFromCamera(this.input.aim.ndc, this.camera);

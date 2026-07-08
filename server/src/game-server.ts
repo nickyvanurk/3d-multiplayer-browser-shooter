@@ -4,7 +4,8 @@ import logger from './utils/logger.ts';
 import Utils from '../../shared/utils.ts';
 
 import { World } from '../../shared/sim/world.ts';
-import { RapierPhysicsWorld } from './physics/rapier-physics-world.ts';
+import { RapierPhysicsWorld } from '../../shared/sim/physics/rapier-physics-world.ts';
+import { NodeMeshProvider } from './physics/node-mesh-provider.ts';
 import { NetworkServer } from './net/network-server.ts';
 import { RespawnSubsystem } from '../../shared/sim/subsystems/respawn.ts';
 import { CombatSubsystem } from '../../shared/sim/subsystems/combat.ts';
@@ -32,7 +33,7 @@ export class GameServer {
     id: string,
     maxClients: number,
     server: Server,
-    physicsWorld: PhysicsWorld = new RapierPhysicsWorld(),
+    physicsWorld: PhysicsWorld = new RapierPhysicsWorld(new NodeMeshProvider()),
   ) {
     this.id = id;
     this.maxClients = maxClients;

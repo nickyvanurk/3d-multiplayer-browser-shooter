@@ -11,31 +11,25 @@ export interface OutgoingMessage {
   serialize(): unknown[];
 }
 
-interface IncomingMessage {
+interface HelloMessage {
   type: unknown;
   data: { name: string };
 }
 
-interface BufferedInput {
-  type: unknown;
-  data: ReturnType<typeof Messages.Input.deserialize>;
-  seq: number;
-}
-
-type MessageData =
-  | unknown[]
-  | { name: string }
-  | ReturnType<typeof Messages.Input.deserialize>;
+type StateData = ReturnType<typeof Messages.State.deserialize>;
+type FireData = ReturnType<typeof Messages.Fire.deserialize>;
 
 export default class Connection {
   id: number;
   connection: ClientSocket;
   server: Server;
-  incomingMessageQueue: IncomingMessage[];
+  incomingMessageQueue: HelloMessage[];
   outgoingMessageQueue: OutgoingMessage[];
-  inputBuffer: BufferedInput[];
-  sequenceNumber: number;
-  lastProcessedInput: number;
+  // Client-authoritative movement: only the newest reported ship state matters,
+  // so it's kept as a single latest value rather than a queue.
+  latestState: StateData | null;
+  // Fire requests are events; every one must be honored, so they queue.
+  fireQueue: FireData[];
   onCloseCallback?: () => void;
 
   constructor(id: number, connection: ClientSocket, server: Server) {
@@ -45,24 +39,25 @@ export default class Connection {
 
     this.incomingMessageQueue = [];
     this.outgoingMessageQueue = [];
-    this.inputBuffer = [];
-    this.sequenceNumber = 0;
-    this.lastProcessedInput = -1;
+    this.latestState = null;
+    this.fireQueue = [];
 
     this.connection.on('message', (message) => {
-      let data: MessageData = JSON.parse(message as string) as unknown[];
+      const data = JSON.parse(message as string) as unknown[];
       const type = data.shift();
 
       switch (type) {
         case Types.Messages.HELLO:
-          data = Messages.Hello.deserialize(data as string[]);
-          this.incomingMessageQueue.push({ type, data });
+          this.incomingMessageQueue.push({
+            type,
+            data: Messages.Hello.deserialize(data as string[]),
+          });
           break;
-        case Types.Messages.INPUT:
-          data = Messages.Input.deserialize(
-            data as Parameters<typeof Messages.Input.deserialize>[0],
-          );
-          this.inputBuffer.push({ type, data, seq: this.sequenceNumber++ });
+        case Types.Messages.STATE:
+          this.latestState = Messages.State.deserialize(data as number[]);
+          break;
+        case Types.Messages.FIRE:
+          this.fireQueue.push(Messages.Fire.deserialize(data as number[]));
           break;
       }
     });
@@ -88,8 +83,14 @@ export default class Connection {
     this.outgoingMessageQueue.push(message);
   }
 
-  popMessage(): IncomingMessage | undefined {
+  popMessage(): HelloMessage | undefined {
     return this.incomingMessageQueue.shift();
+  }
+
+  drainFire(): FireData[] {
+    const fires = this.fireQueue;
+    this.fireQueue = [];
+    return fires;
   }
 
   sendOutgoingMessages(): void {
@@ -109,14 +110,6 @@ export default class Connection {
 
   hasOutgoingMessage(): boolean {
     return this.outgoingMessageQueue.length > 0;
-  }
-
-  popInput(): BufferedInput | undefined {
-    return this.inputBuffer.shift();
-  }
-
-  hasInputs(): boolean {
-    return this.inputBuffer.length > 0;
   }
 
   close(error: unknown): void {

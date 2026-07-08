@@ -8,7 +8,7 @@ import type { ProjectionService } from './projection.ts';
 // Ports aim-assist-system.js: when the cursor hovers near an on-screen ship, snap
 // the aim ray distance to that ship's distance from the camera. Mutates the live
 // input's `aim.distance` (the same object InputController.sample() returns), so the
-// adjusted distance is sent with the next Messages.Input.
+// adjusted distance feeds the owned ship's weapon aiming that same tick.
 export class AimAssistService {
   world: World;
   sceneManager: SceneManager;

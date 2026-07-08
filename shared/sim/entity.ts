@@ -1,7 +1,7 @@
+import { Vector3 } from 'three';
 import { Transform } from './transform.ts';
 import type { TransformInit } from './transform.ts';
 import type { EntityKind } from '../types.ts';
-import type { Vector3 } from 'three';
 
 export interface EntityInit {
   id?: number;
@@ -41,6 +41,9 @@ export class Entity {
     this.type = type; // Types.Entities.*
     this.transform = new Transform(transform);
     this.destroyed = false;
+    // Subclasses overwrite these; base defaults keep serializeNetworkState safe.
+    this.velocity = new Vector3();
+    this.angularVelocity = new Vector3();
   }
 
   update(_dt: number, _world: EntityWorld, _time: number): void {}
@@ -49,15 +52,34 @@ export class Entity {
     this.destroyed = true;
   }
 
-  // Network state = the fields that replicate to clients (position + rotation).
-  // Matches the Messages.World wire layout (7 numbers after the id).
+  // Network state = the fields that replicate to clients: position + rotation
+  // plus linear + angular velocity, so clients can coast remote entities in
+  // their own physics sim between snapshots. 13 numbers after the id.
   serializeNetworkState(): number[] {
     const { position: p, rotation: r } = this.transform;
-    return [p.x, p.y, p.z, r.x, r.y, r.z, r.w];
+    const v = this.velocity;
+    const a = this.angularVelocity;
+    return [p.x, p.y, p.z, r.x, r.y, r.z, r.w, v.x, v.y, v.z, a.x, a.y, a.z];
   }
 
-  applyNetworkState([px, py, pz, rx, ry, rz, rw]: number[]): void {
+  applyNetworkState([
+    px,
+    py,
+    pz,
+    rx,
+    ry,
+    rz,
+    rw,
+    vx,
+    vy,
+    vz,
+    ax,
+    ay,
+    az,
+  ]: number[]): void {
     this.transform.position.set(px, py, pz);
     this.transform.rotation.set(rx, ry, rz, rw);
+    this.velocity.set(vx, vy, vz);
+    this.angularVelocity.set(ax, ay, az);
   }
 }

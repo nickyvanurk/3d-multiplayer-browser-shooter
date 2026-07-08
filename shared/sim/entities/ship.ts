@@ -5,9 +5,26 @@ import type { TransformInit } from '../transform.ts';
 import { InputCommand } from '../input.ts';
 import { Bullet } from './bullet.ts';
 import Types from '../../types.ts';
-import type { Weapon } from '../weapon.ts';
+import { Weapon } from '../weapon.ts';
 
 export const RESPAWN_DELAY = 3000;
+
+// The player ship's dual weapons. Shared so the server (authoritative bullets)
+// and the owning client (predicted bullets) fire from identical mounts/timing.
+export function createDefaultWeapons(ship: Ship): Weapon[] {
+  const left = new Weapon({
+    offset: new Vector3(1.3, 0.9, 5),
+    delay: 125,
+    fireInterval: 250,
+  });
+  const right = new Weapon({
+    offset: new Vector3(-1.3, 0.9, 5),
+    fireInterval: 250,
+  });
+  left.parent = ship;
+  right.parent = ship;
+  return [left, right];
+}
 
 export interface ShipInit {
   id?: number;
@@ -107,6 +124,14 @@ export class Ship extends Entity {
 
   update(dt: number, world: EntityWorld, time: number): void {
     if (!this.alive) {
+      return;
+    }
+
+    // A kinematic ship is the server's mirror of a client-authoritative ship:
+    // its pose comes from the owning client's State, so it must not self-simulate
+    // (that would clobber the reported velocity and fire duplicate bullets). The
+    // owning client runs its ship dynamically (kinematic === false).
+    if (this.kinematic) {
       return;
     }
 

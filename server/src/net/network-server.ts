@@ -1,12 +1,10 @@
-import { Vector3 } from 'three';
-
 import logger from '../utils/logger.ts';
 import Utils from '../../../shared/utils.ts';
 import Types from '../../../shared/types.ts';
 import Messages from '../../../shared/messages.ts';
 
 import { Ship } from '../../../shared/sim/entities/ship.ts';
-import { Weapon } from '../../../shared/sim/weapon.ts';
+import { Bullet } from '../../../shared/sim/entities/bullet.ts';
 import { InputCommand } from '../../../shared/sim/input.ts';
 import { SnapshotDiffer } from '../../../shared/sim/net/snapshot.ts';
 
@@ -82,24 +80,30 @@ export class NetworkServer {
         }
       }
 
-      if (connection.hasInputs()) {
-        let input = connection.popInput();
-
-        while (input && input.seq < connection.lastProcessedInput + 1) {
-          input = connection.popInput();
-        }
-
-        if (!input) {
-          continue;
-        }
-
-        const ship = this.ships.get(connection.id);
-        if (ship && ship.controller) {
-          ship.controller.lastInput = new InputCommand(input.data, input.seq);
-        }
+      const ship = this.ships.get(connection.id);
+      if (!ship) {
+        continue;
       }
 
-      connection.lastProcessedInput++;
+      // Client-authoritative movement: copy the client's latest reported pose
+      // onto the (kinematic) ship body. The server trusts it and does not re-sim.
+      const state = connection.latestState;
+      if (state && ship.alive !== false) {
+        ship.transform.position.copy(state.position);
+        ship.transform.rotation.copy(state.rotation);
+        ship.velocity.copy(state.velocity);
+        ship.angularVelocity.copy(state.angularVelocity);
+      }
+
+      // Each Fire request spawns the authoritative bullet the server owns for
+      // damage/kills. The client already shows a predicted one, so it doesn't
+      // receive this bullet back (see onEntitySpawned / broadcast).
+      for (const fire of connection.drainFire()) {
+        if (ship.alive === false) {
+          break;
+        }
+        this.spawnBullet(world, ship, fire);
+      }
     }
   }
 
@@ -108,19 +112,10 @@ export class NetworkServer {
 
     const ship = new Ship();
 
-    const weaponLeft = new Weapon({
-      offset: new Vector3(1.3, 0.9, 5),
-      delay: 125,
-      fireInterval: 250,
-    });
-    const weaponRight = new Weapon({
-      offset: new Vector3(-1.3, 0.9, 5),
-      fireInterval: 250,
-    });
-    weaponLeft.parent = ship;
-    weaponRight.parent = ship;
-    ship.weapons = [weaponLeft, weaponRight];
-
+    // The server ship is a kinematic mirror of client-authoritative movement: it
+    // is placed from client State and never self-simulates or fires (bullets come
+    // from Fire events), so it needs no weapons or controller input.
+    ship.kinematic = true;
     ship.controller = { connection, lastInput: InputCommand.empty() };
 
     // Place the ship before spawning: world.spawn() synchronously builds the
@@ -136,6 +131,31 @@ export class NetworkServer {
     return ship;
   }
 
+  spawnBullet(
+    world: World,
+    ship: Ship,
+    fire: ReturnType<typeof Messages.Fire.deserialize>,
+  ): void {
+    const bullet = new Bullet({
+      transform: { position: fire.position, rotation: fire.rotation },
+      damage: fire.damage,
+    });
+    bullet.owner = ship;
+    // world.spawn -> onSpawn: physics body + onEntitySpawned broadcast.
+    world.spawn(bullet);
+  }
+
+  // The connection id of a bullet's owner, or null for non-bullets. Used to keep
+  // a client from receiving the authoritative copy of a bullet it predicted.
+  bulletOwnerId(entity: Entity | undefined): number | null {
+    if (!entity || entity.type !== Types.Entities.BULLET) {
+      return null;
+    }
+    const owner = (entity as Bullet).owner as Ship | null;
+    const connection = owner?.controller?.connection as Connection | undefined;
+    return connection ? connection.id : null;
+  }
+
   onEntitySpawned(entity: Entity): void {
     if (entity.alive === false) {
       return;
@@ -145,11 +165,14 @@ export class NetworkServer {
     logger.debug(`Broadcast: Spawn entity#${entity.id}`);
     this.broadcastMessage(
       new Messages.Spawn(entity.id!, entity.type, position, rotation, scale),
+      this.bulletOwnerId(entity),
     );
   }
 
   onEntityDespawned(entity: Entity): void {
     logger.debug(`Broadcast: Despawn entity#${entity.id}`);
+    // Owner exclusion is unnecessary here: despawning an id the client never had
+    // is a harmless no-op on its side.
     this.broadcastMessage(new Messages.Despawn(entity.id!));
   }
 
@@ -196,9 +219,15 @@ export class NetworkServer {
     });
 
     if (changed.length) {
-      const message = new Messages.World(changed);
       for (const connection of this.connections) {
-        connection.pushMessage(message);
+        // Exclude a client's own authoritative bullets — it already renders the
+        // predicted ones it fired. (Non-bullets have owner id null, so they pass.)
+        const relevant = changed.filter(
+          (c) => this.bulletOwnerId(world.get(c.id)) !== connection.id,
+        );
+        if (relevant.length) {
+          connection.pushMessage(new Messages.World(relevant));
+        }
       }
     }
 

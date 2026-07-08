@@ -2,7 +2,6 @@ import { Vector3, Quaternion } from 'three';
 
 import Types from './types.ts';
 import type { EntityKind } from './types.ts';
-import type { Aim, InputCommandData } from './sim/input.ts';
 
 // One replicated entity in a World snapshot: its id plus the 7-number network
 // state (position xyz + rotation xyzw) produced by Entity.serializeNetworkState.
@@ -122,91 +121,98 @@ export class Despawn {
   }
 }
 
-export class Input {
-  forward: boolean | undefined;
-  backward: boolean | undefined;
-  rollLeft: boolean | undefined;
-  rollRight: boolean | undefined;
-  strafeLeft: boolean | undefined;
-  strafeRight: boolean | undefined;
-  strafeUp: boolean | undefined;
-  strafeDown: boolean | undefined;
-  boost: boolean | undefined;
-  weaponPrimary: boolean | undefined;
-  aim: Aim | null | undefined;
+// Client -> server: the local player's authoritative ship movement. The client
+// owns its ship (client-authoritative), so it reports the pose+velocities it
+// simulated locally; the server copies them onto its kinematic body verbatim.
+export class State {
+  position: Vector3;
+  rotation: Quaternion;
+  velocity: Vector3;
+  angularVelocity: Vector3;
 
-  constructor(input: InputCommandData) {
-    const {
-      forward,
-      backward,
-      rollLeft,
-      rollRight,
-      strafeLeft,
-      strafeRight,
-      strafeUp,
-      strafeDown,
-      boost,
-      weaponPrimary,
-      aim,
-    } = input;
-
-    this.forward = forward;
-    this.backward = backward;
-    this.rollLeft = rollLeft;
-    this.rollRight = rollRight;
-    this.strafeLeft = strafeLeft;
-    this.strafeRight = strafeRight;
-    this.strafeUp = strafeUp;
-    this.strafeDown = strafeDown;
-    this.boost = boost;
-    this.weaponPrimary = weaponPrimary;
-    this.aim = aim;
+  constructor(
+    position: Vector3,
+    rotation: Quaternion,
+    velocity: Vector3,
+    angularVelocity: Vector3,
+  ) {
+    this.position = position;
+    this.rotation = rotation;
+    this.velocity = velocity;
+    this.angularVelocity = angularVelocity;
   }
 
-  static deserialize(
-    message: [
-      boolean,
-      boolean,
-      boolean,
-      boolean,
-      boolean,
-      boolean,
-      boolean,
-      boolean,
-      boolean,
-      boolean,
-      Aim,
-    ],
-  ) {
+  static deserialize(message: number[]) {
     return {
-      forward: message[0],
-      backward: message[1],
-      rollLeft: message[2],
-      rollRight: message[3],
-      strafeLeft: message[4],
-      strafeRight: message[5],
-      strafeUp: message[6],
-      strafeDown: message[7],
-      boost: message[8],
-      weaponPrimary: message[9],
-      aim: message[10],
+      position: new Vector3(message[0], message[1], message[2]),
+      rotation: new Quaternion(message[3], message[4], message[5], message[6]),
+      velocity: new Vector3(message[7], message[8], message[9]),
+      angularVelocity: new Vector3(message[10], message[11], message[12]),
     };
   }
 
   serialize() {
     return [
-      Types.Messages.INPUT,
-      this.forward,
-      this.backward,
-      this.rollLeft,
-      this.rollRight,
-      this.strafeLeft,
-      this.strafeRight,
-      this.strafeUp,
-      this.strafeDown,
-      this.boost,
-      this.weaponPrimary,
-      this.aim,
+      Types.Messages.STATE,
+      this.position.x,
+      this.position.y,
+      this.position.z,
+      this.rotation.x,
+      this.rotation.y,
+      this.rotation.z,
+      this.rotation.w,
+      this.velocity.x,
+      this.velocity.y,
+      this.velocity.z,
+      this.angularVelocity.x,
+      this.angularVelocity.y,
+      this.angularVelocity.z,
+    ];
+  }
+}
+
+// Client -> server: "I fired a bullet." The client already spawned a predicted
+// cosmetic bullet locally (id `bulletId`, a client-range id); the server spawns
+// the authoritative one at this muzzle transform and owns the resulting damage.
+export class Fire {
+  position: Vector3;
+  rotation: Quaternion;
+  damage: number;
+  bulletId: number;
+
+  constructor(
+    position: Vector3,
+    rotation: Quaternion,
+    damage: number,
+    bulletId: number,
+  ) {
+    this.position = position;
+    this.rotation = rotation;
+    this.damage = damage;
+    this.bulletId = bulletId;
+  }
+
+  static deserialize(message: number[]) {
+    return {
+      position: new Vector3(message[0], message[1], message[2]),
+      rotation: new Quaternion(message[3], message[4], message[5], message[6]),
+      damage: message[7],
+      bulletId: message[8],
+    };
+  }
+
+  serialize() {
+    return [
+      Types.Messages.FIRE,
+      this.position.x,
+      this.position.y,
+      this.position.z,
+      this.rotation.x,
+      this.rotation.y,
+      this.rotation.z,
+      this.rotation.w,
+      this.damage,
+      this.bulletId,
     ];
   }
 }
@@ -219,9 +225,15 @@ class World {
   }
 
   static deserialize(message: number[]) {
-    const data: { id: number; position: Vector3; rotation: Quaternion }[] = [];
+    const data: {
+      id: number;
+      position: Vector3;
+      rotation: Quaternion;
+      velocity: Vector3;
+      angularVelocity: Vector3;
+    }[] = [];
 
-    for (let i = 0; i < message.length; i += 8) {
+    for (let i = 0; i < message.length; i += 14) {
       data.push({
         id: message[i],
         position: new Vector3(message[i + 1], message[i + 2], message[i + 3]),
@@ -230,6 +242,12 @@ class World {
           message[i + 5],
           message[i + 6],
           message[i + 7],
+        ),
+        velocity: new Vector3(message[i + 8], message[i + 9], message[i + 10]),
+        angularVelocity: new Vector3(
+          message[i + 11],
+          message[i + 12],
+          message[i + 13],
         ),
       });
     }
@@ -241,20 +259,11 @@ class World {
     const data: number[] = [Types.Messages.WORLD];
 
     for (const { id, state } of this.entities) {
-      data.push(
-        id,
-        state[0],
-        state[1],
-        state[2],
-        state[3],
-        state[4],
-        state[5],
-        state[6],
-      );
+      data.push(id, ...state);
     }
 
     return data;
   }
 }
 
-export default { Go, Hello, Welcome, Spawn, Despawn, Input, World };
+export default { Go, Hello, Welcome, Spawn, Despawn, State, Fire, World };

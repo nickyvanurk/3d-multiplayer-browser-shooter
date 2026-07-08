@@ -7,6 +7,7 @@ import './world.test.ts';
 import './entity.test.ts';
 import './entities.test.ts';
 import './input.test.ts';
+import './messages.test.ts';
 import './snapshot.test.ts';
 import './physics-contract.test.ts';
 import './weapon.test.ts';

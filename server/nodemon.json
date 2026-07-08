@@ -1,5 +1,5 @@
 {
-  "watch": ["server/src"],
+  "watch": ["server/src", "shared"],
   "ext": ".ts",
   "exec": "tsx",
   "ignore": []
