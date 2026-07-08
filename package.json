@@ -30,7 +30,7 @@
     "puppeteer": "^5.3.1",
     "tsx": "^4.23.0",
     "typescript": "^6.0.3",
-    "vite": "^5.4.10"
+    "vite": "^6.4.3"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.19.3",
