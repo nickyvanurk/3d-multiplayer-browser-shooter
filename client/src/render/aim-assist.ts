@@ -37,9 +37,12 @@ export class AimAssistService {
       aim.distance = aim.maxDistance;
     }
 
+    // Cursor in centered pixels (y up), matching ProjectionService indicators.
+    // Uses true NDC per axis — the old code read mouse.x for both axes and
+    // scaled y by width, so the hover test never lined up with a target.
     const mouseInPixels = {
-      x: aim.mouse.x * (window.innerWidth / 2),
-      y: aim.mouse.x * (window.innerWidth / 2),
+      x: aim.ndc.x * (window.innerWidth / 2),
+      y: aim.ndc.y * (window.innerHeight / 2),
     };
     const targetRadius = 100; // px
 

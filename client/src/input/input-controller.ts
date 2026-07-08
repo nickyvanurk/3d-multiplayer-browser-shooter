@@ -3,13 +3,17 @@ import type { Camera } from 'three';
 
 import { DEFAULT_KEYBINDINGS } from './keybindings.ts';
 import type { Keybindings } from './keybindings.ts';
+import { screenToNdc, screenToSteering } from './aim-math.ts';
 
 interface AimState {
   origin: Vector3;
   direction: Vector3;
   distance: number;
   maxDistance: number;
+  // Clamped, aspect-normalized deflection that drives ship yaw/pitch.
   mouse: { x: number; y: number };
+  // True normalized device coords for the aim raycast (setFromCamera).
+  ndc: { x: number; y: number };
 }
 
 interface InputState {
@@ -58,7 +62,8 @@ export class InputController {
         direction: new Vector3(),
         distance: 1000,
         maxDistance: 1000,
-        mouse: new Vector3(),
+        mouse: { x: 0, y: 0 },
+        ndc: { x: 0, y: 0 },
       },
     };
 
@@ -153,21 +158,20 @@ export class InputController {
     document.addEventListener('mousemove', (event) => {
       const width = window.innerWidth;
       const height = window.innerHeight;
-      const size = height < width ? height : width;
 
-      const mouse = {
-        x: ((event.clientX / size) * 2 - width / size).toFixed(3),
-        y: (-(event.clientY / size) * 2 + height / size).toFixed(3),
-      } as unknown as { x: number; y: number };
-
-      mouse.x = mouse.x < -1 ? -1 : mouse.x > 1 ? 1 : mouse.x;
-      mouse.y = mouse.y < -1 ? -1 : mouse.y > 1 ? 1 : mouse.y;
-
-      input.aim.mouse = mouse;
+      // Steering deflection (clamped, aspect-normalized) drives yaw/pitch;
+      // true NDC drives the aim raycast so bullets track the crosshair.
+      input.aim.mouse = screenToSteering(
+        event.clientX,
+        event.clientY,
+        width,
+        height,
+      );
+      input.aim.ndc = screenToNdc(event.clientX, event.clientY, width, height);
 
       if (crosshair) {
-        crosshair.style.left = `${(event.clientX / window.innerWidth) * 100}%`;
-        crosshair.style.top = `${(event.clientY / window.innerHeight) * 100}%`;
+        crosshair.style.left = `${(event.clientX / width) * 100}%`;
+        crosshair.style.top = `${(event.clientY / height) * 100}%`;
       }
     });
 
@@ -180,7 +184,7 @@ export class InputController {
   // payload consumed by the server (Messages.Input): all movement booleans plus
   // aim = { mouse:{x,y}, origin, direction, distance }.
   sample() {
-    this.raycaster.setFromCamera(this.input.aim.mouse, this.camera);
+    this.raycaster.setFromCamera(this.input.aim.ndc, this.camera);
     const { origin, direction } = this.raycaster.ray;
 
     this.input.aim.origin = origin;
