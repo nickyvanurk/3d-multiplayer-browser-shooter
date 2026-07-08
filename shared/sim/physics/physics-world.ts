@@ -10,7 +10,7 @@ export interface Collision {
   b: Entity;
 }
 
-// Contract: a physics stepper the World drives. Server injects an Ammo-backed
+// Contract: a physics stepper the World drives. Server injects a Rapier-backed
 // implementation; the client injects a no-op today (interpolation only) and the
 // real stepper later for prediction.
 //
@@ -18,9 +18,9 @@ export interface Collision {
 // on every stepper (the host calls `init()` unconditionally at startup), so they
 // are required. The impl-specific hooks are optional: `applyControls` integrates
 // a single body (Null only), and `applyAll` applies controls/forces across the
-// world before stepping (Ammo only). NOTE: an injected stepper that omits
-// `applyAll` will silently apply no forces — a future prediction/rapier stepper
-// must implement it.
+// world before stepping (Rapier only). NOTE: an injected stepper that omits
+// `applyAll` will silently apply no forces — a prediction stepper must
+// implement it.
 export interface PhysicsWorld {
   init(): Promise<void>;
   add(entity: Entity): void;

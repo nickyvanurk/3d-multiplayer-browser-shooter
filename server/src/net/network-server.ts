@@ -124,7 +124,7 @@ export class NetworkServer {
     ship.controller = { connection, lastInput: InputCommand.empty() };
 
     // Place the ship before spawning: world.spawn() synchronously builds the
-    // Ammo body from the ship's transform, so the scatter must happen first
+    // physics body from the ship's transform, so the scatter must happen first
     // (mirrors the old SpawnSystem-before-PhysicsSystem order). spawnArea 10
     // matches the original SpawnSystem.
     ship.transform.position = Utils.getRandomPosition(10);

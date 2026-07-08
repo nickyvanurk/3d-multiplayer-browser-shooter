@@ -11,8 +11,8 @@ export interface EntityInit {
 
 // The physics body attached to an entity by the server-side stepper. The SIM
 // itself only stores/checks the reference; the concrete implementation
-// (AmmoPhysicsWorld's btRigidBody) satisfies this structurally and carries the
-// `entity` back-reference the collision code reads.
+// (RapierPhysicsWorld's RigidBody) satisfies this structurally. The stepper
+// keeps its own handle -> entity map for collision recovery.
 export interface PhysicsBody {
   entity?: Entity;
 }

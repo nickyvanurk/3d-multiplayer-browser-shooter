@@ -4,7 +4,7 @@ import logger from './utils/logger.js';
 import Utils from '../../shared/utils.js';
 
 import { World } from '../../shared/sim/world.js';
-import { AmmoPhysicsWorld } from './physics/ammo-physics-world.js';
+import { RapierPhysicsWorld } from './physics/rapier-physics-world.js';
 import { NetworkServer } from './net/network-server.js';
 import { RespawnSubsystem } from '../../shared/sim/subsystems/respawn.js';
 import { CombatSubsystem } from '../../shared/sim/subsystems/combat.js';
@@ -32,7 +32,7 @@ export class GameServer {
     id: string,
     maxClients: number,
     server: Server,
-    physicsWorld: PhysicsWorld = new AmmoPhysicsWorld(),
+    physicsWorld: PhysicsWorld = new RapierPhysicsWorld(),
   ) {
     this.id = id;
     this.maxClients = maxClients;
@@ -50,7 +50,7 @@ export class GameServer {
     // NetworkServer owns connections and broadcasts snapshots.
     this.network = new NetworkServer(this);
 
-    // AmmoPhysicsWorld creates/removes Ammo bodies on spawn/despawn; NetworkServer
+    // RapierPhysicsWorld creates/removes bodies on spawn/despawn; NetworkServer
     // broadcasts the matching Spawn/Despawn to clients.
     this.world.onSpawn = (entity: Entity) => {
       this.physics.add(entity);
@@ -71,7 +71,7 @@ export class GameServer {
   }
 
   async init(): Promise<void> {
-    // Physics loads Ammo + collision meshes async; only start the loop and
+    // Physics loads Rapier + collision meshes async; only start the loop and
     // populate the asteroid field once bodies can actually be built.
     await this.physics.init();
     this.spawnAsteroids(500);
@@ -145,7 +145,7 @@ export class GameServer {
       const scaleValue = [1, 5, 10, 20, 40, 60, 120 /*240, /*560*/];
       const scale = scaleValue[Math.floor(rng() * scaleValue.length)];
 
-      // Task 14: AmmoPhysicsWorld builds the collision shape/body (via onSpawn).
+      // RapierPhysicsWorld builds the collision shape/body (via onSpawn).
       this.world.spawn(
         new Asteroid({ transform: { position, rotation }, scale }),
       );
