@@ -68,6 +68,7 @@ export class InputController {
   attach() {
     const input = this.input;
     const keybindings = this.keybindings;
+    const crosshair = document.querySelector<SVGElement>('.crosshair');
 
     document.addEventListener('keydown', ({ code }) => {
       switch (code) {
@@ -163,6 +164,11 @@ export class InputController {
       mouse.y = mouse.y < -1 ? -1 : mouse.y > 1 ? 1 : mouse.y;
 
       input.aim.mouse = mouse;
+
+      if (crosshair) {
+        crosshair.style.left = `${(event.clientX / window.innerWidth) * 100}%`;
+        crosshair.style.top = `${(event.clientY / window.innerHeight) * 100}%`;
+      }
     });
 
     document.addEventListener('contextmenu', (event) => {

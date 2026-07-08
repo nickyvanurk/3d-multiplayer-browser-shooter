@@ -5,9 +5,20 @@
 
 body {
   overflow: hidden;
+  cursor: none;
 }
 
 canvas {
   width: 100vw;
   height: 100vh;
+}
+
+.crosshair {
+  position: absolute;
+  z-index: 1;
+  fill: white;
+  left: 50vw;
+  top: 50vh;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
 }
