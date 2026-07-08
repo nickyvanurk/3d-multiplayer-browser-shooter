@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
-import { World } from '../../shared/sim/world.js';
-import { Entity } from '../../shared/sim/entity.js';
-import { SnapshotDiffer } from '../../shared/sim/net/snapshot.js';
-import { test } from './harness.js';
+import { World } from '../../shared/sim/world.ts';
+import { Entity } from '../../shared/sim/entity.ts';
+import { SnapshotDiffer } from '../../shared/sim/net/snapshot.ts';
+import { test } from './harness.ts';
 
 test('first diff reports all entities; second reports none', () => {
   const w = new World();

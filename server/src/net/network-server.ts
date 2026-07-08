@@ -1,20 +1,20 @@
 import { Vector3 } from 'three';
 
-import logger from '../utils/logger.js';
-import Utils from '../../../shared/utils.js';
-import Types from '../../../shared/types.js';
-import Messages from '../../../shared/messages.js';
+import logger from '../utils/logger.ts';
+import Utils from '../../../shared/utils.ts';
+import Types from '../../../shared/types.ts';
+import Messages from '../../../shared/messages.ts';
 
-import { Ship } from '../../../shared/sim/entities/ship.js';
-import { Weapon } from '../../../shared/sim/weapon.js';
-import { InputCommand } from '../../../shared/sim/input.js';
-import { SnapshotDiffer } from '../../../shared/sim/net/snapshot.js';
+import { Ship } from '../../../shared/sim/entities/ship.ts';
+import { Weapon } from '../../../shared/sim/weapon.ts';
+import { InputCommand } from '../../../shared/sim/input.ts';
+import { SnapshotDiffer } from '../../../shared/sim/net/snapshot.ts';
 
-import type { GameServer } from '../game-server.js';
-import type Connection from '../connection.js';
-import type { OutgoingMessage } from '../connection.js';
-import type { World } from '../../../shared/sim/world.js';
-import type { Entity } from '../../../shared/sim/entity.js';
+import type { GameServer } from '../game-server.ts';
+import type Connection from '../connection.ts';
+import type { OutgoingMessage } from '../connection.ts';
+import type { World } from '../../../shared/sim/world.ts';
+import type { Entity } from '../../../shared/sim/entity.ts';
 
 export class NetworkServer {
   gameServer: GameServer;

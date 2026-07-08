@@ -7,9 +7,9 @@ import {
 } from 'three';
 import type { Texture } from 'three';
 
-import type { World } from '../../../shared/sim/world.js';
-import type { SceneManager } from './scene-manager.js';
-import type { ProjectionService } from './projection.js';
+import type { World } from '../../../shared/sim/world.ts';
+import type { SceneManager } from './scene-manager.ts';
+import type { ProjectionService } from './projection.ts';
 
 // Ports hud-system.js: draws an off-screen indicator sprite for every non-player
 // ship, clamped to an ellipse at the screen edge, swapping to a target reticle

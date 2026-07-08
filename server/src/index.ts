@@ -1,8 +1,8 @@
 import dotenv from 'dotenv';
 
-import logger from './utils/logger.js';
-import Server from './server.js';
-import { GameServer } from './game-server.js';
+import logger from './utils/logger.ts';
+import Server from './server.ts';
+import { GameServer } from './game-server.ts';
 
 dotenv.config();
 

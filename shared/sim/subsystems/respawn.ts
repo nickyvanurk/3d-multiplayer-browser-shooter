@@ -1,4 +1,4 @@
-import type { Entity } from '../entity.js';
+import type { Entity } from '../entity.ts';
 
 // The respawn-relevant view of an entity: base Entity plus the optional
 // lifecycle fields the subsystem duck-types on (present on Ship).

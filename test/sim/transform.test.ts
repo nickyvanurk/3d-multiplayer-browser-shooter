@@ -1,8 +1,8 @@
 // test/sim/transform.test.js
 import assert from 'node:assert/strict';
 import { Vector3 } from 'three';
-import { Transform } from '../../shared/sim/transform.js';
-import { test } from './harness.js';
+import { Transform } from '../../shared/sim/transform.ts';
+import { test } from './harness.ts';
 
 test('Transform defaults to origin, identity, scale 1', () => {
   const t = new Transform();

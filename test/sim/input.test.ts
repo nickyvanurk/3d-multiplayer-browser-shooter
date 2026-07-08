@@ -1,7 +1,7 @@
 // test/sim/input.test.js
 import assert from 'node:assert/strict';
-import { InputCommand } from '../../shared/sim/input.js';
-import { test } from './harness.js';
+import { InputCommand } from '../../shared/sim/input.ts';
+import { test } from './harness.ts';
 
 type BooleanField =
   | 'forward'

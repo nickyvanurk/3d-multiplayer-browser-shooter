@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import { Entity } from '../../shared/sim/entity.js';
-import { test } from './harness.js';
+import { Entity } from '../../shared/sim/entity.ts';
+import { test } from './harness.ts';
 
 test('Entity serialize round-trips transform', () => {
   const e = new Entity({ id: 4, type: 1 });

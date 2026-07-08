@@ -1,7 +1,7 @@
 import { Vector3, Euler } from 'three';
-import { Entity } from '../entity.js';
-import type { TransformInit } from '../transform.js';
-import Types from '../../types.js';
+import { Entity } from '../entity.ts';
+import type { TransformInit } from '../transform.ts';
+import Types from '../../types.ts';
 
 export interface AsteroidInit {
   id?: number;

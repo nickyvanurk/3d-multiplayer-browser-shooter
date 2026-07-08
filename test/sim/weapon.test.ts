@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { Vector3, Quaternion, Euler } from 'three';
-import { Ship } from '../../shared/sim/entities/ship.js';
-import { Weapon, getWeaponTransform } from '../../shared/sim/weapon.js';
-import type { WeaponParent } from '../../shared/sim/weapon.js';
-import { test } from './harness.js';
+import { Ship } from '../../shared/sim/entities/ship.ts';
+import { Weapon, getWeaponTransform } from '../../shared/sim/weapon.ts';
+import type { WeaponParent } from '../../shared/sim/weapon.ts';
+import { test } from './harness.ts';
 
 // Cadence derived by tracing the ported weapon-system.js state machine with a
 // 50ms step: activation sets lastFired=0; firing engages at the first tick where

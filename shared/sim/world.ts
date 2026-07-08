@@ -1,4 +1,4 @@
-import type { Entity } from './entity.js';
+import type { Entity } from './entity.ts';
 
 // A collision pair drained from the physics stepper. `a` is the primary body
 // (guaranteed present); `b` is the other body. Both are present at runtime

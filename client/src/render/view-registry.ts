@@ -2,11 +2,11 @@ import { MeshBasicMaterial } from 'three';
 import type { Object3D, Group, Scene, Vector3, Mesh } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 
-import Types from '../../../shared/types.js';
-import type { EntityKind } from '../../../shared/types.js';
-import type { World } from '../../../shared/sim/world.js';
-import type { Entity } from '../../../shared/sim/entity.js';
-import type { SceneManager } from './scene-manager.js';
+import Types from '../../../shared/types.ts';
+import type { EntityKind } from '../../../shared/types.ts';
+import type { World } from '../../../shared/sim/world.ts';
+import type { Entity } from '../../../shared/sim/entity.ts';
+import type { SceneManager } from './scene-manager.ts';
 
 const MODEL_PATHS: Record<EntityKind, string> = {
   [Types.Entities.SPACESHIP]: 'fighter.glb',

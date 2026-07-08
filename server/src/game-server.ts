@@ -1,19 +1,19 @@
 import { performance } from 'perf_hooks';
 
-import logger from './utils/logger.js';
-import Utils from '../../shared/utils.js';
+import logger from './utils/logger.ts';
+import Utils from '../../shared/utils.ts';
 
-import { World } from '../../shared/sim/world.js';
-import { RapierPhysicsWorld } from './physics/rapier-physics-world.js';
-import { NetworkServer } from './net/network-server.js';
-import { RespawnSubsystem } from '../../shared/sim/subsystems/respawn.js';
-import { CombatSubsystem } from '../../shared/sim/subsystems/combat.js';
-import { Asteroid } from '../../shared/sim/entities/asteroid.js';
+import { World } from '../../shared/sim/world.ts';
+import { RapierPhysicsWorld } from './physics/rapier-physics-world.ts';
+import { NetworkServer } from './net/network-server.ts';
+import { RespawnSubsystem } from '../../shared/sim/subsystems/respawn.ts';
+import { CombatSubsystem } from '../../shared/sim/subsystems/combat.ts';
+import { Asteroid } from '../../shared/sim/entities/asteroid.ts';
 
-import type { PhysicsWorld } from '../../shared/sim/physics/physics-world.js';
-import type { Entity } from '../../shared/sim/entity.js';
-import type Server from './server.js';
-import type Connection from './connection.js';
+import type { PhysicsWorld } from '../../shared/sim/physics/physics-world.ts';
+import type { Entity } from '../../shared/sim/entity.ts';
+import type Server from './server.ts';
+import type Connection from './connection.ts';
 
 export class GameServer {
   id: string;

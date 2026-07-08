@@ -3,16 +3,16 @@ import { fileURLToPath } from 'node:url';
 import RAPIER from '@dimforge/rapier3d-compat';
 import { Vector3, Quaternion, LoadingManager } from 'three';
 
-import { AssetManager } from '../asset-manager.js';
+import { AssetManager } from '../asset-manager.ts';
 
-import Types from '../../../shared/types.js';
-import type { EntityKind } from '../../../shared/types.js';
-import type { Entity, PhysicsBody } from '../../../shared/sim/entity.js';
-import type { World } from '../../../shared/sim/world.js';
+import Types from '../../../shared/types.ts';
+import type { EntityKind } from '../../../shared/types.ts';
+import type { Entity, PhysicsBody } from '../../../shared/sim/entity.ts';
+import type { World } from '../../../shared/sim/world.ts';
 import type {
   PhysicsWorld,
   Collision,
-} from '../../../shared/sim/physics/physics-world.js';
+} from '../../../shared/sim/physics/physics-world.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -187,7 +187,10 @@ export class RapierPhysicsWorld implements PhysicsWorld {
       const q = this.scratchQuat.set(r.x, r.y, r.z, r.w);
 
       body.resetForces(false);
-      body.addForce(this.scratchVec.copy(entity.velocity).applyQuaternion(q), true);
+      body.addForce(
+        this.scratchVec.copy(entity.velocity).applyQuaternion(q),
+        true,
+      );
       body.resetTorques(false);
       body.addTorque(
         this.scratchVec.copy(entity.angularVelocity).applyQuaternion(q),
@@ -310,14 +313,17 @@ export class RapierPhysicsWorld implements PhysicsWorld {
       // times larger than Rapier's true-hull inertia — notably ~4x on yaw. Using
       // the hull inertia makes mouse-look rotation feel far too strong, so match
       // Ammo's box approximation to preserve the tuned handling.
-      const points = this.getConvexVertices(entity.type, entity.transform.scale);
-      const inertia = boxInertiaFromPoints(points, entity.weight);
-      desc.setMassProperties(
-        entity.weight,
-        { x: 0, y: 0, z: 0 },
-        inertia,
-        { x: 0, y: 0, z: 0, w: 1 },
+      const points = this.getConvexVertices(
+        entity.type,
+        entity.transform.scale,
       );
+      const inertia = boxInertiaFromPoints(points, entity.weight);
+      desc.setMassProperties(entity.weight, { x: 0, y: 0, z: 0 }, inertia, {
+        x: 0,
+        y: 0,
+        z: 0,
+        w: 1,
+      });
     }
 
     return desc;

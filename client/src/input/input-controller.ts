@@ -1,8 +1,8 @@
 import { Raycaster, Vector3 } from 'three';
 import type { Camera } from 'three';
 
-import { DEFAULT_KEYBINDINGS } from './keybindings.js';
-import type { Keybindings } from './keybindings.js';
+import { DEFAULT_KEYBINDINGS } from './keybindings.ts';
+import type { Keybindings } from './keybindings.ts';
 
 interface AimState {
   origin: Vector3;

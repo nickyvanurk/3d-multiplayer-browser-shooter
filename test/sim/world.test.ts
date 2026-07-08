@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
-import { World } from '../../shared/sim/world.js';
-import { Entity } from '../../shared/sim/entity.js';
-import { test } from './harness.js';
+import { World } from '../../shared/sim/world.ts';
+import { Entity } from '../../shared/sim/entity.ts';
+import { test } from './harness.ts';
 
 test('spawn assigns reused dense ids', () => {
   const w = new World();

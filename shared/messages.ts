@@ -1,8 +1,8 @@
 import { Vector3, Quaternion } from 'three';
 
-import Types from './types.js';
-import type { EntityKind } from './types.js';
-import type { Aim, InputCommandData } from './sim/input.js';
+import Types from './types.ts';
+import type { EntityKind } from './types.ts';
+import type { Aim, InputCommandData } from './sim/input.ts';
 
 // One replicated entity in a World snapshot: its id plus the 7-number network
 // state (position xyz + rotation xyzw) produced by Entity.serializeNetworkState.

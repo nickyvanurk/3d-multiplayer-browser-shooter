@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import { NullPhysicsWorld } from '../../shared/sim/physics/physics-world.js';
-import { test } from './harness.js';
+import { NullPhysicsWorld } from '../../shared/sim/physics/physics-world.ts';
+import { test } from './harness.ts';
 
 test('NullPhysicsWorld has the full stepper contract', () => {
   const physics = new NullPhysicsWorld();

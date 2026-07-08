@@ -1,5 +1,5 @@
 import { Vector3, Quaternion, Ray, Matrix4 } from 'three';
-import type { Transform } from './transform.js';
+import type { Transform } from './transform.ts';
 
 export interface WeaponParent {
   firingPrimary: boolean;

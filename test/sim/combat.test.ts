@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
-import { World } from '../../shared/sim/world.js';
-import { Ship } from '../../shared/sim/entities/ship.js';
-import { Bullet } from '../../shared/sim/entities/bullet.js';
-import { RESPAWN_DELAY } from '../../shared/sim/entities/ship.js';
-import { CombatSubsystem } from '../../shared/sim/subsystems/combat.js';
-import { test } from './harness.js';
+import { World } from '../../shared/sim/world.ts';
+import { Ship } from '../../shared/sim/entities/ship.ts';
+import { Bullet } from '../../shared/sim/entities/bullet.ts';
+import { RESPAWN_DELAY } from '../../shared/sim/entities/ship.ts';
+import { CombatSubsystem } from '../../shared/sim/subsystems/combat.ts';
+import { test } from './harness.ts';
 
 test('bullet→ship collision damages the ship and destroys the bullet', () => {
   const world = new World();

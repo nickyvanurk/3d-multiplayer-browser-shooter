@@ -1,8 +1,8 @@
-import Types from '../../../shared/types.js';
+import Types from '../../../shared/types.ts';
 import type { Vector3 } from 'three';
-import type { World } from '../../../shared/sim/world.js';
-import type { Entity } from '../../../shared/sim/entity.js';
-import type { SceneManager } from './scene-manager.js';
+import type { World } from '../../../shared/sim/world.ts';
+import type { Entity } from '../../../shared/sim/entity.ts';
+import type { SceneManager } from './scene-manager.ts';
 
 // The client tracks the server-owned local player id on the shared World.
 type ClientWorld = World & { localPlayerId?: number };

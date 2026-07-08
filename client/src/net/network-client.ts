@@ -1,16 +1,16 @@
 import { Object3D } from 'three';
 import type { Camera, Vector3, Quaternion } from 'three';
 
-import Types from '../../../shared/types.js';
-import Messages from '../../../shared/messages.js';
-import { Ship } from '../../../shared/sim/entities/ship.js';
-import { Asteroid } from '../../../shared/sim/entities/asteroid.js';
-import { Bullet } from '../../../shared/sim/entities/bullet.js';
-import type { World } from '../../../shared/sim/world.js';
-import type { Entity } from '../../../shared/sim/entity.js';
-import type { Transform } from '../../../shared/sim/transform.js';
-import type { InputCommandData } from '../../../shared/sim/input.js';
-import type Connection from '../connection.js';
+import Types from '../../../shared/types.ts';
+import Messages from '../../../shared/messages.ts';
+import { Ship } from '../../../shared/sim/entities/ship.ts';
+import { Asteroid } from '../../../shared/sim/entities/asteroid.ts';
+import { Bullet } from '../../../shared/sim/entities/bullet.ts';
+import type { World } from '../../../shared/sim/world.ts';
+import type { Entity } from '../../../shared/sim/entity.ts';
+import type { Transform } from '../../../shared/sim/transform.ts';
+import type { InputCommandData } from '../../../shared/sim/input.ts';
+import type Connection from '../connection.ts';
 
 // The client mirror World gains a runtime-only pointer to the local player's id.
 type ClientWorld = World & { localPlayerId?: number };

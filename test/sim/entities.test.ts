@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
-import type { EntityWorld } from '../../shared/sim/entity.js';
-import { Ship } from '../../shared/sim/entities/ship.js';
-import { Asteroid } from '../../shared/sim/entities/asteroid.js';
-import { Bullet } from '../../shared/sim/entities/bullet.js';
-import { InputCommand } from '../../shared/sim/input.js';
-import Types from '../../shared/types.js';
-import { test } from './harness.js';
+import type { EntityWorld } from '../../shared/sim/entity.ts';
+import { Ship } from '../../shared/sim/entities/ship.ts';
+import { Asteroid } from '../../shared/sim/entities/asteroid.ts';
+import { Bullet } from '../../shared/sim/entities/bullet.ts';
+import { InputCommand } from '../../shared/sim/input.ts';
+import Types from '../../shared/types.ts';
+import { test } from './harness.ts';
 
 test('Ship has correct type and ported fields', () => {
   const ship = new Ship();

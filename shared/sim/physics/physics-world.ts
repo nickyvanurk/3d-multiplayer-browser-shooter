@@ -1,5 +1,5 @@
-import type { Entity } from '../entity.js';
-import type { World } from '../world.js';
+import type { Entity } from '../entity.ts';
+import type { World } from '../world.ts';
 
 // A collision pair drained from the physics stepper. Both bodies are present at
 // runtime: every world body is added via `add()`, which sets `body.entity`, so

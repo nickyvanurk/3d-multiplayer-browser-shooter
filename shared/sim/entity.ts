@@ -1,6 +1,6 @@
-import { Transform } from './transform.js';
-import type { TransformInit } from './transform.js';
-import type { EntityKind } from '../types.js';
+import { Transform } from './transform.ts';
+import type { TransformInit } from './transform.ts';
+import type { EntityKind } from '../types.ts';
 import type { Vector3 } from 'three';
 
 export interface EntityInit {

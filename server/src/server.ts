@@ -4,8 +4,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { IncomingMessage } from 'node:http';
 
-import Connection from './connection.js';
-import type { ClientSocket } from './connection.js';
+import Connection from './connection.ts';
+import type { ClientSocket } from './connection.ts';
 
 const app = express();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));

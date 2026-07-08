@@ -1,4 +1,4 @@
-import type { World } from '../world.js';
+import type { World } from '../world.ts';
 
 // One changed entity emitted by the differ: its id plus its 7-number network
 // state. Mirrors the Messages.World wire layout.

@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
-import { World } from '../../shared/sim/world.js';
-import { Ship } from '../../shared/sim/entities/ship.js';
-import { RespawnSubsystem } from '../../shared/sim/subsystems/respawn.js';
-import { test } from './harness.js';
+import { World } from '../../shared/sim/world.ts';
+import { Ship } from '../../shared/sim/entities/ship.ts';
+import { RespawnSubsystem } from '../../shared/sim/subsystems/respawn.ts';
+import { test } from './harness.ts';
 
 test('living ships are left untouched', () => {
   const world = new World();

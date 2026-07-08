@@ -1,9 +1,9 @@
 import type WebSocket from 'ws';
 
-import logger from './utils/logger.js';
-import Types from '../../shared/types.js';
-import Messages from '../../shared/messages.js';
-import type Server from './server.js';
+import logger from './utils/logger.ts';
+import Types from '../../shared/types.ts';
+import Messages from '../../shared/messages.ts';
+import type Server from './server.ts';
 
 export type ClientSocket = WebSocket & { remoteAddress?: string };
 

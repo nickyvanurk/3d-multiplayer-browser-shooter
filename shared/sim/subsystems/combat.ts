@@ -1,5 +1,5 @@
-import { RESPAWN_DELAY } from '../entities/ship.js';
-import type { Entity } from '../entity.js';
+import { RESPAWN_DELAY } from '../entities/ship.ts';
+import type { Entity } from '../entity.ts';
 
 // The combat-relevant view of an entity: base Entity plus the optional
 // lifecycle/weapon fields the subsystem duck-types on (present on Ship/Bullet).

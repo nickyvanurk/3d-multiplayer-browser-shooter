@@ -7,7 +7,7 @@ import {
   Object3D,
 } from 'three';
 
-import type { SceneManager } from './scene-manager.js';
+import type { SceneManager } from './scene-manager.ts';
 
 // A MeshBasicMaterial carrying the extra `maxOpacity` field the fade uses.
 type FadingMaterial = MeshBasicMaterial & { maxOpacity: number };

@@ -1,11 +1,11 @@
 import { Vector3, Euler, Ray } from 'three';
-import { Entity } from '../entity.js';
-import type { EntityWorld } from '../entity.js';
-import type { TransformInit } from '../transform.js';
-import { InputCommand } from '../input.js';
-import { Bullet } from './bullet.js';
-import Types from '../../types.js';
-import type { Weapon } from '../weapon.js';
+import { Entity } from '../entity.ts';
+import type { EntityWorld } from '../entity.ts';
+import type { TransformInit } from '../transform.ts';
+import { InputCommand } from '../input.ts';
+import { Bullet } from './bullet.ts';
+import Types from '../../types.ts';
+import type { Weapon } from '../weapon.ts';
 
 export const RESPAWN_DELAY = 3000;
 

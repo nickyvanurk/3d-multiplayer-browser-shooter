@@ -1,18 +1,18 @@
-import * as workerInterval from './worker-interval.js';
+import * as workerInterval from './worker-interval.ts';
 
-import { World } from '../../shared/sim/world.js';
-import Connection from './connection.js';
+import { World } from '../../shared/sim/world.ts';
+import Connection from './connection.ts';
 
-import { SceneManager } from './render/scene-manager.js';
-import { ViewRegistry } from './render/view-registry.js';
-import { ProjectionService } from './render/projection.js';
-import { HudService } from './render/hud.js';
-import { AimAssistService } from './render/aim-assist.js';
-import { ParticleService } from './render/particles.js';
-import { RangeService } from './render/range.js';
-import { InputController } from './input/input-controller.js';
-import { DEFAULT_KEYBINDINGS } from './input/keybindings.js';
-import { NetworkClient } from './net/network-client.js';
+import { SceneManager } from './render/scene-manager.ts';
+import { ViewRegistry } from './render/view-registry.ts';
+import { ProjectionService } from './render/projection.ts';
+import { HudService } from './render/hud.ts';
+import { AimAssistService } from './render/aim-assist.ts';
+import { ParticleService } from './render/particles.ts';
+import { RangeService } from './render/range.ts';
+import { InputController } from './input/input-controller.ts';
+import { DEFAULT_KEYBINDINGS } from './input/keybindings.ts';
+import { NetworkClient } from './net/network-client.ts';
 
 // Plain OOP game. Owns the sim mirror World, the presentation layer,
 // and the NetworkClient. The client does NOT simulate: entities only hold the

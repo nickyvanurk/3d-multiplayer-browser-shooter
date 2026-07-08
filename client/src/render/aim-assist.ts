@@ -1,9 +1,9 @@
 import { Vector3 } from 'three';
 
-import type { World } from '../../../shared/sim/world.js';
-import type { SceneManager } from './scene-manager.js';
-import type { InputController } from '../input/input-controller.js';
-import type { ProjectionService } from './projection.js';
+import type { World } from '../../../shared/sim/world.ts';
+import type { SceneManager } from './scene-manager.ts';
+import type { InputController } from '../input/input-controller.ts';
+import type { ProjectionService } from './projection.ts';
 
 // Ports aim-assist-system.js: when the cursor hovers near an on-screen ship, snap
 // the aim ray distance to that ship's distance from the camera. Mutates the live
