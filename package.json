@@ -7,21 +7,29 @@
   "scripts": {
     "client:start:dev": "vite --config client/vite.config.js",
     "client:build": "vite build --config client/vite.config.js",
-    "server:start:dev": "nodemon --config server/nodemon.json server/src/index.js",
-    "server:start": "node server/src/index.js",
+    "server:start:dev": "nodemon --config server/nodemon.json server/src/index.ts",
+    "server:start": "tsx server/src/index.ts",
     "postinstall": "npm run client:build",
     "start": "PRODUCTION=true npm run server:start",
-    "test:sim": "node test/sim/index.js",
-    "lint": "eslint . --ext .js",
-    "lint-and-fix": "eslint . --ext .js --fix"
+    "test:sim": "tsx test/sim/index.ts",
+    "typecheck": "tsc -p tsconfig.json && tsc -p client/tsconfig.json",
+    "lint": "biome check .",
+    "lint-and-fix": "biome check --write ."
   },
   "author": "N. van Urk",
   "license": "UNLICENSED",
   "private": true,
   "devDependencies": {
-    "eslint": "^8.57.1",
+    "@biomejs/biome": "^2.5.3",
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.1.0",
+    "@types/sanitize-html": "^2.16.1",
+    "@types/three": "^0.126.2",
+    "@types/ws": "^7.4.7",
     "nodemon": "^2.0.4",
     "puppeteer": "^5.3.1",
+    "tsx": "^4.23.0",
+    "typescript": "^6.0.3",
     "vite": "^5.4.10"
   },
   "dependencies": {

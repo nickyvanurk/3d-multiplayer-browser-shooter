@@ -1,8 +1,0 @@
-client/*
-!client/src
-server/*
-!server/src
-
-# Verbatim three.js example ports (GLTFLoader, BufferGeometryUtils) — vendored, do not lint.
-server/src/gltf-loader.js
-server/src/buffer-geometry-utils.js

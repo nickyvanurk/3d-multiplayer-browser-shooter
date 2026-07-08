@@ -349,6 +349,10 @@ git commit -am "feat(ts): convert Entity and entity subclasses"
 
 **Guidance:** `World` holds `entities: Map<…, Entity>` and drives a `PhysicsWorld`. Define the `PhysicsWorld` interface here or import it from Task 5's file — sequence so `world.ts` imports the interface. Type the subsystem functions against `World`/`Entity`.
 
+**Carry-forward from Task 3 review (must honor):**
+- `World.spawn` MUST be typed generically as `spawn<T extends Entity>(entity: T): T` — otherwise `World` isn't assignable to the `EntityWorld` interface `Entity.update`/`Ship.update` depend on, and `e.update(dt, this, time)` in `world.tick` fails. Sound, since `spawn` returns its argument.
+- `entity.id` is `number | undefined` (entities get an id only at spawn). At `world.js` `despawn(e.id)` and any `e.id` read where the entity is known-spawned, narrow/assert rather than widening the field. Same applies to `snapshot.ts` in Task 5 (`seen.add(e.id)`, `{ id: e.id }`).
+
 **Gate + commit:**
 
 ```bash
@@ -363,10 +367,12 @@ git commit -am "feat(ts): convert combat/respawn subsystems and World"
 
 **Step 1: `shared/sim/physics/physics-world.ts`** — turn the contract into a real interface plus the null impl:
 
+**Carry-forward from Task 4 review (must honor):** `Collision.b` is non-nullable `Entity`, NOT `Entity | undefined`. `combat.ts` reads `b.destroyOnCollision`/`b.markDestroyed()`/`dealDamage(b,a,…)` unconditionally, and at runtime every world body is added via `add()` which sets `body.entity` (there are no static/entity-less bodies), so `b` is always defined. Do NOT widen it — that would force spurious guards back into `combat.ts`. Task 6's `detectCollision` satisfies this with a non-null assertion at the push sites (see Task 6). Also: `world.ts` (Task 4) already defines a local `Collision`/`PhysicsWorld`; optionally have `world.ts` import these from `physics-world.ts` here to dedupe (only if it stays strict-green and keeps `world.physics` assignable from the `drainCollisions`-only test doubles).
+
 ```ts
 import type { Entity } from '../entity.js';
 
-export interface Collision { a: Entity; b: Entity | undefined; }
+export interface Collision { a: Entity; b: Entity; }
 
 export interface PhysicsWorld {
   add(entity: Entity): void;
@@ -441,7 +447,16 @@ declare module 'ammo.js' {
     setActivationState(s: number): void;
   }
   export interface btRigidBody extends btCollisionObject {
-    entity?: unknown;                 // app-attached back-reference (typed at call site)
+    // App-attached back-reference. Type it as the shared `Entity` (server-side
+    // .d.ts importing shared IS the correct direction; only ammo→shared is the
+    // protected boundary). Confirmed: `unknown` breaks the `entity.body = body`
+    // assignment; `Entity` compiles both that and `const body = entity.body as
+    // btRigidBody` reads with zero `any`.
+    // IMPORTANT: reference Entity via an INLINE import type, NOT a top-level
+    // `import` — a top-level import makes this file a module, which turns
+    // `declare module 'ammo.js'` into an AUGMENTATION of the untyped package
+    // (TS7016 implicit-any). Keep ammo.d.ts a global ambient script:
+    entity?: import('../../../shared/sim/entity.js').Entity;
     getMotionState(): btMotionState | null;
     applyCentralLocalForce(v: btVector3): void;
     applyLocalTorque(v: btVector3): void;
@@ -497,6 +512,8 @@ declare module 'ammo.js' {
 Adjust exact member signatures if the compiler flags a mismatch against real usage — extend this file, never fall back to `any` in `ammo-physics-world.ts`.
 
 **Step 2:** Convert `ammo-physics-world.ts`. Type `this.ammo: AmmoModule`, shapes map, and `implements PhysicsWorld` (reconciled interface from Task 5). At the `castObject`/`.entity` boundary, cast the attached entity to `Entity` once at read sites.
+
+**Carry-forward from Task 4 review (must honor):** In `detectCollision`, `entity1`/`entity0` are inferred `Entity | undefined` (because `PhysicsBody.entity`/the ammo back-ref are optional) and are NOT narrowed at the `{ a: entity0, b: entity1 }` push sites. Satisfy `Collision.b: Entity` with a **non-null assertion at the push site** (`b: entity1!`, and `b: entity0!` in the symmetric push) — the assertion encodes the real invariant that every world body carries `.entity`. Do NOT widen `Collision.b`, and do NOT add a runtime guard (that would change the byte-identical body). The `this.collisions` field is typed `Collision[]`.
 
 **Step 3: Vendored sidecars.** `server/src/gltf-loader.d.ts` and `server/src/buffer-geometry-utils.d.ts` declaring only the exports `asset-manager` uses (`GLTFLoader`, `BufferGeometryUtils`). Example:
 
@@ -596,6 +613,8 @@ Update `.eslintrc` to use the TS parser + plugin, keep the existing style rules 
 **Step 2:** Run `npm run lint` (now `--ext .ts`) → fix to clean.
 
 **Step 3: Tighten** — now that only the two vendored files remain `.js`, confirm `allowJs: true`/`checkJs: false` is still required (it is, for those two). Leave as-is.
+
+**Step 3b: Deps hygiene (from Task 7 review)** — `@types/ws` was installed unpinned and resolved to `8.x`, but the runtime dep is `ws@7`. Pin it to match: `npm i -D @types/ws@^7`. Then re-run typecheck; the `message` handler's `Data` type now includes `string` honestly and the `WebSocket.Server` cast in `server.ts` can likely be removed (verify — ws@7 types surface `.Server` on the default import). If removing the cast isn't clean, leave it. Do NOT let this regress the strict-green state.
 
 **Step 4: Full verification gate — all must pass:**
 
