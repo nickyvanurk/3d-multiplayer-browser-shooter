@@ -14,14 +14,14 @@ export interface Keybindings {
 }
 
 export const DEFAULT_KEYBINDINGS: Keybindings = {
-  forward: 'KeyE',
-  backward: 'KeyD',
-  rollLeft: 'KeyW',
-  rollRight: 'KeyR',
-  strafeLeft: 'KeyS',
-  strafeRight: 'KeyF',
-  strafeUp: 'Backspace',
-  strafeDown: 'Delete',
+  forward: 'KeyW',
+  backward: 'KeyS',
+  rollLeft: 'KeyQ',
+  rollRight: 'KeyE',
+  strafeLeft: 'KeyA',
+  strafeRight: 'KeyD',
+  strafeUp: 'Space',
+  strafeDown: 'KeyC',
   boost: 'ShiftLeft',
   weaponPrimary: 0,
 };
