@@ -545,8 +545,8 @@ export class HudService {
   }
 
   // Place (creating on first use) the lead ring at `lead` and stretch its guide
-  // line from the ship's reticle at `anchor` to the ring. Both live at z=1 in the
-  // ortho HUD scene, drawn over the world.
+  // line from the ship's reticle at `anchor` to the ring. Both live at z=4 in the
+  // ortho HUD scene — above the reticle (1), HP bar (2), and name plate (3).
   updateLead(
     id: number,
     anchor: { x: number; y: number },
@@ -558,13 +558,13 @@ export class HudService {
       this.leadMarkers.set(id, marker);
     }
 
-    marker.ring.position.set(lead.x, lead.y, 1);
+    marker.ring.position.set(lead.x, lead.y, 4);
 
     const positions = marker.line.geometry.getAttribute(
       'position',
     ) as BufferAttribute;
-    positions.setXYZ(0, anchor.x, anchor.y, 1);
-    positions.setXYZ(1, lead.x, lead.y, 1);
+    positions.setXYZ(0, anchor.x, anchor.y, 4);
+    positions.setXYZ(1, lead.x, lead.y, 4);
     positions.needsUpdate = true;
     // Dash spacing is driven by per-vertex line distances; recompute them each
     // time the endpoints move or the dashes stretch/smear as the gap changes.
