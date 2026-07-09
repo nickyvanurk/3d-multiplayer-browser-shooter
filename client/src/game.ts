@@ -99,7 +99,7 @@ export default class Game {
       this.inputController,
     );
 
-    this.music = new MusicPlayer(defaultPlaylist());
+    this.music = new MusicPlayer(defaultPlaylist(), this.settings.isFirstVisit);
     this.musicHud = new MusicPlayerHud(this.music);
     this.music.start();
 

@@ -23,10 +23,24 @@ function clamp(v: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, v));
 }
 
+function hasStoredSettings(): boolean {
+  try {
+    return localStorage.getItem(STORAGE_KEY) !== null;
+  } catch {
+    // localStorage may be unavailable (private mode); treat as a first visit.
+    return false;
+  }
+}
+
 export class SettingsStore {
   private settings: GameSettings;
 
+  // True when no settings were stored yet — i.e. a first-time visitor. Captured
+  // before load() (which never writes) so it reflects the pre-visit state.
+  readonly isFirstVisit: boolean;
+
   constructor() {
+    this.isFirstVisit = !hasStoredSettings();
     this.settings = this.load();
   }
 

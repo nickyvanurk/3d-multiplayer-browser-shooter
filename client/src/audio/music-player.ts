@@ -3,8 +3,9 @@ export interface Track {
   url: string;
 }
 
-// Playlist files, served from client/public/music. "blade of grass" is pinned
-// first; the rest are shuffled behind it (see buildOrder).
+// Playlist files, served from client/public/music. For first-time visitors
+// "blade of grass" (index 0) is pinned first; everyone else gets a full shuffle
+// (see buildOrder).
 const MUSIC_FILES = [
   'blade of grass.wav',
   'Astroid.wav',
@@ -35,11 +36,14 @@ function clamp01(v: number): number {
 
 // Streaming background-music player. Unlike SoundService (short SFX loaded whole
 // as AudioBuffers), music tracks are large files streamed through a single
-// HTMLAudioElement. Order: track 0 ("blade of grass") first, the rest shuffled;
-// when the playlist is exhausted it reshuffles all tracks and continues.
+// HTMLAudioElement. Order on the first cycle: for first-time visitors track 0
+// ("blade of grass") is pinned first with the rest shuffled behind it, otherwise
+// everything is shuffled. When the playlist is exhausted it reshuffles all
+// tracks and continues.
 export class MusicPlayer {
   private readonly audio = new Audio();
   private readonly tracks: Track[];
+  private readonly pinFirstTrack: boolean;
   private order: number[] = [];
   private pos = 0;
 
@@ -47,8 +51,9 @@ export class MusicPlayer {
   // HUD can refresh.
   onChange: (() => void) | null = null;
 
-  constructor(tracks: Track[]) {
+  constructor(tracks: Track[], pinFirstTrack = false) {
     this.tracks = tracks;
+    this.pinFirstTrack = pinFirstTrack;
     this.audio.preload = 'auto';
     this.audio.volume = clamp01(loadVolume());
     this.audio.addEventListener('ended', () => this.next());
@@ -132,11 +137,12 @@ export class MusicPlayer {
     this.onChange?.();
   }
 
-  // Build the play order. First cycle pins track 0 ("blade of grass") in front
-  // of a shuffled tail; later cycles shuffle everything, avoiding an immediate
-  // repeat of `last` (the track that just finished) as the new first track.
+  // Build the play order. On the first cycle, first-time visitors get track 0
+  // ("blade of grass") pinned in front of a shuffled tail; everyone else gets a
+  // full shuffle. Later cycles shuffle everything, avoiding an immediate repeat
+  // of `last` (the track that just finished) as the new first track.
   private buildOrder(firstCycle: boolean, last = -1): void {
-    if (firstCycle) {
+    if (firstCycle && this.pinFirstTrack) {
       this.order = [0, ...shuffle(range(1, this.tracks.length))];
       return;
     }
