@@ -1,6 +1,5 @@
 import logger from '../utils/logger.ts';
 import { sanitize } from '../utils/sanitize.ts';
-import Utils from '../../../shared/utils.ts';
 import Types from '../../../shared/types.ts';
 import Messages from '../../../shared/messages.ts';
 
@@ -8,6 +7,7 @@ import { Ship } from '../../../shared/sim/entities/ship.ts';
 import { Bullet } from '../../../shared/sim/entities/bullet.ts';
 import { InputCommand } from '../../../shared/sim/input.ts';
 import { SnapshotDiffer } from '../../../shared/sim/net/snapshot.ts';
+import { pickSpawnPosition } from '../../../shared/sim/spawn.ts';
 
 import type { GameServer } from '../game-server.ts';
 import type Connection from '../connection.ts';
@@ -129,10 +129,10 @@ export class NetworkServer {
     ship.controller = { connection, lastInput: InputCommand.empty() };
 
     // Place the ship before spawning: world.spawn() synchronously builds the
-    // physics body from the ship's transform, so the scatter must happen first
-    // (mirrors the old SpawnSystem-before-PhysicsSystem order). spawnArea 10
-    // matches the original SpawnSystem.
-    ship.transform.position = Utils.getRandomPosition(10);
+    // physics body from the ship's transform, so the spawn point must be chosen
+    // first. Scatter across the field, clear of asteroids and away from other
+    // ships, rather than piling everyone onto the origin.
+    ship.transform.position = pickSpawnPosition(world);
     ship.randomSpawn = false;
 
     world.spawn(ship);

@@ -17,6 +17,7 @@ import './projectile.test.ts';
 import './weapon.test.ts';
 import './combat.test.ts';
 import './respawn.test.ts';
+import './spawn.test.ts';
 import './aim-math.test.ts';
 import './steering.test.ts';
 import './bot.test.ts';

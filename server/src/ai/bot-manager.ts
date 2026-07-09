@@ -6,6 +6,7 @@ import {
   createDefaultWeapons,
 } from '../../../shared/sim/entities/ship.ts';
 import { InputCommand } from '../../../shared/sim/input.ts';
+import { pickSpawnPosition } from '../../../shared/sim/spawn.ts';
 import type { World } from '../../../shared/sim/world.ts';
 
 import type { GameServer } from '../game-server.ts';
@@ -22,9 +23,6 @@ const DEFAULT_MAX_BOTS = 8;
 // gradually so the roster doesn't churn.
 const RECONCILE_INTERVAL_MS = 1000;
 const MAX_CHANGE_PER_RECONCILE = 2;
-// Spawn bots near the action (players spawn near the origin) so a dense furball
-// forms rather than a sparse one across the whole arena.
-const SPAWN_SPREAD = 300;
 
 export class BotManager {
   private gameServer: GameServer;
@@ -100,7 +98,9 @@ export class BotManager {
     // Unlike server player-ships (which fire only from client Fire messages), the
     // bot ship carries real weapons so its own Ship.update loop spawns bullets.
     ship.weapons = createDefaultWeapons(ship);
-    ship.transform.position = Utils.getRandomPosition(SPAWN_SPREAD, rng);
+    // Scatter across the field, clear of asteroids and away from other ships,
+    // using the bot's seeded RNG so the spawn stays deterministic.
+    ship.transform.position = pickSpawnPosition(world, rng);
     ship.randomSpawn = false;
 
     world.spawn(ship); // onSpawn: physics body + Spawn broadcast to all clients
