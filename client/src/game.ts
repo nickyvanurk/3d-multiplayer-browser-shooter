@@ -22,6 +22,8 @@ import { SoundService } from './audio/sound-service.ts';
 import { DebugPanel } from './debug/debug-panel.ts';
 import { SettingsStore } from './settings.ts';
 import { SettingsMenu } from './ui/settings-menu.ts';
+import { MusicPlayer, defaultPlaylist } from './audio/music-player.ts';
+import { MusicPlayerHud } from './ui/music-player-hud.ts';
 
 // Plain OOP game. Owns the mirror World, the presentation layer, the client
 // physics world, the NetworkClient, and the client-authoritative ClientSim.
@@ -51,6 +53,8 @@ export default class Game {
   debug: DebugPanel;
   settings: SettingsStore;
   settingsMenu: SettingsMenu;
+  music: MusicPlayer;
+  musicHud: MusicPlayerHud;
   fixedStep = 1000 / 60;
   fixedUpdate!: (delta: number) => number;
   currentInput: InputCommand = InputCommand.empty();
@@ -94,6 +98,10 @@ export default class Game {
       this.sceneManager,
       this.inputController,
     );
+
+    this.music = new MusicPlayer(defaultPlaylist());
+    this.musicHud = new MusicPlayerHud(this.music);
+    this.music.start();
 
     this.viewRegistry.onShipDestroyed = (position) =>
       this.particles.spawnExplosion(position);
