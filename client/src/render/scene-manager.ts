@@ -16,6 +16,15 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass';
 import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader';
 
+// Games conventionally specify horizontal FOV; three.js expects vertical.
+const HORIZONTAL_FOV = 90;
+
+function verticalFov(horizontalFovDeg: number, aspect: number): number {
+  const hRad = (horizontalFovDeg * Math.PI) / 180;
+  const vRad = 2 * Math.atan(Math.tan(hRad / 2) / aspect);
+  return (vRad * 180) / Math.PI;
+}
+
 export class SceneManager {
   scene: Scene;
   camera: PerspectiveCamera;
@@ -33,9 +42,10 @@ export class SceneManager {
 
     const scene = new Scene();
 
+    const aspect = window.innerWidth / window.innerHeight;
     const camera = new PerspectiveCamera(
-      75,
-      window.innerWidth / window.innerHeight,
+      verticalFov(HORIZONTAL_FOV, aspect),
+      aspect,
       1,
       4100,
     );
@@ -136,6 +146,7 @@ export class SceneManager {
       const height = canvas.clientHeight;
 
       this.camera.aspect = width / height;
+      this.camera.fov = verticalFov(HORIZONTAL_FOV, this.camera.aspect);
       this.camera.updateProjectionMatrix();
       renderer.setSize(width, height, false);
       this.composer.setSize(width, height);
