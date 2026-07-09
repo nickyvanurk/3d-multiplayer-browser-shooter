@@ -1,13 +1,8 @@
-import sanitizeHtml from 'sanitize-html';
 import { Vector3, Quaternion } from 'three';
 
 type Rng = () => number;
 
 export default {
-  sanitize: (string: string): string => {
-    return sanitizeHtml(string);
-  },
-
   random: (range: number): number => {
     return Math.floor(Math.random() * range);
   },

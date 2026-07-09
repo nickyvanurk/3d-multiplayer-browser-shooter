@@ -1,4 +1,5 @@
 import logger from '../utils/logger.ts';
+import { sanitize } from '../utils/sanitize.ts';
 import Utils from '../../../shared/utils.ts';
 import Types from '../../../shared/types.ts';
 import Messages from '../../../shared/messages.ts';
@@ -70,7 +71,7 @@ export class NetworkServer {
 
         switch (message!.type) {
           case Types.Messages.HELLO: {
-            let name = Utils.sanitize(message!.data.name);
+            let name = sanitize(message!.data.name);
             name = !name ? 'UNKNOWN' : name.substr(0, 15);
 
             const ship = this.spawnShip(world, connection);
