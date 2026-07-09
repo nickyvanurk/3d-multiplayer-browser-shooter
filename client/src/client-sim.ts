@@ -30,6 +30,11 @@ export class ClientSim {
   // Emitted when the owned ship fires a predicted bullet, so NetworkClient can
   // send the matching authoritative Fire request to the server.
   onFire: ((bullet: Bullet) => void) | null;
+  // Emitted when one of our predicted bullets strikes an enemy ship, with the
+  // world-space impact point — the client hit prediction that drives the
+  // (immediate) hitmarker + sound. The server still owns the actual damage; this
+  // is cosmetic feedback only.
+  onHitEnemy: ((impact: Vector3) => void) | null;
 
   private readonly scratch: Vector3;
   private readonly scratch2: Vector3;
@@ -42,6 +47,7 @@ export class ClientSim {
     this.predictedBullets = [];
     this.nextBulletId = CLIENT_ID_BASE;
     this.onFire = null;
+    this.onHitEnemy = null;
     this.scratch = new Vector3();
     this.scratch2 = new Vector3();
     // Ship.update spawns bullets through this; we intercept to give them
@@ -184,6 +190,14 @@ export class ClientSim {
       // leading point and nothing is ever drawn ahead of the impact.
       const hit = this.physics.castSegment(from, step, this.ownedShip);
       if (hit) {
+        // Predicted enemy hit → immediate hitmarker/sound at the impact point
+        // (from + step·toi). Only ships count (not asteroids or the vendor).
+        if (hit.entity.type === Types.Entities.SPACESHIP) {
+          const impact = new Vector3()
+            .copy(from)
+            .addScaledVector(step, hit.toi);
+          this.onHitEnemy?.(impact);
+        }
         bullet.markDestroyed();
       } else {
         bullet.transform.position.copy(from).add(step);

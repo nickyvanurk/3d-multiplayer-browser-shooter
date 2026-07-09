@@ -25,6 +25,7 @@ import { consumeFirstVisit } from './first-visit.ts';
 import { SettingsMenu } from './ui/settings-menu.ts';
 import { MusicPlayer, defaultPlaylist } from './audio/music-player.ts';
 import { MusicPlayerHud } from './ui/music-player-hud.ts';
+import { HitMarker } from './ui/hit-marker.ts';
 
 // Plain OOP game. Owns the mirror World, the presentation layer, the client
 // physics world, the NetworkClient, and the client-authoritative ClientSim.
@@ -56,6 +57,10 @@ export default class Game {
   settingsMenu: SettingsMenu;
   music: MusicPlayer;
   musicHud: MusicPlayerHud;
+  hitMarker: HitMarker;
+  // Hitmarker cue level/pitch, tunable live from the F3 panel.
+  hitVolume = 0.45;
+  hitPitch = 2;
   fixedStep = 1000 / 60;
   fixedUpdate!: (delta: number) => number;
   currentInput: InputCommand = InputCommand.empty();
@@ -107,6 +112,7 @@ export default class Game {
 
     this.music = new MusicPlayer(defaultPlaylist(), consumeFirstVisit());
     this.musicHud = new MusicPlayerHud(this.music);
+    this.hitMarker = new HitMarker();
     this.music.start();
 
     this.viewRegistry.onShipDestroyed = (position) =>
@@ -134,6 +140,8 @@ export default class Game {
       'blaster',
       'sfx/freesound_community-blaster-multiple-14893.mp3',
     );
+    // Hitmarker cue: a single short clip played on a predicted enemy hit.
+    await this.sound.load('hit', 'sfx/hit.mp3');
     const blasterCount = this.sound.getSegments('blaster').length;
     // Chosen defaults (tunable live via the F3 panel): sound 1, pitch 2, vol 0.7.
     this.sound.setActive('blaster', 0);
@@ -181,6 +189,37 @@ export default class Game {
       onChange: previewBlaster,
     });
 
+    // Hit cue: its own volume + pitch, independent of the blaster. Previews the
+    // clip on change so you can dial it in by ear.
+    const previewHit = () =>
+      this.sound.play('hit', this.hitVolume, this.hitPitch);
+    this.debug.addSlider('Hit volume', {
+      min: 0,
+      max: 2,
+      step: 0.05,
+      decKey: 'Semicolon',
+      incKey: 'Quote',
+      keyHint: "; '",
+      get: () => this.hitVolume,
+      set: (v) => {
+        this.hitVolume = v;
+      },
+      onChange: previewHit,
+    });
+    this.debug.addSlider('Hit pitch', {
+      min: 0.5,
+      max: 2,
+      step: 0.05,
+      decKey: 'Comma',
+      incKey: 'Period',
+      keyHint: ', .',
+      get: () => this.hitPitch,
+      set: (v) => {
+        this.hitPitch = v;
+      },
+      onChange: previewHit,
+    });
+
     // The client runs its own Rapier world (all ships + the static asteroid
     // field). Meshes come from the GLTF scenes the renderer already loaded.
     // reconcileShips is off: the client manages ship bodies itself.
@@ -196,6 +235,17 @@ export default class Game {
 
     this.clientSim = new ClientSim(this.world, this.physics);
     this.clientSim.onFire = (bullet) => this.networkClient.sendFire(bullet);
+    // Predicted enemy hit: project the world impact point to the screen, flash
+    // the hitmarker there and play the hit cue right away (server still owns the
+    // authoritative damage).
+    this.clientSim.onHitEnemy = (impact) => {
+      const camera = this.sceneManager.camera;
+      const ndc = impact.clone().project(camera);
+      const x = (ndc.x * 0.5 + 0.5) * window.innerWidth;
+      const y = (-ndc.y * 0.5 + 0.5) * window.innerHeight;
+      this.hitMarker.trigger(x, y);
+      this.sound.play('hit', this.hitVolume, this.hitPitch);
+    };
     this.networkClient.onLocalShip = (ship) =>
       this.clientSim.setOwnedShip(ship);
 
@@ -279,6 +329,6 @@ export default class Game {
     this.viewRegistry.update(alpha, delta);
     this.sceneManager.render(alpha);
     this.projection.render();
-    this.hud.render();
+    this.hud.render(this.aimAssist.aimedShipId);
   }
 }

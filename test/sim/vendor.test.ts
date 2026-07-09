@@ -49,8 +49,10 @@ test('Vendor is a kinematic, undamageable NPC of type VENDOR', () => {
 test('Vendor packs its thrust bits into network slot [13] for remote exhaust', () => {
   const vendor = new Vendor();
   const state = vendor.serializeNetworkState();
-  assert.equal(state.length, 14);
+  assert.equal(state.length, 15);
   assert.equal(state[13], InputBits.forward);
+  // The vendor is undamageable, so its health slot stays 0.
+  assert.equal(state[14], 0);
 });
 
 test('Vendor.update places it on the orbit with a tangent velocity', () => {

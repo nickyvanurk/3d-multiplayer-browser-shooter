@@ -81,11 +81,12 @@ export class Ship extends Entity {
     this.renderInput = null;
   }
 
-  // Fill the trailing input slot the base leaves at 0, so remote clients can
-  // light this ship's engine from its actual thrust command.
+  // Fill the trailing slots the base leaves at 0: the packed input (so remote
+  // clients can light this ship's engine) and current health (for enemy HP bars).
   serializeNetworkState(): number[] {
     const state = super.serializeNetworkState();
     state[13] = this.inputBits;
+    state[14] = this.health;
     return state;
   }
 

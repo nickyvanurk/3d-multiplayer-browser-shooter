@@ -237,11 +237,12 @@ class World {
       velocity: Vector3;
       angularVelocity: Vector3;
       input: number;
+      health: number;
     }[] = [];
 
-    // 15 numbers per entity: id + 14 network-state values (the last is the
-    // packed input bitmask, non-zero only for ships).
-    for (let i = 0; i < message.length; i += 15) {
+    // 16 numbers per entity: id + 15 network-state values (the last two are the
+    // packed input bitmask and health, non-zero only for ships).
+    for (let i = 0; i < message.length; i += 16) {
       data.push({
         id: message[i],
         position: new Vector3(message[i + 1], message[i + 2], message[i + 3]),
@@ -258,6 +259,7 @@ class World {
           message[i + 13],
         ),
         input: message[i + 14],
+        health: message[i + 15],
       });
     }
 

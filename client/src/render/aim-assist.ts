@@ -15,6 +15,9 @@ export class AimAssistService {
   inputController: InputController;
   projection: ProjectionService;
   lastVel: Vector3;
+  // The enemy ship the crosshair is currently on (its lead ring or reticle), or
+  // null. The HUD reads this to draw that ship's HP bar.
+  aimedShipId: number | null;
 
   constructor(
     world: World,
@@ -27,11 +30,14 @@ export class AimAssistService {
     this.inputController = inputController;
     this.projection = projection;
     this.lastVel = new Vector3();
+    this.aimedShipId = null;
   }
 
   update(): void {
     const camera = this.sceneManager.camera;
     const aim = this.inputController.input.aim;
+
+    this.aimedShipId = null;
 
     if (aim.distance !== aim.maxDistance) {
       aim.distance = aim.maxDistance;
@@ -58,6 +64,7 @@ export class AimAssistService {
         const leadDistance = this.projection.leadDistances.get(id);
         if (leadDistance !== undefined) {
           aim.distance = leadDistance;
+          this.aimedShipId = id;
           return;
         }
       }
@@ -90,6 +97,7 @@ export class AimAssistService {
           .clone()
           .sub(camera.position)
           .length();
+        this.aimedShipId = id;
       }
     }
   }

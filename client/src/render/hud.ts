@@ -43,13 +43,32 @@ const RETICLE_MIN_HALF_PX = 10; // floor on the half-size so far ships still sho
 const RETICLE_FALLBACK_DIAMETER_PX = 44; // when a ship can't be distance-sized
 const RETICLE_COLOR_ENEMY = 0xb9524c; // muted red, matching the lead marker
 const RETICLE_COLOR_VENDOR = 0xd1a44c; // gold, for the neutral vendor
+const RETICLE_BASE_OPACITY = 0.9;
+// Up close the brackets just clutter the ship, so the reticle fades out by
+// distance (camera -> target, world units): full beyond START, gone within END.
+const RETICLE_FADE_START_DIST = 500; // begin fading nearer than this
+const RETICLE_FADE_END_DIST = 450; // fully gone nearer than this — a fast, snappy fade
 // Fixed sizing (fraction of the sprite texture) for the off-screen edge arrow.
 const ARROW_SCALE = 0.2;
+
+// Enemy HP bar (below the reticle), shown only for the ship the crosshair is on.
+// MAX_HEALTH mirrors Ship's spawn health.
+const MAX_HEALTH = 100;
+const HP_BAR_WIDTH = 42; // px
+const HP_BAR_HEIGHT = 5; // px
+const HP_BAR_GAP = 9; // px between the reticle's bottom and the bar
+const HP_BAR_BG_COLOR = 0x101010;
 
 // A ring sprite plus the thin line joining a ship's on-screen reticle to it.
 interface LeadMarker {
   ring: Sprite;
   line: Line;
+}
+
+// A health bar: a dark background quad and a fillable foreground quad.
+interface HpBar {
+  bg: Sprite;
+  fg: Sprite;
 }
 
 // Draw the hollow "shoot here" ring once into a canvas-backed texture, so the
@@ -91,6 +110,8 @@ export class HudService {
   leadMarkers: Map<number, LeadMarker>;
   // Corner-bracket reticle per entity, shown while the ship is on-screen.
   reticles: Map<number, LineSegments>;
+  // Enemy HP bars, shown below the reticle only while the ship is aimed at.
+  hpBars: Map<number, HpBar>;
   viewRegistry: ViewRegistry;
   // World-space bounding radius of each ship model at scale 1, computed once per
   // kind from its loaded model and multiplied by the entity's scale on use.
@@ -154,11 +175,12 @@ export class HudService {
     this.ringTexture = createRingTexture();
     this.leadMarkers = new Map();
     this.reticles = new Map();
+    this.hpBars = new Map();
 
     window.addEventListener('resize', this.onWindowResize.bind(this));
   }
 
-  render(): void {
+  render(aimedShipId: number | null = null): void {
     if (!this.textures) {
       return;
     }
@@ -184,6 +206,12 @@ export class HudService {
       }
     }
 
+    for (const id of this.hpBars.keys()) {
+      if (!indicators.has(id)) {
+        this.removeHpBar(id);
+      }
+    }
+
     for (const [id, transform2d] of indicators) {
       if (!this.entityIndicators[id]) {
         this.entityIndicators[id] = this.createHudSprite(0, 0);
@@ -205,8 +233,8 @@ export class HudService {
       // Same behaviour as ships (edge marker off-screen, reticle once on-screen),
       // but the vendor gets its own edge sprite and its own reticle colour so it
       // never reads as an enemy.
-      const isVendor =
-        this.world.get(Number(id))?.type === Types.Entities.VENDOR;
+      const entity = this.world.get(Number(id));
+      const isVendor = entity?.type === Types.Entities.VENDOR;
 
       if (transform2d.onscreen) {
         // On-screen: draw the line-bracket reticle (sized to the ship, grows as
@@ -229,6 +257,17 @@ export class HudService {
         } else {
           this.removeLead(Number(id));
         }
+
+        // Enemy HP bar below the reticle, only for the aimed-at ship. Vendor is
+        // undamageable, so it never gets one.
+        this.updateHealthBar(
+          Number(id),
+          entity,
+          isVendor,
+          transform2d.position,
+          diameter,
+          aimedShipId === Number(id),
+        );
       } else {
         // Off-screen: the clamped edge marker sprite; hide the reticle.
         indicator.visible = true;
@@ -239,6 +278,7 @@ export class HudService {
         this.resetToArrowScale(indicator);
         this.hideReticle(Number(id));
         this.removeLead(Number(id));
+        this.hideHpBar(Number(id));
       }
     }
 
@@ -335,8 +375,30 @@ export class HudService {
       reticle = this.createReticle();
       this.reticles.set(id, reticle);
     }
+
+    // Fade out as the target gets close (distance from camera). Fully faded →
+    // skip drawing entirely.
+    const entity = this.world.get(id);
+    const distance = entity
+      ? entity.transform.position.distanceTo(this.sceneManager.camera.position)
+      : Number.POSITIVE_INFINITY;
+    const fade = Math.max(
+      0,
+      Math.min(
+        1,
+        (distance - RETICLE_FADE_END_DIST) /
+          (RETICLE_FADE_START_DIST - RETICLE_FADE_END_DIST),
+      ),
+    );
+    if (fade <= 0) {
+      reticle.visible = false;
+      return;
+    }
+
     reticle.visible = true;
-    (reticle.material as LineBasicMaterial).color.setHex(
+    const material = reticle.material as LineBasicMaterial;
+    material.opacity = RETICLE_BASE_OPACITY * fade;
+    material.color.setHex(
       isVendor ? RETICLE_COLOR_VENDOR : RETICLE_COLOR_ENEMY,
     );
 
@@ -378,7 +440,7 @@ export class HudService {
       geometry,
       new LineBasicMaterial({
         transparent: true,
-        opacity: 0.9,
+        opacity: RETICLE_BASE_OPACITY,
         depthTest: false,
       }),
     );
@@ -403,6 +465,83 @@ export class HudService {
     reticle.geometry.dispose();
     (reticle.material as LineBasicMaterial).dispose();
     this.reticles.delete(id);
+  }
+
+  // Track this ship's health to spot hits, then show its HP bar below the
+  // reticle when it is aimed at or was recently damaged, else hide it. Health is
+  // replicated from the server (network-client); the vendor has none.
+  updateHealthBar(
+    id: number,
+    entity: Entity | undefined,
+    isVendor: boolean,
+    center: { x: number; y: number },
+    reticleDiameter: number,
+    aimed: boolean,
+  ): void {
+    const health =
+      !isVendor && entity ? (entity as { health?: number }).health : undefined;
+    if (!aimed || typeof health !== 'number') {
+      this.hideHpBar(id);
+      return;
+    }
+
+    const frac = Math.max(0, Math.min(1, health / MAX_HEALTH));
+    const left = center.x - HP_BAR_WIDTH / 2;
+    const y = center.y - reticleDiameter / 2 - HP_BAR_GAP;
+
+    let bar = this.hpBars.get(id);
+    if (!bar) {
+      bar = this.createHpBar();
+      this.hpBars.set(id, bar);
+    }
+    bar.bg.visible = true;
+    bar.fg.visible = true;
+    bar.bg.position.set(left, y, 1);
+    bar.fg.position.set(left, y, 2); // in front of the background
+    bar.bg.scale.set(HP_BAR_WIDTH, HP_BAR_HEIGHT, 1);
+    bar.fg.scale.set(HP_BAR_WIDTH * frac, HP_BAR_HEIGHT, 1);
+    // Fill hue runs red (low) -> green (full).
+    (bar.fg.material as SpriteMaterial).color.setHSL(0.33 * frac, 0.85, 0.5);
+  }
+
+  // Left-anchored quads (center x = 0) so the fill grows rightward from `left`.
+  createHpBar(): HpBar {
+    const bg = new Sprite(
+      new SpriteMaterial({
+        color: HP_BAR_BG_COLOR,
+        transparent: true,
+        opacity: 0.6,
+        depthTest: false,
+      }),
+    );
+    bg.center.set(0, 0.5);
+    const fg = new Sprite(
+      new SpriteMaterial({ transparent: true, depthTest: false }),
+    );
+    fg.center.set(0, 0.5);
+    this.sceneOrtho.add(bg);
+    this.sceneOrtho.add(fg);
+    return { bg, fg };
+  }
+
+  hideHpBar(id: number): void {
+    const bar = this.hpBars.get(id);
+    if (bar) {
+      bar.bg.visible = false;
+      bar.fg.visible = false;
+    }
+  }
+
+  removeHpBar(id: number): void {
+    const bar = this.hpBars.get(id);
+    if (!bar) {
+      return;
+    }
+    this.sceneOrtho.remove(bar.bg);
+    this.sceneOrtho.remove(bar.fg);
+    bar.bg.material.dispose();
+    bar.fg.material.dispose();
+    this.hpBars.delete(id);
   }
 
   // Place (creating on first use) the lead ring at `lead` and stretch its guide

@@ -153,6 +153,7 @@ export class NetworkClient {
       velocity,
       angularVelocity,
       input,
+      health,
     } of entities) {
       // The local ship is client-authoritative; ignore the server's echo of it.
       if (id === this.localPlayerId) {
@@ -164,6 +165,13 @@ export class NetworkClient {
       if (!entity) {
         console.error(`Entity ${id} doesn't exist on client`);
         continue;
+      }
+
+      // Health is server-authoritative (combat runs there); mirror it onto the
+      // remote entity so the HUD can draw enemy HP bars from the live value.
+      const healthCarrier = entity as { health?: number };
+      if (typeof healthCarrier.health === 'number') {
+        healthCarrier.health = health;
       }
 
       // Decode the replicated thrust input for remote ships and the vendor NPC

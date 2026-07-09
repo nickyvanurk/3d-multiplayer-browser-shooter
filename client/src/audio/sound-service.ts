@@ -61,8 +61,9 @@ export class SoundService {
   }
 
   // 2D one-shot of the active segment — centered, for the local player's own SFX.
-  play(name: string, volume = 1): void {
-    this.spawn(name, this.resolve(name), null, volume);
+  // An optional `pitch` overrides the global base pitch for this one clip.
+  play(name: string, volume = 1, pitch?: number): void {
+    this.spawn(name, this.resolve(name), null, volume, pitch);
   }
 
   // Positional one-shot of the active segment at a world position.
@@ -92,6 +93,7 @@ export class SoundService {
     index: number,
     position: Vector3 | null,
     volume: number,
+    pitch?: number,
   ): void {
     const buffer = this.buffers.get(name);
     const seg = this.segments.get(name)?.[index];
@@ -108,7 +110,9 @@ export class SoundService {
     // Battlefield Heroes anti-repetition: a fresh random pitch + volume per shot
     // (pitchEnvelope 0.97–1.03, volumeEnvelope 0.9–1.0) around the tunable base,
     // so rapid fire varies shot-to-shot instead of being a dead-identical repeat.
-    sound.setPlaybackRate(this.pitch * (0.97 + Math.random() * 0.06));
+    sound.setPlaybackRate(
+      (pitch ?? this.pitch) * (0.97 + Math.random() * 0.06),
+    );
     sound.setVolume(volume * this.volume * (0.9 + Math.random() * 0.1));
 
     if (position && sound instanceof PositionalAudio) {
