@@ -10,6 +10,7 @@ export class SettingsMenu {
   private readonly sceneManager: SceneManager;
   private readonly inputController: InputController;
   private readonly backdrop: HTMLDivElement;
+  private readonly crosshair: HTMLElement | null;
   private visible = false;
 
   constructor(
@@ -20,6 +21,7 @@ export class SettingsMenu {
     this.settings = settings;
     this.sceneManager = sceneManager;
     this.inputController = inputController;
+    this.crosshair = document.querySelector<HTMLElement>('.crosshair');
 
     this.backdrop = document.createElement('div');
     Object.assign(this.backdrop.style, {
@@ -142,11 +144,22 @@ export class SettingsMenu {
     this.visible = true;
     this.backdrop.style.display = 'flex';
     this.inputController.setEnabled(false);
+    // The gameplay cursor is the crosshair SVG; body sets `cursor: none`.
+    // Reveal the real OS cursor (and hide the crosshair) so the menu is usable.
+    document.body.style.cursor = 'auto';
+    if (this.crosshair) {
+      this.crosshair.style.display = 'none';
+    }
   }
 
   private close(): void {
     this.visible = false;
     this.backdrop.style.display = 'none';
     this.inputController.setEnabled(true);
+    // Clearing the inline value falls back to the stylesheet's `cursor: none`.
+    document.body.style.cursor = '';
+    if (this.crosshair) {
+      this.crosshair.style.display = '';
+    }
   }
 }
