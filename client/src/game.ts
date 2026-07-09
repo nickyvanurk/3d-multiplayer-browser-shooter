@@ -21,6 +21,7 @@ import { NetworkClient } from './net/network-client.ts';
 import { SoundService } from './audio/sound-service.ts';
 import { DebugPanel } from './debug/debug-panel.ts';
 import { SettingsStore } from './settings.ts';
+import { consumeFirstVisit } from './first-visit.ts';
 import { SettingsMenu } from './ui/settings-menu.ts';
 import { MusicPlayer, defaultPlaylist } from './audio/music-player.ts';
 import { MusicPlayerHud } from './ui/music-player-hud.ts';
@@ -99,7 +100,7 @@ export default class Game {
       this.inputController,
     );
 
-    this.music = new MusicPlayer(defaultPlaylist(), this.settings.isFirstVisit);
+    this.music = new MusicPlayer(defaultPlaylist(), consumeFirstVisit());
     this.musicHud = new MusicPlayerHud(this.music);
     this.music.start();
 
