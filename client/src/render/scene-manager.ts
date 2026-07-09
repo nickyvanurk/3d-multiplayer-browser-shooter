@@ -9,6 +9,8 @@ import {
   BufferAttribute,
   PointsMaterial,
   Points,
+  Vector2,
+  WebGLMultisampleRenderTarget,
 } from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass';
@@ -34,7 +36,13 @@ export class SceneManager {
   constructor(horizontalFov = 90) {
     this.horizontalFov = horizontalFov;
 
-    const renderer = new WebGLRenderer({ antialias: true });
+    // Asteroids are placed densely enough that large rocks interpenetrate; a
+    // logarithmic depth buffer spreads depth precision evenly across the
+    // near->far range so those overlaps stop z-fighting at distance.
+    const renderer = new WebGLRenderer({
+      antialias: true,
+      logarithmicDepthBuffer: true,
+    });
     renderer.setClearColor(0x020207);
     renderer.shadowMap.enabled = true;
     renderer.autoClear = false;
@@ -73,7 +81,13 @@ export class SceneManager {
     fxaaPass.material.uniforms['resolution'].value.y =
       1 / (window.innerHeight * pixelRatio);
 
-    const composer = new EffectComposer(renderer);
+    // Render into a multisampled target so the 3D pass gets true MSAA. Without
+    // this the composer renders to a plain render target and the renderer's
+    // `antialias` is ignored, leaving only FXAA — which can't stop distant
+    // asteroid edges/terminators from shimmering as the camera moves.
+    const size = renderer.getDrawingBufferSize(new Vector2());
+    const renderTarget = new WebGLMultisampleRenderTarget(size.x, size.y);
+    const composer = new EffectComposer(renderer, renderTarget);
     composer.addPass(new RenderPass(scene, camera));
     composer.addPass(fxaaPass);
     // Original JS passed `undefined` for the resolution arg; cast preserves that verbatim.

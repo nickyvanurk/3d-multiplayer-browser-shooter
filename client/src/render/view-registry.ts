@@ -157,8 +157,8 @@ export class ViewRegistry {
       : source.material;
 
     this.asteroids = new InstancedAsteroids(this.scene, geometry, material);
-    this.asteroids.mesh.castShadow = source.castShadow;
-    this.asteroids.mesh.receiveShadow = source.receiveShadow;
+    this.asteroids.mesh.castShadow = false;
+    this.asteroids.mesh.receiveShadow = true;
   }
 
   // First Mesh under `root`. The explicit return type is deliberate: it stops
