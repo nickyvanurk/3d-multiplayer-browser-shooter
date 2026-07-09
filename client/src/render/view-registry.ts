@@ -1,5 +1,12 @@
-import { MeshBasicMaterial, Group, Box3 } from 'three';
-import type { Object3D, Scene, Vector3, Mesh } from 'three';
+import { MeshBasicMaterial, Group, Box3, Color } from 'three';
+import type {
+  Object3D,
+  Scene,
+  Mesh,
+  MeshStandardMaterial,
+  Vector3,
+} from 'three';
+import type { Ship } from '../../../shared/sim/entities/ship.ts';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 
 import Types from '../../../shared/types.ts';
@@ -9,10 +16,40 @@ import type { Entity } from '../../../shared/sim/entity.ts';
 import type { SceneManager } from './scene-manager.ts';
 
 const MODEL_PATHS: Record<EntityKind, string> = {
-  [Types.Entities.SPACESHIP]: 'fighter.glb',
+  [Types.Entities.SPACESHIP]: 'SM_Ship_Fighter_02.glb',
   [Types.Entities.ASTEROID]: 'asteroid.glb',
   [Types.Entities.BULLET]: 'projectile.glb',
 };
+
+// The ship model carries a dedicated "Exhaust" material slot (black base, white
+// emissive). Each ship view gets its own clone of it so the glow can be driven
+// per-ship from thrust: emissive stays this colour and only the intensity is
+// animated, so at intensity 0 the black base shows (engine off) and it flares
+// toward orange/yellow as it climbs (bloom does the hot bloom-out).
+const EXHAUST_MATERIAL_NAME = 'Exhaust';
+// The glow is driven by what the pilot is pressing (not coasting speed): off at
+// rest, orange on thrust/reverse, blue "afterburner" flame on boost. Intensity
+// is kept low on purpose — pushing it high makes the orange clip through green
+// and the bloom washes it out to yellow/white, so we hold near the projectile's
+// own brightness to keep the colour reading true.
+const EXHAUST_ORANGE = new Color(0xff5a00); // deep orange (less green = less yellow)
+const EXHAUST_BLUE = new Color(0x2b6bff); // blue flame on boost
+const EXHAUST_FORWARD_INTENSITY = 1.5; // holding W
+const EXHAUST_BOOST_INTENSITY = 2.2; // W + boost
+const EXHAUST_REVERSE_INTENSITY = 0.8; // holding S
+// The glow brightness eases toward its target rather than snapping, so it spools
+// up as the pilot accelerates and fades out fast on release. The colour, by
+// contrast, is switched instantly (orange, or blue on boost). Units are
+// intensity/second.
+const EXHAUST_RAMP_UP = 4;
+const EXHAUST_RAMP_DOWN = 9;
+
+// Move `current` toward `target` by at most `step`, without overshooting.
+function approach(current: number, target: number, step: number): number {
+  return current < target
+    ? Math.min(current + step, target)
+    : Math.max(current - step, target);
+}
 
 export class ViewRegistry {
   sceneManager: SceneManager;
@@ -27,6 +64,9 @@ export class ViewRegistry {
   // be drawn extending forward past whatever it hits. Cache how far its tip leads
   // the pivot so bullet views can be shifted to put the tip at the origin.
   bulletTipOffset: number | null;
+  // Per-ship clone of the "Exhaust" material, keyed by entity id, whose emissive
+  // intensity `update()` drives from that ship's thrust input.
+  exhaustMaterials: Map<number, MeshStandardMaterial>;
 
   constructor(sceneManager: SceneManager) {
     this.sceneManager = sceneManager;
@@ -38,6 +78,7 @@ export class ViewRegistry {
     this.pendingSpawns = [];
     this.onShipDestroyed = null; // (position) => void, wired by Task 19/20 particles
     this.bulletTipOffset = null;
+    this.exhaustMaterials = new Map();
   }
 
   // Port of model-loading-system.js: load every kind's GLTF before views can be
@@ -115,6 +156,47 @@ export class ViewRegistry {
 
     this.scene.add(view);
     this.views.set(entity.id!, view);
+
+    if (entity.type === Types.Entities.SPACESHIP) {
+      const exhaust = this.prepareExhaust(view);
+      if (exhaust) {
+        this.exhaustMaterials.set(entity.id!, exhaust);
+      }
+    }
+  }
+
+  // Give this ship view its own clone of the shared "Exhaust" material (so its
+  // glow animates independently), recolour it, and start it dark. Returns the
+  // per-ship material `update()` drives, or null if the model has no such slot.
+  prepareExhaust(view: Object3D): MeshStandardMaterial | null {
+    let exhaust: MeshStandardMaterial | null = null;
+    view.traverse((child) => {
+      const mesh = child as Mesh;
+      if (!mesh.isMesh) {
+        return;
+      }
+      const materials = Array.isArray(mesh.material)
+        ? mesh.material
+        : [mesh.material];
+      for (let i = 0; i < materials.length; i++) {
+        if (materials[i].name !== EXHAUST_MATERIAL_NAME) {
+          continue;
+        }
+        if (!exhaust) {
+          const cloned = materials[i].clone() as MeshStandardMaterial;
+          cloned.emissive = EXHAUST_ORANGE.clone();
+          cloned.emissiveIntensity = 0;
+          exhaust = cloned;
+        }
+        const material = exhaust as MeshStandardMaterial;
+        if (Array.isArray(mesh.material)) {
+          mesh.material[i] = material;
+        } else {
+          mesh.material = material;
+        }
+      }
+    });
+    return exhaust;
   }
 
   // The transform (position/rotation) is the projectile's leading point — it is
@@ -144,6 +226,7 @@ export class ViewRegistry {
     if (mesh) {
       this.scene.remove(mesh);
       this.views.delete(entity.id!);
+      this.exhaustMaterials.delete(entity.id!);
     } else {
       const idx = this.pendingSpawns.indexOf(entity);
       if (idx !== -1) {
@@ -158,7 +241,8 @@ export class ViewRegistry {
 
   // Port of webgl-renderer-system.js render() + transform-system.js: lerp
   // prevPosition->position and slerp prevRotation->rotation by alpha, write to mesh.
-  update(alpha: number): void {
+  update(alpha: number, delta = 0): void {
+    const dt = delta / 1000;
     for (const [id, mesh] of this.views) {
       const entity = this.world!.get(id);
       if (!entity) {
@@ -178,6 +262,45 @@ export class ViewRegistry {
         .copy(transform.prevRotation)
         .slerp(transform.rotation, alpha);
       mesh.scale.setScalar(transform.scale);
+
+      const exhaust = this.exhaustMaterials.get(id);
+      if (exhaust) {
+        this.driveExhaust(entity, exhaust, dt);
+      }
     }
+  }
+
+  // Light the exhaust from thrust INPUT, not motion: it glows while the pilot
+  // holds W (brighter on boost) and dimmer on S. The colour is switched
+  // instantly (blue on boost, orange otherwise); only the brightness eases,
+  // spooling up as you accelerate and fading out fast on release. The owned ship
+  // reads its live controller input; remote ships read the input replicated from
+  // the server (decoded into renderInput by NetworkClient).
+  driveExhaust(
+    entity: Entity,
+    exhaust: MeshStandardMaterial,
+    dt: number,
+  ): void {
+    const ship = entity as Ship;
+    const input = ship.controller?.lastInput ?? ship.renderInput;
+
+    let target = 0;
+    let color = EXHAUST_ORANGE;
+    if (input?.forward) {
+      if (input.boost) {
+        target = EXHAUST_BOOST_INTENSITY;
+        color = EXHAUST_BLUE;
+      } else {
+        target = EXHAUST_FORWARD_INTENSITY;
+      }
+    } else if (input?.backward) {
+      target = EXHAUST_REVERSE_INTENSITY;
+    }
+
+    exhaust.emissive.copy(color);
+
+    const current = exhaust.emissiveIntensity;
+    const rate = (target > current ? EXHAUST_RAMP_UP : EXHAUST_RAMP_DOWN) * dt;
+    exhaust.emissiveIntensity = approach(current, target, rate);
   }
 }

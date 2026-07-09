@@ -48,6 +48,14 @@ export class Ship extends Entity {
   respawn: boolean;
   randomSpawn: boolean;
   respawnTimer: number;
+  // Packed movement input replicated to other clients (serializeNetworkState).
+  // On the server it's set from the owner's reported State; it drives remote
+  // engine visuals and, later, dead reckoning.
+  inputBits: number;
+  // Client-only: the replicated inputBits decoded for a REMOTE ship, read by the
+  // renderer. Kept off `controller` so the client sim never re-applies it as
+  // thrust (that would double-integrate against the server-corrected velocity).
+  renderInput: InputCommand | null;
 
   constructor(opts: ShipInit = {}) {
     super({ ...opts, type: Types.Entities.SPACESHIP });
@@ -69,6 +77,16 @@ export class Ship extends Entity {
     this.randomSpawn = true;
     this.alive = true;
     this.respawnTimer = 0;
+    this.inputBits = 0;
+    this.renderInput = null;
+  }
+
+  // Fill the trailing input slot the base leaves at 0, so remote clients can
+  // light this ship's engine from its actual thrust command.
+  serializeNetworkState(): number[] {
+    const state = super.serializeNetworkState();
+    state[13] = this.inputBits;
+    return state;
   }
 
   applyInput(input: InputCommand, dt: number): void {

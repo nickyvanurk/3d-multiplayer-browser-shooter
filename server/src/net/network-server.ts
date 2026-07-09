@@ -91,6 +91,9 @@ export class NetworkServer {
       // Draining clears it so a state-less tick coasts rather than re-snapping.
       const state = connection.drainState();
       if (state && ship.alive !== false) {
+        // Carry the owner's reported thrust input so it re-broadcasts to other
+        // clients (remote engine visuals / dead reckoning).
+        ship.inputBits = state.input;
         this.gameServer.physics.correctBody?.(
           ship,
           state.position,

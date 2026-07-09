@@ -4,6 +4,7 @@ import type { Camera, Quaternion } from 'three';
 import Types from '../../../shared/types.ts';
 import Messages from '../../../shared/messages.ts';
 import { Ship } from '../../../shared/sim/entities/ship.ts';
+import { InputCommand } from '../../../shared/sim/input.ts';
 import { Asteroid } from '../../../shared/sim/entities/asteroid.ts';
 import { Bullet } from '../../../shared/sim/entities/bullet.ts';
 import type { World } from '../../../shared/sim/world.ts';
@@ -144,6 +145,7 @@ export class NetworkClient {
       rotation,
       velocity,
       angularVelocity,
+      input,
     } of entities) {
       // The local ship is client-authoritative; ignore the server's echo of it.
       if (id === this.localPlayerId) {
@@ -155,6 +157,16 @@ export class NetworkClient {
       if (!entity) {
         console.error(`Entity ${id} doesn't exist on client`);
         continue;
+      }
+
+      // Decode the replicated thrust input for remote ships (render-only; the
+      // renderer lights their engines from it). Kept off `controller` so the
+      // client sim never re-applies it as thrust force.
+      if (entity.type === Types.Entities.SPACESHIP) {
+        const ship = entity as Ship;
+        ship.renderInput = (ship.renderInput ?? new InputCommand()).applyBits(
+          input,
+        );
       }
 
       const body = entity.body as unknown as SimBody | null;
@@ -200,6 +212,7 @@ export class NetworkClient {
         rotation,
         new Vector3(lv.x, lv.y, lv.z),
         new Vector3(av.x, av.y, av.z),
+        ship.controller?.lastInput?.toBits() ?? 0,
       ),
     );
     this.connection.sendOutgoingMessages();

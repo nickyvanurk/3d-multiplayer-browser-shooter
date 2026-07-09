@@ -129,17 +129,20 @@ export class State {
   rotation: Quaternion;
   velocity: Vector3;
   angularVelocity: Vector3;
+  input: number;
 
   constructor(
     position: Vector3,
     rotation: Quaternion,
     velocity: Vector3,
     angularVelocity: Vector3,
+    input = 0,
   ) {
     this.position = position;
     this.rotation = rotation;
     this.velocity = velocity;
     this.angularVelocity = angularVelocity;
+    this.input = input;
   }
 
   static deserialize(message: number[]) {
@@ -148,6 +151,7 @@ export class State {
       rotation: new Quaternion(message[3], message[4], message[5], message[6]),
       velocity: new Vector3(message[7], message[8], message[9]),
       angularVelocity: new Vector3(message[10], message[11], message[12]),
+      input: message[13] ?? 0,
     };
   }
 
@@ -167,6 +171,7 @@ export class State {
       this.angularVelocity.x,
       this.angularVelocity.y,
       this.angularVelocity.z,
+      this.input,
     ];
   }
 }
@@ -231,9 +236,12 @@ class World {
       rotation: Quaternion;
       velocity: Vector3;
       angularVelocity: Vector3;
+      input: number;
     }[] = [];
 
-    for (let i = 0; i < message.length; i += 14) {
+    // 15 numbers per entity: id + 14 network-state values (the last is the
+    // packed input bitmask, non-zero only for ships).
+    for (let i = 0; i < message.length; i += 15) {
       data.push({
         id: message[i],
         position: new Vector3(message[i + 1], message[i + 2], message[i + 3]),
@@ -249,6 +257,7 @@ class World {
           message[i + 12],
           message[i + 13],
         ),
+        input: message[i + 14],
       });
     }
 

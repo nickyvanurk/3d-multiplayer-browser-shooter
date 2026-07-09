@@ -4,12 +4,13 @@ import Messages from '../../shared/messages.ts';
 import Types from '../../shared/types.ts';
 import { test } from './harness.ts';
 
-test('State round-trips pose and velocities', () => {
+test('State round-trips pose, velocities and input', () => {
   const msg = new Messages.State(
     new Vector3(1, 2, 3),
     new Quaternion(0.1, 0.2, 0.3, 0.4),
     new Vector3(4, 5, 6),
     new Vector3(7, 8, 9),
+    0b1010_0101,
   );
 
   const wire = msg.serialize();
@@ -26,6 +27,7 @@ test('State round-trips pose and velocities', () => {
     [out.angularVelocity.x, out.angularVelocity.y, out.angularVelocity.z],
     [7, 8, 9],
   );
+  assert.equal(out.input, 0b1010_0101);
 });
 
 test('Fire round-trips muzzle transform, damage and bullet id', () => {
