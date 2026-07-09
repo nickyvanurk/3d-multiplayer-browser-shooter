@@ -81,7 +81,12 @@ export default class Game {
 
     this.projection = new ProjectionService(this.world, this.sceneManager);
     this.particles = new ParticleService(this.sceneManager);
-    this.hud = new HudService(this.world, this.sceneManager, this.projection);
+    this.hud = new HudService(
+      this.world,
+      this.sceneManager,
+      this.projection,
+      this.viewRegistry,
+    );
     this.aimAssist = new AimAssistService(
       this.world,
       this.sceneManager,

@@ -46,6 +46,23 @@ export class AimAssistService {
     };
     const targetRadius = 100; // px
 
+    // Lead ring first: aiming at the "shoot here" marker of a moving target
+    // should converge the guns at the LEAD point (ahead of the ship), not the
+    // ship itself. This is where a moving target must actually be led, so it
+    // takes priority over the reticle hover below.
+    const leadHoverRadius = 48; // px around the fixed-size lead ring
+    for (const [id, leadPos] of this.projection.leads) {
+      const dx = mouseInPixels.x - leadPos.x;
+      const dy = mouseInPixels.y - leadPos.y;
+      if (dx * dx + dy * dy < leadHoverRadius * leadHoverRadius) {
+        const leadDistance = this.projection.leadDistances.get(id);
+        if (leadDistance !== undefined) {
+          aim.distance = leadDistance;
+          return;
+        }
+      }
+    }
+
     for (const [id, indicator] of this.projection.indicators) {
       if (!indicator.onscreen) {
         continue;

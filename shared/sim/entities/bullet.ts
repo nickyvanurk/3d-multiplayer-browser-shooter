@@ -3,6 +3,15 @@ import { Entity } from '../entity.ts';
 import type { TransformInit } from '../transform.ts';
 import Types from '../../types.ts';
 
+// Muzzle speed of a bullet along its local +Z, in world units per millisecond
+// (integrateBullets/sweepProjectiles multiply by the ms timestep). The lead
+// indicator reads this to solve the firing intercept; ×1000 gives units/second.
+export const DEFAULT_BULLET_SPEED = 1.5;
+
+// How long a bullet lives before it despawns (ms). Speed × timer bounds a shot's
+// reach; the lead indicator hides once the intercept lands past this lifetime.
+export const DEFAULT_BULLET_TIMER = 2000;
+
 export interface BulletInit {
   id?: number;
   transform?: TransformInit;
@@ -24,8 +33,8 @@ export class Bullet extends Entity {
     id,
     transform,
     damage,
-    speed = 1.5,
-    timer = 2000,
+    speed = DEFAULT_BULLET_SPEED,
+    timer = DEFAULT_BULLET_TIMER,
   }: BulletInit = {}) {
     super({ id, transform, type: Types.Entities.BULLET });
     this.velocity = new Vector3(0, 0, speed);

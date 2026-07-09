@@ -1,17 +1,96 @@
-import { Object3D, Vector2 } from 'three';
+import { Object3D, Vector2, Vector3 } from 'three';
 
 import Types from '../../../shared/types.ts';
+import {
+  DEFAULT_BULLET_SPEED,
+  DEFAULT_BULLET_TIMER,
+} from '../../../shared/sim/entities/bullet.ts';
 import type { World } from '../../../shared/sim/world.ts';
 import type { SceneManager } from './scene-manager.ts';
 
 // The client tracks the server-owned local player id on the shared World.
 type ClientWorld = World & { localPlayerId?: number };
 
+// Bullet muzzle speed in world units per SECOND. Bullets fly at a fixed speed
+// along the firing direction and do NOT inherit the shooter's velocity, so the
+// firing solution is a plain stationary-shooter intercept at this speed.
+const BULLET_SPEED = DEFAULT_BULLET_SPEED * 1000;
+
+// How long a bullet lives (seconds). The intercept happens at t seconds and the
+// bullet dies at this age, so a shot only connects when t <= this — beyond it the
+// target is out of range and we hide the lead.
+const BULLET_LIFETIME = DEFAULT_BULLET_TIMER / 1000;
+
 // A per-entity 2D screen-space indicator, keyed by entity id.
 export interface Indicator {
   position: Vector2;
   rotation: number;
   onscreen: boolean;
+}
+
+// The coasting velocity read off a remote ship's physics body.
+interface Velocity {
+  x: number;
+  y: number;
+  z: number;
+}
+
+// A remote ship's body exposes its current world velocity via linvel(). On the
+// client, entity.velocity is NOT this (it is left stale — the body coasts on the
+// server-corrected linvel, and writeBackVelocity is off), so the firing solution
+// must read the body directly.
+interface LinvelBody {
+  linvel(): Velocity;
+}
+
+// Smallest positive time (seconds) at which a bullet of speed `speed` fired from
+// `muzzle` intercepts a target at `targetPos` moving at `targetVel` (units/s),
+// or null if the target outruns the bullet. Solves
+// |D + Vt·t| = speed·t  =>  (Vt·Vt − s²)t² + 2(D·Vt)t + D·D = 0, D = target − muzzle.
+function interceptTime(
+  muzzle: Vector3,
+  targetPos: Vector3,
+  targetVel: Velocity,
+  speed: number,
+): number | null {
+  const dx = targetPos.x - muzzle.x;
+  const dy = targetPos.y - muzzle.y;
+  const dz = targetPos.z - muzzle.z;
+
+  const a =
+    targetVel.x * targetVel.x +
+    targetVel.y * targetVel.y +
+    targetVel.z * targetVel.z -
+    speed * speed;
+  const b = 2 * (dx * targetVel.x + dy * targetVel.y + dz * targetVel.z);
+  const c = dx * dx + dy * dy + dz * dz;
+
+  // Target moving at (nearly) bullet speed collapses the quadratic to linear.
+  if (Math.abs(a) < 1e-6) {
+    if (Math.abs(b) < 1e-6) {
+      return null;
+    }
+    const t = -c / b;
+    return t > 0 ? t : null;
+  }
+
+  const disc = b * b - 4 * a * c;
+  if (disc < 0) {
+    return null;
+  }
+  const sqrt = Math.sqrt(disc);
+  const t1 = (-b - sqrt) / (2 * a);
+  const t2 = (-b + sqrt) / (2 * a);
+
+  // Smallest strictly-positive root.
+  let t = Infinity;
+  if (t1 > 0) {
+    t = t1;
+  }
+  if (t2 > 0 && t2 < t) {
+    t = t2;
+  }
+  return Number.isFinite(t) ? t : null;
 }
 
 // Ports projection-system.js: projects each non-player ship's world position to
@@ -24,12 +103,23 @@ export class ProjectionService {
   sceneManager: SceneManager;
   dummy: Object3D;
   indicators: Map<number, Indicator>;
+  // Screen-space firing-lead point per enemy ship: where to aim to hit it,
+  // keyed by entity id. Only present when a valid intercept exists and the aim
+  // point is in front of the camera. HUD draws a ring + guide line from these.
+  leads: Map<number, Vector2>;
+  // Distance (camera -> lead world point) per enemy, in world units. Aim-assist
+  // snaps the weapon convergence to this so bullets meet the target at the lead.
+  leadDistances: Map<number, number>;
+  private readonly scratchAim: Vector3;
 
   constructor(world: ClientWorld, sceneManager: SceneManager) {
     this.world = world;
     this.sceneManager = sceneManager;
     this.dummy = new Object3D();
     this.indicators = new Map(); // entity.id -> { position: Vector2, rotation, onscreen }
+    this.leads = new Map();
+    this.leadDistances = new Map();
+    this.scratchAim = new Vector3();
   }
 
   render(): void {
@@ -39,6 +129,13 @@ export class ProjectionService {
     const halfHeight = window.innerHeight / 2;
 
     const live = new Set<number>();
+
+    // The local ship is the shooter; without it there is no firing solution.
+    const ownedShip =
+      this.world.localPlayerId != null
+        ? this.world.get(this.world.localPlayerId)
+        : undefined;
+    const muzzle = ownedShip?.transform.position;
 
     for (const entity of this.world.entities.values()) {
       if (
@@ -76,11 +173,58 @@ export class ProjectionService {
         Math.abs(indicator.position.x) >= halfWidth ||
         Math.abs(indicator.position.y) >= halfHeight
       );
+
+      // Firing-lead point: solve the intercept for enemy ships only (not the
+      // friendly Vendor NPC), and only when the aim point sits in front of the
+      // camera so it projects to a sensible screen position. The target's true
+      // coasting velocity lives on its physics body, not entity.velocity.
+      let lead: Vector2 | null = null;
+      const body = entity.body as unknown as LinvelBody | null;
+      if (muzzle && entity.type === Types.Entities.SPACESHIP && body?.linvel) {
+        const vel = body.linvel();
+        const t = interceptTime(muzzle, transform.position, vel, BULLET_SPEED);
+        // t within the bullet's lifetime means a shot can actually reach the
+        // intercept before it despawns; past that the target is out of range.
+        if (t !== null && t <= BULLET_LIFETIME) {
+          const aim = this.scratchAim
+            .set(vel.x, vel.y, vel.z)
+            .multiplyScalar(t)
+            .add(transform.position);
+
+          this.dummy.quaternion.copy(camera.quaternion);
+          this.dummy.position.copy(aim);
+          this.dummy.applyMatrix4(camera.matrixWorldInverse);
+          if (this.dummy.position.z < 0) {
+            // In view space the camera is the origin, so this length is the
+            // camera->lead distance (captured before project() mutates aim).
+            const leadDistance = this.dummy.position.length();
+            aim.project(camera);
+            let leadPoint = this.leads.get(entity.id!);
+            if (!leadPoint) {
+              leadPoint = new Vector2();
+              this.leads.set(entity.id!, leadPoint);
+            }
+            leadPoint.set(aim.x * halfWidth, aim.y * halfHeight);
+            this.leadDistances.set(entity.id!, leadDistance);
+            lead = leadPoint;
+          }
+        }
+      }
+      if (!lead) {
+        this.leads.delete(entity.id!);
+        this.leadDistances.delete(entity.id!);
+      }
     }
 
     for (const id of this.indicators.keys()) {
       if (!live.has(id)) {
         this.indicators.delete(id);
+      }
+    }
+    for (const id of this.leads.keys()) {
+      if (!live.has(id)) {
+        this.leads.delete(id);
+        this.leadDistances.delete(id);
       }
     }
   }
