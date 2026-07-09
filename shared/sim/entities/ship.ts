@@ -127,10 +127,12 @@ export class Ship extends Entity {
       return;
     }
 
-    // A kinematic ship is the server's mirror of a client-authoritative ship:
-    // its pose comes from the owning client's State, so it must not self-simulate
-    // (that would clobber the reported velocity and fire duplicate bullets). The
-    // owning client runs its ship dynamically (kinematic === false).
+    // Ships are dynamic in production: the owning client drives its ship from
+    // input, while the server keeps a dynamic mirror it snaps to that client's
+    // State (correctBody) and lets coast. A controllerless mirror just applies
+    // empty input, a no-op that writeBack overwrites. The guard below only
+    // catches a ship made kinematic as a static collision target (tests), which
+    // must not self-simulate.
     if (this.kinematic) {
       return;
     }

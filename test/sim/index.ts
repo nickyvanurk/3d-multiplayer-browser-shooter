@@ -11,6 +11,7 @@ import './messages.test.ts';
 import './snapshot.test.ts';
 import './physics-contract.test.ts';
 import './rapier-body-sync.test.ts';
+import './rapier-thrust-gating.test.ts';
 import './fixed-timestep.test.ts';
 import './projectile.test.ts';
 import './weapon.test.ts';

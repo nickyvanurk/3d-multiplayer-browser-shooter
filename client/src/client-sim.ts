@@ -50,8 +50,9 @@ export class ClientSim {
   }
 
   // The local player's ship became known (WELCOME/SPAWN). Make it controllable:
-  // give it weapons + an input controller and a physics body (dynamic — it is
-  // simulated locally, unlike the server's kinematic mirror of it).
+  // give it weapons + an input controller and a dynamic physics body. Here it is
+  // simulated from local input; the server keeps its own dynamic mirror, snapped
+  // to this client's reported State (correctBody) rather than self-simulated.
   setOwnedShip(ship: Ship): void {
     if (this.ownedShip === ship) {
       return;

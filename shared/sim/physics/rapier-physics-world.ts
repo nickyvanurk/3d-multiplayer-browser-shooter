@@ -170,6 +170,18 @@ export class RapierPhysicsWorld implements PhysicsWorld {
         continue;
       }
 
+      // The force branch below treats entity.velocity/angularVelocity as a THRUST
+      // COMMAND — which is what applyInput writes onto the client's owned ship.
+      // On the server (writeBackVelocity) those fields instead hold the body's
+      // ACTUAL velocity: set by correctBody and mirrored back by writeBack. Re-
+      // applying the real velocity as a force every tick feeds the solver's own
+      // velocity straight back in — a positive-feedback loop that diverges to
+      // NaN within seconds and traps Rapier (`unreachable`). Server bodies coast
+      // under the solver instead (ships are snapped to State via correctBody).
+      if (this.writeBackVelocity) {
+        continue;
+      }
+
       // Ammo's applyCentralLocalForce/applyLocalTorque are body-local; Rapier's
       // addForce/addTorque are world-space, so rotate by the body's orientation.
       // Forces persist across steps in Rapier, so reset before re-applying.
