@@ -32,7 +32,8 @@ function newPhysics(): RapierPhysicsWorld {
 
 // A dynamic body (weight 1, non-kinematic) whose entity.velocity is non-zero.
 function dynamicEntityWithBody() {
-  const entity = new Asteroid({ transform: { scale: 1 } }); // weight 1, dynamic
+  const entity = new Asteroid({ transform: { scale: 1 } });
+  entity.weight = 1; // force a dynamic body to exercise applyAll's thrust branch
   entity.velocity.set(5, 0, 0);
   entity.angularVelocity.set(0, 1, 0);
   const body = forceRecordingBody();

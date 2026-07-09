@@ -25,7 +25,9 @@ export class Asteroid extends Entity {
     this.angularVelocity = new Vector3();
     this.damping = 0.001;
     this.angularDamping = 0.1;
-    this.weight = scale <= 5 ? 1 : 0;
+    // Static world geometry: fixed rigid bodies (weight 0) that never move.
+    // Dynamic/mineable behaviour will be layered on later.
+    this.weight = 0;
     this.kinematic = false;
   }
 }

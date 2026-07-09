@@ -76,10 +76,9 @@ export class ClientSim {
       }
       return;
     }
-    // Only the static (large) asteroids become client colliders. Small dynamic
-    // asteroids move on the server and would drift from a fixed client body;
-    // skip them in this cut (the owned ship passes through them locally).
-    if (entity.type === Types.Entities.ASTEROID && entity.weight === 0) {
+    // Asteroids are static world geometry, so a fixed client body always matches
+    // the server pose — add them as colliders for local ship-vs-world collisions.
+    if (entity.type === Types.Entities.ASTEROID) {
       this.physics.add(entity);
     }
   }

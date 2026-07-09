@@ -17,17 +17,13 @@ test('Ship has correct type and ported fields', () => {
   assert.deepEqual(ship.weapons, []);
 });
 
-test('Asteroid type and weight rule (scale <= 5 ? 1 : 0)', () => {
+test('Asteroid is always a static body (weight 0) regardless of scale', () => {
   const big = new Asteroid({ scale: 6 });
   assert.equal(big.type, Types.Entities.ASTEROID);
   assert.equal(big.weight, 0);
 
-  const small = new Asteroid({ scale: 5 });
-  assert.equal(small.weight, 1);
-});
-
-test('Asteroid defaults to scale 1 (weight 1)', () => {
-  assert.equal(new Asteroid().weight, 1);
+  assert.equal(new Asteroid({ scale: 1 }).weight, 0);
+  assert.equal(new Asteroid().weight, 0);
 });
 
 test('Bullet type and ported fields', () => {
