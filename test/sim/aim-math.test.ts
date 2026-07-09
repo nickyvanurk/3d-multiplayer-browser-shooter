@@ -3,6 +3,7 @@ import { test } from './harness.ts';
 import {
   screenToNdc,
   screenToSteering,
+  STEERING_DEADZONE,
 } from '../../client/src/input/aim-math.ts';
 
 const W = 1920;
@@ -44,4 +45,30 @@ test('screenToSteering keeps aspect-normalized, clamped, numeric behavior', () =
   assert.equal(screenToSteering(W * 0.9, H / 2, W, H).x, 1);
   // Must be a number, not a toFixed() string (old regression).
   assert.equal(typeof screenToSteering(W * 0.6, H / 2, W, H).x, 'number');
+});
+
+test('screenToSteering zeroes deflection inside the circular dead zone', () => {
+  const size = H; // smaller dimension; 1 steering unit = size/2 pixels
+  // Offset each axis by 0.4 radii; the diagonal magnitude (~0.57 radii) still
+  // sits inside the circle, and both components are non-zero pre-dead-zone.
+  const off = (STEERING_DEADZONE * 0.4 * size) / 2;
+  const s = screenToSteering(W / 2 + off, H / 2 + off, W, H);
+  assert.deepEqual(s, { x: 0, y: 0 });
+});
+
+test('screenToSteering ramps from 0 at the dead-zone edge (no jump)', () => {
+  const size = H;
+  // Just outside the dead-zone radius, straight up: deflection is small, not a
+  // step to STEERING_DEADZONE.
+  const px = (STEERING_DEADZONE * 1.01 * size) / 2;
+  const s = screenToSteering(W / 2, H / 2 - px, W, H);
+  assert.ok(s.y > 0 && s.y < 0.05, `y=${s.y}`);
+});
+
+test('screenToSteering keeps full per-axis authority at a corner', () => {
+  // The circular dead zone must not shrink diagonal turn rate: a corner cursor
+  // still commands max yaw AND max pitch (per-axis clamp, not a unit-disk cap).
+  const s = screenToSteering(W, 0, W, H);
+  assert.equal(s.x, 1);
+  assert.equal(s.y, 1);
 });
