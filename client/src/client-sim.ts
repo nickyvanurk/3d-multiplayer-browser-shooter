@@ -81,6 +81,11 @@ export class ClientSim {
     if (entity.type === Types.Entities.ASTEROID) {
       this.physics.add(entity);
     }
+    // The vendor NPC is a kinematic body dead-reckoned from its server-replicated
+    // velocity (see update()); the owned ship physically bumps off it.
+    if (entity.type === Types.Entities.VENDOR) {
+      this.physics.add(entity);
+    }
   }
 
   onDespawn(entity: Entity): void {
@@ -100,7 +105,11 @@ export class ClientSim {
     // Snapshot prev poses for every physics-simmed entity (all ships + predicted
     // bullets) so the renderer can interpolate between fixed steps.
     for (const entity of this.world.entities.values()) {
-      if (entity.type === Types.Entities.SPACESHIP && entity.body) {
+      if (
+        (entity.type === Types.Entities.SPACESHIP ||
+          entity.type === Types.Entities.VENDOR) &&
+        entity.body
+      ) {
         this.snapshotPrev(entity);
       }
     }
@@ -125,6 +134,20 @@ export class ClientSim {
         entity.body
       ) {
         entity.update(dt, this.simWorld, time);
+      }
+    }
+
+    // The vendor's route runs server-side only; on the client dead-reckon its
+    // kinematic body forward on the last server-replicated velocity so applyAll
+    // drives the collider and the render lerp stays smooth between snapshots.
+    // dt is milliseconds; velocity is units/second.
+    for (const entity of this.world.entities.values()) {
+      if (
+        entity.type === Types.Entities.VENDOR &&
+        entity.body &&
+        entity.alive !== false
+      ) {
+        entity.transform.position.addScaledVector(entity.velocity, dt / 1000);
       }
     }
 

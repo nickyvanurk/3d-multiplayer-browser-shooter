@@ -105,6 +105,7 @@ export class RapierPhysicsWorld implements PhysicsWorld {
     // Prewarm the convex-hull caches for the two hulled shapes.
     this.getConvexVertices(Types.Entities.SPACESHIP, 1);
     this.getConvexVertices(Types.Entities.ASTEROID, 1);
+    this.getConvexVertices(Types.Entities.VENDOR, 1);
 
     this.ready = true;
     if (this.onReady) {

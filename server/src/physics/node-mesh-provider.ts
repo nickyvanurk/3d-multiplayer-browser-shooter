@@ -31,6 +31,13 @@ export class NodeMeshProvider implements MeshProvider {
         name: 'asteroid',
         url: path.join(__dirname, '../../../client/public/models/asteroid.glb'),
       });
+      this.assetManager.loadModel({
+        name: 'vendor',
+        url: path.join(
+          __dirname,
+          '../../../client/public/models/SM_Ship_Transport_01.glb',
+        ),
+      });
     });
   }
 
@@ -47,6 +54,9 @@ export class NodeMeshProvider implements MeshProvider {
     }
     if (kind === Types.Entities.ASTEROID) {
       return 'asteroid';
+    }
+    if (kind === Types.Entities.VENDOR) {
+      return 'vendor';
     }
     throw new Error(`No model for entity type ${kind}`);
   }

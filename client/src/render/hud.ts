@@ -7,6 +7,7 @@ import {
 } from 'three';
 import type { Texture } from 'three';
 
+import Types from '../../../shared/types.ts';
 import type { World } from '../../../shared/sim/world.ts';
 import type { SceneManager } from './scene-manager.ts';
 import type { ProjectionService } from './projection.ts';
@@ -22,7 +23,12 @@ export class HudService {
   halfHeight: number;
   cameraOrtho: OrthographicCamera;
   sceneOrtho: Scene;
-  textures?: { spaceship: Texture; target: Texture };
+  textures?: {
+    spaceship: Texture;
+    target: Texture;
+    vendor: Texture;
+    targetVendor: Texture;
+  };
   entityIndicators: Record<string, Sprite>;
 
   constructor(
@@ -61,6 +67,8 @@ export class HudService {
       [
         loader.load('textures/spaceship.png'),
         loader.load('textures/target.png'),
+        loader.load('textures/vendor.png'),
+        loader.load('textures/target_vendor.png'),
       ],
       (resolve, _) => {
         resolve(texture);
@@ -69,6 +77,8 @@ export class HudService {
       this.textures = {
         spaceship: result[0],
         target: result[1],
+        vendor: result[2],
+        targetVendor: result[3],
       };
     });
 
@@ -111,11 +121,19 @@ export class HudService {
 
       const position = transform2d.position;
 
+      // Same behaviour as ships (edge marker off-screen, reticle inside the
+      // ellipse), but the vendor uses its own distinct icons for both states
+      // (vendor marker / target_vendor reticle) so it never reads as an enemy.
+      const isVendor =
+        this.world.get(Number(id))?.type === Types.Entities.VENDOR;
+
       if (
         transform2d.onscreen &&
         position.x * position.x + position.y * position.y <= x * x + y * y
       ) {
-        indicator.material = new SpriteMaterial({ map: this.textures.target });
+        indicator.material = new SpriteMaterial({
+          map: isVendor ? this.textures.targetVendor : this.textures.target,
+        });
         indicator.position.set(
           transform2d.position.x,
           transform2d.position.y,
@@ -123,7 +141,7 @@ export class HudService {
         );
       } else {
         indicator.material = new SpriteMaterial({
-          map: this.textures.spaceship,
+          map: isVendor ? this.textures.vendor : this.textures.spaceship,
         });
         indicator.position.set(x, y, 1);
       }

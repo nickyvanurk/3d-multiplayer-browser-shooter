@@ -41,7 +41,10 @@ export class ProjectionService {
     const live = new Set<number>();
 
     for (const entity of this.world.entities.values()) {
-      if (entity.type !== Types.Entities.SPACESHIP) {
+      if (
+        entity.type !== Types.Entities.SPACESHIP &&
+        entity.type !== Types.Entities.VENDOR
+      ) {
         continue;
       }
       if (entity.id === this.world.localPlayerId) {

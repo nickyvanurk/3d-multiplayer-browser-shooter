@@ -22,6 +22,7 @@ const MODEL_PATHS: Record<EntityKind, string> = {
   [Types.Entities.SPACESHIP]: 'SM_Ship_Fighter_02.glb',
   [Types.Entities.ASTEROID]: 'asteroid.glb',
   [Types.Entities.BULLET]: 'projectile.glb',
+  [Types.Entities.VENDOR]: 'SM_Ship_Transport_01.glb',
 };
 
 // The ship model carries a dedicated "Exhaust" material slot (black base, white
@@ -213,7 +214,10 @@ export class ViewRegistry {
     this.scene.add(view);
     this.views.set(entity.id!, view);
 
-    if (entity.type === Types.Entities.SPACESHIP) {
+    if (
+      entity.type === Types.Entities.SPACESHIP ||
+      entity.type === Types.Entities.VENDOR
+    ) {
       const exhaust = this.prepareExhaust(view);
       if (exhaust) {
         this.exhaustMaterials.set(entity.id!, exhaust);

@@ -81,6 +81,13 @@ export class AssetManager {
     const geometries: BufferGeometry[] = [];
     const mesh = this.getModel(name);
 
+    // Bake node transforms into child.matrixWorld before reading it: getModel
+    // returns a fresh clone that was never added to a scene graph, so its world
+    // matrices are stale (identity). Models with a scaled root node (e.g. the
+    // transport's 0.01 node over ~13,700-unit geometry) would otherwise yield a
+    // hull ~100x too large. Mirrors BrowserMeshProvider.getTriangles.
+    mesh.updateMatrixWorld(true);
+
     mesh.traverse((child) => {
       if ((child as Mesh).isMesh) {
         geometries.push(

@@ -1,4 +1,5 @@
 import { performance } from 'perf_hooks';
+import { Vector3 } from 'three';
 
 import logger from './utils/logger.ts';
 import Utils from '../../shared/utils.ts';
@@ -10,6 +11,7 @@ import { NetworkServer } from './net/network-server.ts';
 import { RespawnSubsystem } from '../../shared/sim/subsystems/respawn.ts';
 import { CombatSubsystem } from '../../shared/sim/subsystems/combat.ts';
 import { Asteroid } from '../../shared/sim/entities/asteroid.ts';
+import { Vendor } from '../../shared/sim/entities/vendor.ts';
 
 import type { PhysicsWorld } from '../../shared/sim/physics/physics-world.ts';
 import type { Entity } from '../../shared/sim/entity.ts';
@@ -76,6 +78,7 @@ export class GameServer {
     // populate the asteroid field once bodies can actually be built.
     await this.physics.init();
     this.spawnAsteroids(500);
+    this.spawnVendor();
 
     this.fixedUpdate = Utils.createFixedTimestep(
       1000 / this.updatesPerSecond,
@@ -154,5 +157,14 @@ export class GameServer {
         new Asteroid({ transform: { position, rotation }, scale }),
       );
     }
+  }
+
+  // A single NPC transport orbiting outside the asteroid field (future vendor).
+  // Spawn it on its orbit so the initial body pose matches Vendor.update's first
+  // tick (no teleport).
+  spawnVendor(): void {
+    this.world.spawn(
+      new Vendor({ transform: { position: new Vector3(3000, 0, 0) } }),
+    );
   }
 }

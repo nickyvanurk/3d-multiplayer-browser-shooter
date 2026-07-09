@@ -7,6 +7,7 @@ import { Ship } from '../../../shared/sim/entities/ship.ts';
 import { InputCommand } from '../../../shared/sim/input.ts';
 import { Asteroid } from '../../../shared/sim/entities/asteroid.ts';
 import { Bullet } from '../../../shared/sim/entities/bullet.ts';
+import { Vendor } from '../../../shared/sim/entities/vendor.ts';
 import type { World } from '../../../shared/sim/world.ts';
 import type { Entity } from '../../../shared/sim/entity.ts';
 import type { Transform } from '../../../shared/sim/transform.ts';
@@ -21,7 +22,10 @@ type ClientWorld = World & { localPlayerId?: number };
 type Vec = { x: number; y: number; z: number };
 type SimBody = {
   setTranslation(t: Vec, wake: boolean): void;
-  setRotation(r: { x: number; y: number; z: number; w: number }, wake: boolean): void;
+  setRotation(
+    r: { x: number; y: number; z: number; w: number },
+    wake: boolean,
+  ): void;
   setLinvel(v: Vec, wake: boolean): void;
   setAngvel(v: Vec, wake: boolean): void;
   linvel(): Vec;
@@ -124,6 +128,9 @@ export class NetworkClient {
       case Types.Entities.BULLET:
         entity = new Bullet({ transform: { position, rotation, scale } });
         break;
+      case Types.Entities.VENDOR:
+        entity = new Vendor({ transform: { position, rotation, scale } });
+        break;
       default:
         console.error(`Unknown entity kind ${kind}`);
         return null;
@@ -159,14 +166,29 @@ export class NetworkClient {
         continue;
       }
 
-      // Decode the replicated thrust input for remote ships (render-only; the
-      // renderer lights their engines from it). Kept off `controller` so the
-      // client sim never re-applies it as thrust force.
-      if (entity.type === Types.Entities.SPACESHIP) {
+      // Decode the replicated thrust input for remote ships and the vendor NPC
+      // (render-only; the renderer lights their engines from it). Kept off
+      // `controller` so the client sim never re-applies it as thrust force.
+      if (
+        entity.type === Types.Entities.SPACESHIP ||
+        entity.type === Types.Entities.VENDOR
+      ) {
         const ship = entity as Ship;
         ship.renderInput = (ship.renderInput ?? new InputCommand()).applyBits(
           input,
         );
+      }
+
+      // The vendor is a kinematic NPC: correct its transform + velocity to the
+      // server's authoritative state and let ClientSim dead-reckon its body on
+      // that velocity between snapshots (prev is snapshotted there for interp).
+      // Not routed through the body-correction branch below (setTranslation would
+      // fight the kinematic body and skip the prev snapshot).
+      if (entity.type === Types.Entities.VENDOR) {
+        entity.transform.position.copy(position);
+        entity.transform.rotation.copy(rotation);
+        entity.velocity.copy(velocity);
+        continue;
       }
 
       const body = entity.body as unknown as SimBody | null;
@@ -262,12 +284,15 @@ export class NetworkClient {
     const obj = this._cameraDummy;
     // Interpolated pose — identical basis to ViewRegistry's mesh rendering.
     obj.position.copy(transform.prevPosition).lerp(transform.position, alpha);
-    obj.quaternion.copy(transform.prevRotation).slerp(transform.rotation, alpha);
+    obj.quaternion
+      .copy(transform.prevRotation)
+      .slerp(transform.rotation, alpha);
     obj.translateY(4);
     obj.translateZ(-14);
     obj.rotateY(Math.PI);
 
-    const factor = 1 - Math.exp(-this.settings.cameraStiffness * (delta / 1000));
+    const factor =
+      1 - Math.exp(-this.settings.cameraStiffness * (delta / 1000));
     this.camera.position.lerp(obj.position, factor);
     this.camera.quaternion.slerp(obj.quaternion, factor);
   }

@@ -13,6 +13,7 @@ export const Entities = {
   SPACESHIP: 0,
   ASTEROID: 1,
   BULLET: 2,
+  VENDOR: 3,
 } as const;
 
 export type MessageId = (typeof Messages)[keyof typeof Messages];
