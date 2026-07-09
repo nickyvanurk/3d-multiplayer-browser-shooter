@@ -14,12 +14,12 @@ export const RESPAWN_DELAY = 3000;
 export function createDefaultWeapons(ship: Ship): Weapon[] {
   const left = new Weapon({
     offset: new Vector3(1.3, 0.9, 5),
-    delay: 125,
-    fireInterval: 250,
+    delay: 160, // half of fireInterval: interleaves the two guns evenly
+    fireInterval: 320,
   });
   const right = new Weapon({
     offset: new Vector3(-1.3, 0.9, 5),
-    fireInterval: 250,
+    fireInterval: 320,
   });
   left.parent = ship;
   right.parent = ship;
