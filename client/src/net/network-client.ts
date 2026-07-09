@@ -10,6 +10,7 @@ import type { World } from '../../../shared/sim/world.ts';
 import type { Entity } from '../../../shared/sim/entity.ts';
 import type { Transform } from '../../../shared/sim/transform.ts';
 import type Connection from '../connection.ts';
+import type { SettingsStore } from '../settings.ts';
 
 // The client mirror World gains a runtime-only pointer to the local player's id.
 type ClientWorld = World & { localPlayerId?: number };
@@ -35,6 +36,7 @@ export class NetworkClient {
   connection: Connection;
   world: ClientWorld;
   camera: Camera;
+  settings: SettingsStore;
   name: string;
   localPlayerId: number | null;
   // Called when the local player's ship becomes known (WELCOME/SPAWN), so the
@@ -46,11 +48,13 @@ export class NetworkClient {
     connection: Connection,
     world: ClientWorld,
     camera: Camera,
+    settings: SettingsStore,
     name = 'Nicky',
   ) {
     this.connection = connection;
     this.world = world;
     this.camera = camera;
+    this.settings = settings;
     this.name = name;
     this.localPlayerId = null;
     this.onLocalShip = null;
@@ -250,7 +254,7 @@ export class NetworkClient {
     obj.translateZ(-14);
     obj.rotateY(Math.PI);
 
-    const factor = 1 - Math.exp(-10 * (delta / 1000));
+    const factor = 1 - Math.exp(-this.settings.cameraStiffness * (delta / 1000));
     this.camera.position.lerp(obj.position, factor);
     this.camera.quaternion.slerp(obj.quaternion, factor);
   }

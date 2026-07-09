@@ -102,6 +102,7 @@ export default class Game {
       this.connection,
       this.world,
       this.sceneManager.camera,
+      this.settings,
     );
 
     this.connection.onConnection(() => console.log('Connected to server'));

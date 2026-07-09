@@ -1,10 +1,14 @@
 import type { SceneManager } from '../render/scene-manager.ts';
 import type { InputController } from '../input/input-controller.ts';
-import { FOV_LIMITS, type SettingsStore } from '../settings.ts';
+import {
+  CAMERA_STIFFNESS_LIMITS,
+  FOV_LIMITS,
+  type SettingsStore,
+} from '../settings.ts';
 
-// A simple in-game settings overlay, toggled with Escape. Holds a horizontal FOV
-// slider that applies live to the camera and persists to localStorage. While
-// open it disables game input so slider tweaks don't steer or fire the ship.
+// A simple in-game settings overlay, toggled with Escape. Sliders apply live and
+// persist to localStorage. While open it disables game input so slider tweaks
+// don't steer or fire the ship.
 export class SettingsMenu {
   private readonly settings: SettingsStore;
   private readonly sceneManager: SceneManager;
@@ -66,7 +70,34 @@ export class SettingsMenu {
     });
     panel.appendChild(title);
 
-    panel.appendChild(this.buildFovRow());
+    panel.appendChild(
+      this.buildSliderRow({
+        label: 'Field of view (horizontal)',
+        min: FOV_LIMITS.min,
+        max: FOV_LIMITS.max,
+        step: 1,
+        format: (v) => `${v}°`,
+        get: () => this.settings.horizontalFov,
+        set: (v) => {
+          this.sceneManager.setHorizontalFov(v);
+          this.settings.horizontalFov = v;
+        },
+      }),
+    );
+    panel.appendChild(
+      this.buildSliderRow({
+        label: 'Camera stiffness',
+        min: CAMERA_STIFFNESS_LIMITS.min,
+        max: CAMERA_STIFFNESS_LIMITS.max,
+        step: 1,
+        format: (v) => String(v),
+        get: () => this.settings.cameraStiffness,
+        // Read live by the chase camera each frame; just persist it.
+        set: (v) => {
+          this.settings.cameraStiffness = v;
+        },
+      }),
+    );
 
     const hint = document.createElement('div');
     hint.textContent = 'Esc to close';
@@ -88,8 +119,17 @@ export class SettingsMenu {
     });
   }
 
-  private buildFovRow(): HTMLDivElement {
+  private buildSliderRow(opts: {
+    label: string;
+    min: number;
+    max: number;
+    step: number;
+    format: (v: number) => string;
+    get: () => number;
+    set: (v: number) => void;
+  }): HTMLDivElement {
     const row = document.createElement('div');
+    row.style.marginBottom = '14px';
 
     const header = document.createElement('div');
     Object.assign(header.style, {
@@ -99,13 +139,13 @@ export class SettingsMenu {
     });
 
     const label = document.createElement('span');
-    label.textContent = 'Field of view (horizontal)';
+    label.textContent = opts.label;
     label.style.color = '#9fb0c8';
 
     const value = document.createElement('span');
     value.style.color = '#8fd0ff';
     const setValueText = (v: number) => {
-      value.textContent = `${v}°`;
+      value.textContent = opts.format(v);
     };
 
     header.appendChild(label);
@@ -114,18 +154,17 @@ export class SettingsMenu {
 
     const slider = document.createElement('input');
     slider.type = 'range';
-    slider.min = String(FOV_LIMITS.min);
-    slider.max = String(FOV_LIMITS.max);
-    slider.step = '1';
-    slider.value = String(this.settings.horizontalFov);
+    slider.min = String(opts.min);
+    slider.max = String(opts.max);
+    slider.step = String(opts.step);
+    slider.value = String(opts.get());
     Object.assign(slider.style, { width: '100%', cursor: 'pointer' });
-    setValueText(this.settings.horizontalFov);
+    setValueText(opts.get());
 
     slider.addEventListener('input', () => {
-      const fov = Number(slider.value);
-      setValueText(fov);
-      this.sceneManager.setHorizontalFov(fov);
-      this.settings.horizontalFov = fov;
+      const v = Number(slider.value);
+      setValueText(v);
+      opts.set(v);
     });
 
     row.appendChild(slider);

@@ -5,13 +5,17 @@
 const STORAGE_KEY = 'voidfall.settings';
 
 export const FOV_LIMITS = { min: 60, max: 120 } as const;
+// Chase-camera follow strength: the k in `1 - exp(-k * dt)`. Higher = snappier.
+export const CAMERA_STIFFNESS_LIMITS = { min: 2, max: 30 } as const;
 
 export interface GameSettings {
   horizontalFov: number;
+  cameraStiffness: number;
 }
 
 const DEFAULTS: GameSettings = {
   horizontalFov: 90,
+  cameraStiffness: 10,
 };
 
 function clamp(v: number, min: number, max: number): number {
@@ -34,6 +38,19 @@ export class SettingsStore {
     this.save();
   }
 
+  get cameraStiffness(): number {
+    return this.settings.cameraStiffness;
+  }
+
+  set cameraStiffness(k: number) {
+    this.settings.cameraStiffness = clamp(
+      k,
+      CAMERA_STIFFNESS_LIMITS.min,
+      CAMERA_STIFFNESS_LIMITS.max,
+    );
+    this.save();
+  }
+
   private load(): GameSettings {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -46,6 +63,11 @@ export class SettingsStore {
           parsed.horizontalFov ?? DEFAULTS.horizontalFov,
           FOV_LIMITS.min,
           FOV_LIMITS.max,
+        ),
+        cameraStiffness: clamp(
+          parsed.cameraStiffness ?? DEFAULTS.cameraStiffness,
+          CAMERA_STIFFNESS_LIMITS.min,
+          CAMERA_STIFFNESS_LIMITS.max,
         ),
       };
     } catch {
