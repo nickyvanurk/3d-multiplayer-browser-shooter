@@ -24,7 +24,7 @@ export class Bullet extends Entity {
     id,
     transform,
     damage,
-    speed = 0.5,
+    speed = 1.5,
     timer = 2000,
   }: BulletInit = {}) {
     super({ id, transform, type: Types.Entities.BULLET });
