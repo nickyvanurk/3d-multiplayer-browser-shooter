@@ -29,6 +29,10 @@ export interface PhysicsWorld {
   drainCollisions(): Collision[];
   applyControls?(entity: Entity, dt: number): void;
   applyAll?(world: World, dt: number): void;
+  // Integrates bullets and raycasts their swept path (prev -> next) for hits,
+  // enqueuing them onto the collision stream. Bullets carry no solver body, so a
+  // stepper without this leaves them motionless (Rapier only). Call after step().
+  sweepProjectiles?(world: World, dt: number): void;
 }
 
 export class NullPhysicsWorld implements PhysicsWorld {

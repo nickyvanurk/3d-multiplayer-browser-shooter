@@ -116,6 +116,9 @@ export class GameServer {
     // 2. Physics: apply controls/forces, integrate, collect collisions.
     this.physics.applyAll?.(this.world, dt);
     this.physics.step(dt);
+    // 2b. Sweep bullets along their path (raycast prev -> next) for hits. Runs
+    //     after step() so ships/asteroids are at their post-step poses.
+    this.physics.sweepProjectiles?.(this.world, dt);
 
     // 3. Subsystems: respawn, then combat (reads drained collisions).
     for (const s of this.world.subsystems) {

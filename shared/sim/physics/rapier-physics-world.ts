@@ -4,19 +4,10 @@ import { Vector3, Quaternion } from 'three';
 import Types from '../../types.ts';
 import type { EntityKind } from '../../types.ts';
 import type { Entity, PhysicsBody } from '../entity.ts';
+import type { Bullet } from '../entities/bullet.ts';
 import type { World } from '../world.ts';
 import type { PhysicsWorld, Collision } from './physics-world.ts';
 import type { MeshProvider } from './mesh-provider.ts';
-
-// Bullets integrate their own position (pos += velocity * delta) instead of
-// being driven by the solver, so they collide as sensors. KINEMATIC_FIXED lets
-// them still register hits against the static (weight 0) asteroids, and
-// KINEMATIC_KINEMATIC lets them hit player ships, which are now kinematic bodies
-// driven by client-authoritative state (both bullet and ship are kinematic).
-const BULLET_COLLISION_TYPES =
-  RAPIER.ActiveCollisionTypes.DEFAULT |
-  RAPIER.ActiveCollisionTypes.KINEMATIC_FIXED |
-  RAPIER.ActiveCollisionTypes.KINEMATIC_KINEMATIC;
 
 // The fixed timestep (updatesPerSecond = 60), in seconds. Used to convert
 // damping coefficients; the conversion barely moves across the 30–60 Hz range,
@@ -81,6 +72,7 @@ export class RapierPhysicsWorld implements PhysicsWorld {
   bodies: Set<Entity>;
 
   private readonly scratchVec: Vector3;
+  private readonly scratchVec2: Vector3;
   private readonly scratchQuat: Quaternion;
 
   constructor(meshProvider: MeshProvider) {
@@ -93,6 +85,7 @@ export class RapierPhysicsWorld implements PhysicsWorld {
     this.handleToEntity = new Map();
     this.bodies = new Set();
     this.scratchVec = new Vector3();
+    this.scratchVec2 = new Vector3();
     this.scratchQuat = new Quaternion();
   }
 
@@ -113,6 +106,13 @@ export class RapierPhysicsWorld implements PhysicsWorld {
   }
 
   add(entity: Entity): void {
+    // Bullets are fast movers: a solver body integrating ~8 units/step tunnels
+    // straight through anything smaller than one step. They carry no collider or
+    // rigid body at all — sweepProjectiles() raycasts their path each tick.
+    if (entity.type === Types.Entities.BULLET) {
+      return;
+    }
+
     const body = this.world.createRigidBody(this.createBodyDesc(entity));
     const collider = this.world.createCollider(
       this.createColliderDesc(entity),
@@ -139,7 +139,7 @@ export class RapierPhysicsWorld implements PhysicsWorld {
     entity.body = null;
   }
 
-  applyAll(world: World, delta: number): void {
+  applyAll(world: World, _delta: number): void {
     if (this.reconcileShips) {
       this.reconcile(world);
     }
@@ -152,22 +152,10 @@ export class RapierPhysicsWorld implements PhysicsWorld {
       const body = entity.body as unknown as RAPIER.RigidBody;
 
       if (entity.kinematic) {
-        const rot = entity.transform.rotation;
-
         // Player ships are kinematic bodies driven by client-authoritative
         // state: place the body at exactly the reported pose (no extrapolation).
-        // Bullets integrate their own straight-line motion from local velocity.
-        if (entity.type === Types.Entities.BULLET) {
-          this.scratchVec
-            .copy(entity.velocity)
-            .applyQuaternion(rot)
-            .multiplyScalar(delta)
-            .add(entity.transform.position);
-          body.setNextKinematicTranslation(this.scratchVec);
-        } else {
-          body.setNextKinematicTranslation(entity.transform.position);
-        }
-        body.setNextKinematicRotation(rot);
+        body.setNextKinematicTranslation(entity.transform.position);
+        body.setNextKinematicRotation(entity.transform.rotation);
         continue;
       }
 
@@ -222,6 +210,72 @@ export class RapierPhysicsWorld implements PhysicsWorld {
     const collisions = this.collisions;
     this.collisions = [];
     return collisions;
+  }
+
+  // Bullets carry no collider; instead we sweep a ray along each bullet's path
+  // this tick (prev -> next position). This is CCD-by-construction: a bullet can
+  // never tunnel through a target, however small or fast. Run AFTER step() so
+  // ships/asteroids sit at their current poses. Hits are pushed onto the same
+  // collision queue combat drains, so bullet↔entity damage flows unchanged.
+  sweepProjectiles(world: World, delta: number): void {
+    for (const entity of world.entities.values()) {
+      if (entity.type !== Types.Entities.BULLET || entity.destroyed) {
+        continue;
+      }
+
+      const from = this.scratchVec.copy(entity.transform.position);
+      const step = this.scratchVec2
+        .copy(entity.velocity)
+        .applyQuaternion(entity.transform.rotation)
+        .multiplyScalar(delta);
+
+      entity.transform.prevPosition.copy(from);
+
+      const hit = this.castSegment(from, step, (entity as Bullet).owner);
+      if (hit) {
+        entity.transform.position.copy(from).addScaledVector(step, hit.toi);
+        this.collisions.push({ a: entity, b: hit.entity });
+        continue;
+      }
+
+      entity.transform.position.copy(from).add(step);
+    }
+  }
+
+  // Raycast the segment `from -> from + step` and return the first live entity it
+  // hits (with the fraction along the segment), excluding `exclude`'s body. This
+  // is how bullets detect hits without a collider — a swept ray can't tunnel.
+  castSegment(
+    from: Vector3,
+    step: Vector3,
+    exclude?: Entity | null,
+  ): { entity: Entity; toi: number } | null {
+    if (step.length() === 0) {
+      return null;
+    }
+    // Ray dir is the full segment; maxToi 1 => hit point is from + step*toi.
+    // solid=true so a segment starting inside a target still registers.
+    const ray = new RAPIER.Ray(from, step);
+    const excludeBody = exclude?.body
+      ? (exclude.body as unknown as RAPIER.RigidBody)
+      : undefined;
+    const hit = this.world.castRay(
+      ray,
+      1,
+      true,
+      undefined,
+      undefined,
+      undefined,
+      excludeBody,
+    );
+    if (!hit) {
+      return null;
+    }
+    const entity = this.handleToEntity.get(hit.collider.handle);
+    if (!entity || entity.destroyed || entity.alive === false) {
+      return null;
+    }
+    return { entity, toi: hit.timeOfImpact };
   }
 
   detectCollisions(): void {
@@ -305,12 +359,7 @@ export class RapierPhysicsWorld implements PhysicsWorld {
       .setFriction(0)
       .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
 
-    // Only bullets are sensors (they integrate their own motion and just need to
-    // report hits). Player ships are kinematic on the server but remain solid
-    // bodies so bullet↔ship detection matches the old dynamic-ship behavior.
-    if (entity.type === Types.Entities.BULLET) {
-      desc.setSensor(true).setActiveCollisionTypes(BULLET_COLLISION_TYPES);
-    } else if (entity.weight !== 0) {
+    if (entity.weight !== 0) {
       // Ammo approximated a convex hull's rotational inertia from its bounding
       // box (btConvexInternalShape::calculateLocalInertia), which is several
       // times larger than Rapier's true-hull inertia — notably ~4x on yaw. Using
@@ -333,10 +382,6 @@ export class RapierPhysicsWorld implements PhysicsWorld {
   }
 
   createShapeDesc(entity: Entity): RAPIER.ColliderDesc {
-    if (entity.type === Types.Entities.BULLET) {
-      return RAPIER.ColliderDesc.cuboid(0.05, 0.05, 0.5);
-    }
-
     const points = this.getConvexVertices(entity.type, entity.transform.scale);
     const desc = RAPIER.ColliderDesc.convexHull(points);
     if (!desc) {

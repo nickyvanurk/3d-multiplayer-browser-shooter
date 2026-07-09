@@ -10,6 +10,7 @@ import './input.test.ts';
 import './messages.test.ts';
 import './snapshot.test.ts';
 import './physics-contract.test.ts';
+import './projectile.test.ts';
 import './weapon.test.ts';
 import './combat.test.ts';
 import './respawn.test.ts';

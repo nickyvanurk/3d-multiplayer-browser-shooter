@@ -12,6 +12,11 @@ import type { RapierPhysicsWorld } from '../../shared/sim/physics/rapier-physics
 // collide with server-owned ids in the shared world map.
 const CLIENT_ID_BASE = 1_000_000;
 
+// Rendered length of the projectile beam (world units), matching the projectile
+// model. The tracer's tip is spawned this far ahead of the muzzle so the beam
+// emerges from the barrel instead of trailing back through the ship.
+export const BULLET_LENGTH = 38;
+
 // The client-authoritative half of the sim. Ticks ONLY entities this client
 // owns — its own ship (driven by local input, collided against the static
 // asteroid field on the client's Rapier world) and the cosmetic bullets it
@@ -27,6 +32,7 @@ export class ClientSim {
   onFire: ((bullet: Bullet) => void) | null;
 
   private readonly scratch: Vector3;
+  private readonly scratch2: Vector3;
   private readonly simWorld: EntityWorld;
 
   constructor(world: World, physics: RapierPhysicsWorld) {
@@ -37,6 +43,7 @@ export class ClientSim {
     this.nextBulletId = CLIENT_ID_BASE;
     this.onFire = null;
     this.scratch = new Vector3();
+    this.scratch2 = new Vector3();
     // Ship.update spawns bullets through this; we intercept to give them
     // client-range ids, track them, and notify the server.
     this.simWorld = { spawn: (entity) => this.spawnFromSim(entity) };
@@ -135,11 +142,29 @@ export class ClientSim {
 
   private integrateBullets(dt: number): void {
     for (const bullet of this.predictedBullets) {
-      this.scratch
+      // Freshly spawned this tick: hold at the emerge pose (tail at the muzzle)
+      // for its first frame so the beam leaves the barrel, then fly from the next.
+      if (bullet.ageMs === 0) {
+        bullet.update(dt);
+        continue;
+      }
+
+      const from = this.scratch2.copy(bullet.transform.position);
+      const step = this.scratch
         .copy(bullet.velocity)
         .applyQuaternion(bullet.transform.rotation)
         .multiplyScalar(dt);
-      bullet.transform.position.add(this.scratch);
+
+      // Bullets carry no collider; raycast the path this frame. On a hit the
+      // predicted tracer is removed (cosmetic — the server owns damage). The
+      // bullet mesh's origin is its tip (see ViewRegistry), so `position` is the
+      // leading point and nothing is ever drawn ahead of the impact.
+      const hit = this.physics.castSegment(from, step, this.ownedShip);
+      if (hit) {
+        bullet.markDestroyed();
+      } else {
+        bullet.transform.position.copy(from).add(step);
+      }
       bullet.update(dt); // ages the bullet; marks destroyed past its timeout
     }
     for (const bullet of [...this.predictedBullets]) {
@@ -155,7 +180,19 @@ export class ClientSim {
       this.world.spawnWithId(id, entity);
       const bullet = entity as unknown as Bullet;
       this.predictedBullets.push(bullet);
+      // Report the true muzzle to the server BEFORE the visual offset below.
       this.onFire?.(bullet);
+
+      // The tracer mesh's origin is its tip and it extends BULLET_LENGTH backward
+      // (see ViewRegistry). The muzzle sits inside the hull, so leaving the tip
+      // there would draw the whole beam back through the ship. Advance the tip one
+      // length forward and anchor prev at it, so the first frame the beam sits in
+      // the barrel pointing out and then flies — cosmetic only.
+      const forward = this.scratch
+        .set(0, 0, 1)
+        .applyQuaternion(bullet.transform.rotation);
+      bullet.transform.position.addScaledVector(forward, BULLET_LENGTH);
+      bullet.transform.prevPosition.copy(bullet.transform.position);
       return entity;
     }
     return this.world.spawn(entity);

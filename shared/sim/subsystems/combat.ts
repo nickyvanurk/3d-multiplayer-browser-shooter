@@ -9,6 +9,7 @@ interface CombatEntity extends Entity {
   destroyOnCollision?: boolean;
   respawn?: boolean;
   respawnTimer?: number;
+  owner?: Entity | null;
 }
 
 interface CombatWorld {
@@ -22,6 +23,13 @@ export class CombatSubsystem {
 
     const damaged: Set<CombatEntity> = new Set();
     for (const { a, b } of pairs) {
+      // A bullet spawns inside its owner's hull; ignore that collision entirely
+      // so it neither damages the firing ship nor self-destructs before it can
+      // travel out to hit anything else.
+      if (a.owner === b || b.owner === a) {
+        continue;
+      }
+
       this.dealDamage(a, b, damaged);
       this.dealDamage(b, a, damaged);
 

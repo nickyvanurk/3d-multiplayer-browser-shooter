@@ -72,6 +72,47 @@ test('collision resolution is order-independent ({a:ship,b:bullet})', () => {
   assert.equal(ship.destroyed, false);
 });
 
+test('a bullet does not damage or destroy against its own ship (owner)', () => {
+  const world = new World();
+  const ship = world.spawn(new Ship());
+  const bullet = world.spawn(new Bullet({ damage: 30 }));
+  bullet.owner = ship;
+  world.physics = { drainCollisions: () => [{ a: bullet, b: ship }] };
+
+  new CombatSubsystem().update(world);
+
+  assert.equal(ship.health, 100);
+  assert.equal(bullet.destroyed, false);
+});
+
+test('owner exclusion is order-independent ({a:ship,b:bullet})', () => {
+  const world = new World();
+  const ship = world.spawn(new Ship());
+  const bullet = world.spawn(new Bullet({ damage: 30 }));
+  bullet.owner = ship;
+  world.physics = { drainCollisions: () => [{ a: ship, b: bullet }] };
+
+  new CombatSubsystem().update(world);
+
+  assert.equal(ship.health, 100);
+  assert.equal(bullet.destroyed, false);
+});
+
+test('a bullet still damages and is destroyed by a ship that is not its owner', () => {
+  const world = new World();
+  const owner = world.spawn(new Ship());
+  const target = world.spawn(new Ship());
+  const bullet = world.spawn(new Bullet({ damage: 30 }));
+  bullet.owner = owner;
+  world.physics = { drainCollisions: () => [{ a: bullet, b: target }] };
+
+  new CombatSubsystem().update(world);
+
+  assert.equal(target.health, 70);
+  assert.equal(owner.health, 100);
+  assert.equal(bullet.destroyed, true);
+});
+
 test('a victim only suffers damage once per tick (not stackable)', () => {
   const world = new World();
   const ship = world.spawn(new Ship());

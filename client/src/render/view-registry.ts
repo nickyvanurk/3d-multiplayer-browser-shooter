@@ -1,5 +1,5 @@
-import { MeshBasicMaterial } from 'three';
-import type { Object3D, Group, Scene, Vector3, Mesh } from 'three';
+import { MeshBasicMaterial, Group, Box3 } from 'three';
+import type { Object3D, Scene, Vector3, Mesh } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 
 import Types from '../../../shared/types.ts';
@@ -23,6 +23,10 @@ export class ViewRegistry {
   ready: boolean;
   pendingSpawns: Entity[];
   onShipDestroyed: ((position: Vector3) => void) | null;
+  // The projectile model is a long beam whose pivot sits at its tail, so it would
+  // be drawn extending forward past whatever it hits. Cache how far its tip leads
+  // the pivot so bullet views can be shifted to put the tip at the origin.
+  bulletTipOffset: number | null;
 
   constructor(sceneManager: SceneManager) {
     this.sceneManager = sceneManager;
@@ -33,6 +37,7 @@ export class ViewRegistry {
     this.ready = false;
     this.pendingSpawns = [];
     this.onShipDestroyed = null; // (position) => void, wired by Task 19/20 particles
+    this.bulletTipOffset = null;
   }
 
   // Port of model-loading-system.js: load every kind's GLTF before views can be
@@ -100,16 +105,37 @@ export class ViewRegistry {
       return;
     }
 
-    const mesh = model.clone();
+    const view = this.buildMesh(entity, model);
     const { position, rotation, scale } = entity.transform;
 
-    mesh.position.copy(position);
-    mesh.quaternion.copy(rotation);
-    mesh.scale.setScalar(scale);
-    mesh.visible = true;
+    view.position.copy(position);
+    view.quaternion.copy(rotation);
+    view.scale.setScalar(scale);
+    view.visible = true;
 
-    this.scene.add(mesh);
-    this.views.set(entity.id!, mesh);
+    this.scene.add(view);
+    this.views.set(entity.id!, view);
+  }
+
+  // The transform (position/rotation) is the projectile's leading point — it is
+  // what the hit raycast originates from. The beam model's pivot is at its tail,
+  // so left as-is it would render extending forward through the target. Wrap it
+  // and shift it back by its tip offset so the tip sits at the view origin; the
+  // beam then trails behind the impact point instead of poking past it.
+  buildMesh(entity: Entity, model: Group): Object3D {
+    const mesh = model.clone();
+    if (entity.type !== Types.Entities.BULLET) {
+      return mesh;
+    }
+
+    if (this.bulletTipOffset === null) {
+      this.bulletTipOffset = new Box3().setFromObject(model).max.z;
+    }
+
+    const group = new Group();
+    mesh.position.z = -this.bulletTipOffset;
+    group.add(mesh);
+    return group;
   }
 
   handleDespawn(entity: Entity): void {
