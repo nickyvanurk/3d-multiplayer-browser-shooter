@@ -34,7 +34,7 @@ export class SceneManager {
     const scene = new Scene();
 
     const camera = new PerspectiveCamera(
-      70,
+      75,
       window.innerWidth / window.innerHeight,
       1,
       4100,
