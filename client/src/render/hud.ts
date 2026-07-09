@@ -119,18 +119,13 @@ export class HudService {
 
       const indicator = this.entityIndicators[id];
 
-      const position = transform2d.position;
-
-      // Same behaviour as ships (edge marker off-screen, reticle inside the
-      // ellipse), but the vendor uses its own distinct icons for both states
-      // (vendor marker / target_vendor reticle) so it never reads as an enemy.
+      // Same behaviour as ships (edge marker off-screen, reticle once on-screen),
+      // but the vendor uses its own distinct icons for both states (vendor marker
+      // / target_vendor reticle) so it never reads as an enemy.
       const isVendor =
         this.world.get(Number(id))?.type === Types.Entities.VENDOR;
 
-      if (
-        transform2d.onscreen &&
-        position.x * position.x + position.y * position.y <= x * x + y * y
-      ) {
+      if (transform2d.onscreen) {
         indicator.material = new SpriteMaterial({
           map: isVendor ? this.textures.targetVendor : this.textures.target,
         });
