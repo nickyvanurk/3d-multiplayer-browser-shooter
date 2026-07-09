@@ -40,6 +40,8 @@ export class InputController {
   keybindings: Keybindings;
   raycaster: Raycaster;
   input: InputState;
+  // When false, keyboard/mouse events are ignored (e.g. while a menu is open).
+  enabled = true;
 
   constructor(camera: Camera, keybindings: Keybindings = DEFAULT_KEYBINDINGS) {
     this.camera = camera;
@@ -76,6 +78,9 @@ export class InputController {
     const crosshair = document.querySelector<SVGElement>('.crosshair');
 
     document.addEventListener('keydown', ({ code }) => {
+      if (!this.enabled) {
+        return;
+      }
       switch (code) {
         case keybindings.forward:
           input.forward = true;
@@ -108,6 +113,9 @@ export class InputController {
     });
 
     document.addEventListener('keyup', ({ code }) => {
+      if (!this.enabled) {
+        return;
+      }
       switch (code) {
         case keybindings.forward:
           input.forward = false;
@@ -140,6 +148,9 @@ export class InputController {
     });
 
     document.addEventListener('mousedown', ({ button }) => {
+      if (!this.enabled) {
+        return;
+      }
       switch (button) {
         case keybindings.weaponPrimary:
           input.weaponPrimary = true;
@@ -148,6 +159,9 @@ export class InputController {
     });
 
     document.addEventListener('mouseup', ({ button }) => {
+      if (!this.enabled) {
+        return;
+      }
       switch (button) {
         case keybindings.weaponPrimary:
           input.weaponPrimary = false;
@@ -156,6 +170,9 @@ export class InputController {
     });
 
     document.addEventListener('mousemove', (event) => {
+      if (!this.enabled) {
+        return;
+      }
       const width = window.innerWidth;
       const height = window.innerHeight;
 
@@ -178,6 +195,25 @@ export class InputController {
     document.addEventListener('contextmenu', (event) => {
       event.preventDefault();
     });
+  }
+
+  // Toggle input processing. Disabling clears held movement/fire state so the
+  // ship coasts to a stop (rather than flying on a stuck key) while a menu is up.
+  setEnabled(enabled: boolean): void {
+    this.enabled = enabled;
+    if (!enabled) {
+      const input = this.input;
+      input.forward = false;
+      input.backward = false;
+      input.rollLeft = false;
+      input.rollRight = false;
+      input.strafeLeft = false;
+      input.strafeRight = false;
+      input.strafeUp = false;
+      input.strafeDown = false;
+      input.boost = false;
+      input.weaponPrimary = false;
+    }
   }
 
   // Update the aim ray from the current mouse + camera and return the input

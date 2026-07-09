@@ -20,6 +20,8 @@ import { DEFAULT_KEYBINDINGS } from './input/keybindings.ts';
 import { NetworkClient } from './net/network-client.ts';
 import { SoundService } from './audio/sound-service.ts';
 import { DebugPanel } from './debug/debug-panel.ts';
+import { SettingsStore } from './settings.ts';
+import { SettingsMenu } from './ui/settings-menu.ts';
 
 // Plain OOP game. Owns the mirror World, the presentation layer, the client
 // physics world, the NetworkClient, and the client-authoritative ClientSim.
@@ -47,6 +49,8 @@ export default class Game {
   networkClient: NetworkClient;
   sound: SoundService;
   debug: DebugPanel;
+  settings: SettingsStore;
+  settingsMenu: SettingsMenu;
   fixedStep = 1000 / 60;
   fixedUpdate!: (delta: number) => number;
   currentInput: InputCommand = InputCommand.empty();
@@ -60,7 +64,8 @@ export default class Game {
     this.world = new World();
     this.connection = new Connection();
 
-    this.sceneManager = new SceneManager();
+    this.settings = new SettingsStore();
+    this.sceneManager = new SceneManager(this.settings.horizontalFov);
     this.viewRegistry = new ViewRegistry(this.sceneManager);
     this.viewRegistry.attachTo(this.world);
 
@@ -84,6 +89,11 @@ export default class Game {
       this.sceneManager.scene,
     );
     this.debug = new DebugPanel();
+    this.settingsMenu = new SettingsMenu(
+      this.settings,
+      this.sceneManager,
+      this.inputController,
+    );
 
     this.viewRegistry.onShipDestroyed = (position) =>
       this.particles.spawnExplosion(position);
@@ -251,7 +261,7 @@ export default class Game {
     this.particles.update();
     this.range.update();
 
-    this.viewRegistry.update(alpha);
+    this.viewRegistry.update(alpha, delta);
     this.sceneManager.render(alpha);
     this.projection.render();
     this.hud.render();

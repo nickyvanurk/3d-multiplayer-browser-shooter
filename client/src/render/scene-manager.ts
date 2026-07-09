@@ -17,8 +17,6 @@ import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass';
 import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader';
 
 // Games conventionally specify horizontal FOV; three.js expects vertical.
-const HORIZONTAL_FOV = 90;
-
 function verticalFov(horizontalFovDeg: number, aspect: number): number {
   const hRad = (horizontalFovDeg * Math.PI) / 180;
   const vRad = 2 * Math.atan(Math.tan(hRad / 2) / aspect);
@@ -31,8 +29,11 @@ export class SceneManager {
   renderer: WebGLRenderer;
   composer: EffectComposer;
   needsResize: boolean;
+  horizontalFov: number;
 
-  constructor() {
+  constructor(horizontalFov = 90) {
+    this.horizontalFov = horizontalFov;
+
     const renderer = new WebGLRenderer({ antialias: true });
     renderer.setClearColor(0x020207);
     renderer.shadowMap.enabled = true;
@@ -44,7 +45,7 @@ export class SceneManager {
 
     const aspect = window.innerWidth / window.innerHeight;
     const camera = new PerspectiveCamera(
-      verticalFov(HORIZONTAL_FOV, aspect),
+      verticalFov(horizontalFov, aspect),
       aspect,
       1,
       4100,
@@ -133,6 +134,14 @@ export class SceneManager {
     scene.add(mesh);
   }
 
+  // Apply a new horizontal FOV live; the vertical FOV three.js uses is derived
+  // from the current aspect ratio.
+  setHorizontalFov(horizontalFovDeg: number): void {
+    this.horizontalFov = horizontalFovDeg;
+    this.camera.fov = verticalFov(horizontalFovDeg, this.camera.aspect);
+    this.camera.updateProjectionMatrix();
+  }
+
   render(_alpha: number): void {
     if (this.needsResize) {
       const renderer = this.renderer;
@@ -146,7 +155,7 @@ export class SceneManager {
       const height = canvas.clientHeight;
 
       this.camera.aspect = width / height;
-      this.camera.fov = verticalFov(HORIZONTAL_FOV, this.camera.aspect);
+      this.camera.fov = verticalFov(this.horizontalFov, this.camera.aspect);
       this.camera.updateProjectionMatrix();
       renderer.setSize(width, height, false);
       this.composer.setSize(width, height);
