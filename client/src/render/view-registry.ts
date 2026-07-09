@@ -4,6 +4,8 @@ import type {
   Scene,
   Mesh,
   MeshStandardMaterial,
+  BufferGeometry,
+  Material,
   Vector3,
 } from 'three';
 import type { Ship } from '../../../shared/sim/entities/ship.ts';
@@ -14,6 +16,7 @@ import type { EntityKind } from '../../../shared/types.ts';
 import type { World } from '../../../shared/sim/world.ts';
 import type { Entity } from '../../../shared/sim/entity.ts';
 import type { SceneManager } from './scene-manager.ts';
+import { InstancedAsteroids } from './instanced-asteroids.ts';
 
 const MODEL_PATHS: Record<EntityKind, string> = {
   [Types.Entities.SPACESHIP]: 'SM_Ship_Fighter_02.glb',
@@ -67,6 +70,9 @@ export class ViewRegistry {
   // Per-ship clone of the "Exhaust" material, keyed by entity id, whose emissive
   // intensity `update()` drives from that ship's thrust input.
   exhaustMaterials: Map<number, MeshStandardMaterial>;
+  // The static asteroid field, rendered as a single instanced draw call instead
+  // of one Object3D per rock. Built once the asteroid model has loaded.
+  asteroids: InstancedAsteroids | null;
 
   constructor(sceneManager: SceneManager) {
     this.sceneManager = sceneManager;
@@ -79,6 +85,7 @@ export class ViewRegistry {
     this.onShipDestroyed = null; // (position) => void, wired by Task 19/20 particles
     this.bulletTipOffset = null;
     this.exhaustMaterials = new Map();
+    this.asteroids = null;
   }
 
   // Port of model-loading-system.js: load every kind's GLTF before views can be
@@ -117,11 +124,54 @@ export class ViewRegistry {
 
     return Promise.all(loads).then(() => {
       this.ready = true;
+      this.buildAsteroidField();
       for (const entity of this.pendingSpawns) {
         this.createView(entity);
       }
       this.pendingSpawns.length = 0;
     });
+  }
+
+  // Extract the asteroid model's geometry + material into a single InstancedMesh.
+  // The node transform is baked into the geometry so an instance matrix of just
+  // the entity transform matches the old clone-the-whole-group render exactly.
+  buildAsteroidField(): void {
+    const model = this.models.get(Types.Entities.ASTEROID);
+    if (!model) {
+      return;
+    }
+    model.position.set(0, 0, 0);
+    model.quaternion.identity();
+    model.scale.set(1, 1, 1);
+    model.updateMatrixWorld(true);
+
+    const source = this.firstMesh(model);
+    if (!source) {
+      return;
+    }
+
+    const geometry = (source.geometry as BufferGeometry).clone();
+    geometry.applyMatrix4(source.matrixWorld);
+    const material: Material = Array.isArray(source.material)
+      ? source.material[0]
+      : source.material;
+
+    this.asteroids = new InstancedAsteroids(this.scene, geometry, material);
+    this.asteroids.mesh.castShadow = source.castShadow;
+    this.asteroids.mesh.receiveShadow = source.receiveShadow;
+  }
+
+  // First Mesh under `root`. The explicit return type is deliberate: it stops
+  // TS narrowing the closure-assigned local to `null` at the call site.
+  firstMesh(root: Object3D): Mesh | null {
+    let found: Mesh | null = null;
+    root.traverse((child) => {
+      const mesh = child as Mesh;
+      if (mesh.isMesh && !found) {
+        found = mesh;
+      }
+    });
+    return found;
   }
 
   attachTo(world: World): void {
@@ -139,6 +189,12 @@ export class ViewRegistry {
   }
 
   createView(entity: Entity): void {
+    // Asteroids live in the shared instanced field, not as individual views.
+    if (entity.type === Types.Entities.ASTEROID) {
+      this.asteroids?.add(entity.id!, entity.transform);
+      return;
+    }
+
     const model = this.models.get(entity.type);
 
     if (!model) {
@@ -221,6 +277,15 @@ export class ViewRegistry {
   }
 
   handleDespawn(entity: Entity): void {
+    if (entity.type === Types.Entities.ASTEROID) {
+      this.asteroids?.remove(entity.id!);
+      const idx = this.pendingSpawns.indexOf(entity);
+      if (idx !== -1) {
+        this.pendingSpawns.splice(idx, 1);
+      }
+      return;
+    }
+
     const mesh = this.views.get(entity.id!);
 
     if (mesh) {
@@ -252,9 +317,9 @@ export class ViewRegistry {
       const transform = entity.transform;
 
       // Interpolate prev -> current directly into the mesh's own vectors. No
-      // per-entity/per-frame allocations (was 3 clones each) — with hundreds of
-      // asteroids the old path churned ~90k temp objects/sec, causing periodic
-      // GC hitches.
+      // per-entity/per-frame allocations (was 3 clones each). Only moving
+      // entities (ships, bullets) reach here; the static asteroid field is an
+      // instanced mesh whose matrices are set once on spawn.
       mesh.position
         .copy(transform.prevPosition)
         .lerp(transform.position, alpha);
