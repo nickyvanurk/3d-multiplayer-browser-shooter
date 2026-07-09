@@ -18,6 +18,8 @@ import './weapon.test.ts';
 import './combat.test.ts';
 import './respawn.test.ts';
 import './aim-math.test.ts';
+import './steering.test.ts';
+import './bot.test.ts';
 import './vendor.test.ts';
 import { run } from './harness.ts';
 run();

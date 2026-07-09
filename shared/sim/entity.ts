@@ -35,12 +35,19 @@ export class Entity {
   kinematic!: boolean;
   alive?: boolean;
   body!: PhysicsBody | null;
+  // Server-side self-propelled body (AI bots): unlike client-authoritative player
+  // ships — which the server only mirrors via correctBody — a self-simulated ship
+  // runs the real thrust/torque physics from its controller input, exactly like a
+  // client-owned ship. Lets the stepper apply forces even when writeBackVelocity
+  // is on. Default off (mirrored).
+  selfSimulated!: boolean;
 
   constructor({ id, type, transform }: EntityInit = {} as EntityInit) {
     this.id = id;
     this.type = type; // Types.Entities.*
     this.transform = new Transform(transform);
     this.destroyed = false;
+    this.selfSimulated = false;
     // Subclasses overwrite these; base defaults keep serializeNetworkState safe.
     this.velocity = new Vector3();
     this.angularVelocity = new Vector3();

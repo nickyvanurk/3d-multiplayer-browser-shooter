@@ -8,6 +8,7 @@ import { World } from '../../shared/sim/world.ts';
 import { RapierPhysicsWorld } from '../../shared/sim/physics/rapier-physics-world.ts';
 import { NodeMeshProvider } from './physics/node-mesh-provider.ts';
 import { NetworkServer } from './net/network-server.ts';
+import { BotManager } from './ai/bot-manager.ts';
 import { RespawnSubsystem } from '../../shared/sim/subsystems/respawn.ts';
 import { CombatSubsystem } from '../../shared/sim/subsystems/combat.ts';
 import { Asteroid } from '../../shared/sim/entities/asteroid.ts';
@@ -29,6 +30,7 @@ export class GameServer {
   world: World;
   physics: PhysicsWorld;
   network: NetworkServer;
+  bots: BotManager;
   fixedUpdate!: (delta: number) => number;
 
   constructor(
@@ -52,6 +54,9 @@ export class GameServer {
 
     // NetworkServer owns connections and broadcasts snapshots.
     this.network = new NetworkServer(this);
+
+    // BotManager tops the world up to a target headcount with AI ships.
+    this.bots = new BotManager(this);
 
     // RapierPhysicsWorld creates/removes bodies on spawn/despawn; NetworkServer
     // broadcasts the matching Spawn/Despawn to clients.
@@ -79,6 +84,7 @@ export class GameServer {
     await this.physics.init();
     this.spawnAsteroids(500);
     this.spawnVendor();
+    this.bots.reconcile(0);
 
     this.fixedUpdate = Utils.createFixedTimestep(
       1000 / this.updatesPerSecond,
@@ -109,6 +115,13 @@ export class GameServer {
     // 0. Drain incoming messages/inputs before the sim steps (Hello -> ship
     //    spawn, latest input copied onto each ship's controller).
     this.network.processIncoming(this.world, time);
+
+    // 0b. Drive AI bots: top up the roster, then set each bot's control input.
+    //     Runs before the entity loop so Ship.update applies that input (thrust +
+    //     turn + weapon fire) and the physics flies the ship for real — bots are
+    //     self-simulated, so applyAll runs their thrust/torque like a player's.
+    this.bots.reconcile(time);
+    this.bots.update(this.world, dt, time);
 
     // 1. Entity behaviour (control, weapon firing). Snapshot the values so
     //    entities spawned mid-tick (e.g. bullets) wait for the next tick.

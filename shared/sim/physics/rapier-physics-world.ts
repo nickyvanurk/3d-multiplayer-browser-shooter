@@ -179,7 +179,13 @@ export class RapierPhysicsWorld implements PhysicsWorld {
       // velocity straight back in — a positive-feedback loop that diverges to
       // NaN within seconds and traps Rapier (`unreachable`). Server bodies coast
       // under the solver instead (ships are snapped to State via correctBody).
-      if (this.writeBackVelocity) {
+      //
+      // EXCEPTION: self-simulated ships (AI bots) hold a THRUST COMMAND in
+      // entity.velocity from their own applyInput — exactly like a client-owned
+      // ship — so they DO run the force branch and fly on the real ship physics.
+      // applyInput overwrites entity.velocity each tick before this runs, so
+      // there is no writeBack feedback loop for them.
+      if (this.writeBackVelocity && !entity.selfSimulated) {
         continue;
       }
 
