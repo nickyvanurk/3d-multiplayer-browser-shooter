@@ -1,11 +1,12 @@
 import Utils from '../../shared/utils.ts';
+import Types from '../../shared/types.ts';
 import { World } from '../../shared/sim/world.ts';
 import { InputCommand } from '../../shared/sim/input.ts';
 import { RapierPhysicsWorld } from '../../shared/sim/physics/rapier-physics-world.ts';
 import Connection from './connection.ts';
 
 import { BrowserMeshProvider } from './physics/browser-mesh-provider.ts';
-import { ClientSim } from './client-sim.ts';
+import { ClientSim, CLIENT_ID_BASE } from './client-sim.ts';
 
 import { SceneManager } from './render/scene-manager.ts';
 import { ViewRegistry } from './render/view-registry.ts';
@@ -17,6 +18,8 @@ import { RangeService } from './render/range.ts';
 import { InputController } from './input/input-controller.ts';
 import { DEFAULT_KEYBINDINGS } from './input/keybindings.ts';
 import { NetworkClient } from './net/network-client.ts';
+import { SoundService } from './audio/sound-service.ts';
+import { DebugPanel } from './debug/debug-panel.ts';
 
 // Plain OOP game. Owns the mirror World, the presentation layer, the client
 // physics world, the NetworkClient, and the client-authoritative ClientSim.
@@ -42,6 +45,8 @@ export default class Game {
   aimAssist: AimAssistService;
   range: RangeService;
   networkClient: NetworkClient;
+  sound: SoundService;
+  debug: DebugPanel;
   fixedStep = 1000 / 60;
   fixedUpdate!: (delta: number) => number;
   currentInput: InputCommand = InputCommand.empty();
@@ -74,6 +79,11 @@ export default class Game {
       this.projection,
     );
     this.range = new RangeService(this.world, this.sceneManager);
+    this.sound = new SoundService(
+      this.sceneManager.camera,
+      this.sceneManager.scene,
+    );
+    this.debug = new DebugPanel();
 
     this.viewRegistry.onShipDestroyed = (position) =>
       this.particles.spawnExplosion(position);
@@ -91,6 +101,60 @@ export default class Game {
 
   async init(): Promise<void> {
     await this.viewRegistry.load();
+
+    // The blaster pack holds many sounds separated by silence; load splits them
+    // into segments. Expose a selector (F3, number keys / clicks) to audition and
+    // pick the active one live.
+    await this.sound.load(
+      'blaster',
+      'sfx/freesound_community-blaster-multiple-14893.mp3',
+    );
+    const blasterCount = this.sound.getSegments('blaster').length;
+    // Chosen defaults (tunable live via the F3 panel): sound 1, pitch 2, vol 0.7.
+    this.sound.setActive('blaster', 0);
+    this.sound.pitch = 2;
+    this.sound.volume = 0.7;
+    this.debug.addSelector(
+      `Blaster sound (⚄=R, 1-${blasterCount})`,
+      blasterCount,
+      () => this.sound.getActive('blaster'),
+      (i) => {
+        this.sound.setActive('blaster', i);
+        // Audition: a specific pick previews itself; Random previews any one.
+        this.sound.preview('blaster', i < 0 ? 0 : i, 0.6);
+      },
+      true,
+    );
+    const previewBlaster = () => {
+      const a = this.sound.getActive('blaster');
+      this.sound.preview('blaster', a < 0 ? 0 : a, 0.6);
+    };
+    this.debug.addSlider('Pitch', {
+      min: 0.5,
+      max: 2,
+      step: 0.05,
+      decKey: 'BracketLeft',
+      incKey: 'BracketRight',
+      keyHint: '[ ]',
+      get: () => this.sound.pitch,
+      set: (v) => {
+        this.sound.pitch = v;
+      },
+      onChange: previewBlaster,
+    });
+    this.debug.addSlider('Volume', {
+      min: 0,
+      max: 1.5,
+      step: 0.05,
+      decKey: 'Minus',
+      incKey: 'Equal',
+      keyHint: '- =',
+      get: () => this.sound.volume,
+      set: (v) => {
+        this.sound.volume = v;
+      },
+      onChange: previewBlaster,
+    });
 
     // The client runs its own Rapier world (all ships + the static asteroid
     // field). Meshes come from the GLTF scenes the renderer already loaded.
@@ -117,6 +181,17 @@ export default class Game {
     this.world.onSpawn = (entity) => {
       viewSpawn?.(entity);
       this.clientSim.onSpawn(entity);
+      // Blaster on every bullet spawn. The local player's own shots (client-range
+      // ids) play 2D so they stay consistent — the listener rides the lerping
+      // camera, so a positional own-shot would wander. Remote players' shots play
+      // positionally at their muzzle, so you hear them from where they are.
+      if (entity.type === Types.Entities.BULLET) {
+        if (entity.id! >= CLIENT_ID_BASE) {
+          this.sound.play('blaster', 0.4);
+        } else {
+          this.sound.playAt('blaster', entity.transform.position, 0.7);
+        }
+      }
     };
     this.world.onDespawn = (entity) => {
       viewDespawn?.(entity);
