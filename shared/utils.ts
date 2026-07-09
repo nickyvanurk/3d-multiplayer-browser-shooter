@@ -32,14 +32,18 @@ export default {
   createFixedTimestep(
     timestep: number,
     callback: (dt: number, time: number) => void,
-  ): (delta: number, time: number) => number {
+  ): (delta: number) => number {
     let lag = 0;
+    // Deterministic sim clock: advances by exactly `timestep` per sub-step so
+    // time-based game logic (weapon cadence) depends only on dt, not wall-clock.
+    let elapsed = 0;
 
-    return (delta, time) => {
+    return (delta) => {
       lag += delta;
 
       while (lag >= timestep) {
-        callback(timestep, time);
+        elapsed += timestep;
+        callback(timestep, elapsed);
         lag -= timestep;
       }
 

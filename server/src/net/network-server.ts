@@ -85,14 +85,19 @@ export class NetworkServer {
         continue;
       }
 
-      // Client-authoritative movement: copy the client's latest reported pose
-      // onto the (kinematic) ship body. The server trusts it and does not re-sim.
-      const state = connection.latestState;
+      // Client-authoritative movement: when a fresh State arrives, snap the
+      // ship's dynamic body to the reported pose+velocity. Between States the
+      // body coasts and collides with other ships (bumps) under physics.
+      // Draining clears it so a state-less tick coasts rather than re-snapping.
+      const state = connection.drainState();
       if (state && ship.alive !== false) {
-        ship.transform.position.copy(state.position);
-        ship.transform.rotation.copy(state.rotation);
-        ship.velocity.copy(state.velocity);
-        ship.angularVelocity.copy(state.angularVelocity);
+        this.gameServer.physics.correctBody?.(
+          ship,
+          state.position,
+          state.rotation,
+          state.velocity,
+          state.angularVelocity,
+        );
       }
 
       // Each Fire request spawns the authoritative bullet the server owns for
@@ -112,10 +117,11 @@ export class NetworkServer {
 
     const ship = new Ship();
 
-    // The server ship is a kinematic mirror of client-authoritative movement: it
-    // is placed from client State and never self-simulates or fires (bullets come
-    // from Fire events), so it needs no weapons or controller input.
-    ship.kinematic = true;
+    // The server ship is a DYNAMIC body: its pose is snapped to the owning
+    // client's State (client-authoritative movement), but between States it
+    // coasts and physically collides with other ships so ship-vs-ship bumps
+    // resolve on the server. It still fires no weapons (bullets come from Fire
+    // events); the controller only carries the connection for bullet ownership.
     ship.controller = { connection, lastInput: InputCommand.empty() };
 
     // Place the ship before spawning: world.spawn() synchronously builds the

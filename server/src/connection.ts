@@ -93,6 +93,14 @@ export default class Connection {
     return fires;
   }
 
+  // Returns the newest reported state and clears it, so a tick with no fresh
+  // State lets the ship coast/collide instead of re-snapping to a stale pose.
+  drainState(): StateData | null {
+    const state = this.latestState;
+    this.latestState = null;
+    return state;
+  }
+
   sendOutgoingMessages(): void {
     while (this.hasOutgoingMessage()) {
       const message = this.outgoingMessageQueue.shift();

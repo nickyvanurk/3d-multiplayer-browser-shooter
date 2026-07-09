@@ -1,3 +1,4 @@
+import type { Vector3, Quaternion } from 'three';
 import type { Entity } from '../entity.ts';
 import type { World } from '../world.ts';
 
@@ -33,6 +34,15 @@ export interface PhysicsWorld {
   // enqueuing them onto the collision stream. Bullets carry no solver body, so a
   // stepper without this leaves them motionless (Rapier only). Call after step().
   sweepProjectiles?(world: World, dt: number): void;
+  // Snaps a networked body to an authoritative pose+velocity so it coasts and
+  // collides until the next correction (state-sync). Rapier only.
+  correctBody?(
+    entity: Entity,
+    position: Vector3,
+    rotation: Quaternion,
+    velocity: Vector3,
+    angularVelocity: Vector3,
+  ): void;
 }
 
 export class NullPhysicsWorld implements PhysicsWorld {

@@ -61,6 +61,12 @@ export class RapierPhysicsWorld implements PhysicsWorld {
   // manages the single owned ship's body itself and must NOT auto-body remote
   // ships, so it disables this.
   reconcileShips: boolean;
+  // Server-only: mirror each dynamic body's post-step velocity back onto its
+  // entity so the broadcast (serializeNetworkState reads entity.velocity) reports
+  // true coasting velocity. The client disables it — there the owned ship's
+  // entity.velocity/angularVelocity are control accumulators (roll builds up in
+  // angularVelocity.z), and overwriting them from the solver kills the controls.
+  writeBackVelocity: boolean;
   world!: RAPIER.World;
   eventQueue!: RAPIER.EventQueue;
   // Convex-hull point clouds cached by `${kind}:${scale}`; extracting/merging
@@ -81,6 +87,7 @@ export class RapierPhysicsWorld implements PhysicsWorld {
     this.onReady = null;
     this.meshProvider = meshProvider;
     this.reconcileShips = true;
+    this.writeBackVelocity = true;
     this.vertices = new Map();
     this.handleToEntity = new Map();
     this.bodies = new Set();
@@ -322,7 +329,46 @@ export class RapierPhysicsWorld implements PhysicsWorld {
       const q = body.rotation();
       entity.transform.position.set(o.x, o.y, o.z);
       entity.transform.rotation.set(q.x, q.y, q.z, q.w);
+
+      // Mirror the solver's post-step velocity back onto the entity. Broadcast
+      // reads entity.velocity (serializeNetworkState), so a dynamic body driven
+      // by physics — e.g. a ship coasting or shoved by a bump — reports the true
+      // velocity that lets other clients coast it between snapshots.
+      if (this.writeBackVelocity && !entity.kinematic) {
+        const lv = body.linvel();
+        const av = body.angvel();
+        entity.velocity.set(lv.x, lv.y, lv.z);
+        entity.angularVelocity.set(av.x, av.y, av.z);
+      }
     }
+  }
+
+  // Snap a networked body to an authoritative pose + velocity, then let it coast
+  // and collide until the next correction. The single source of truth for
+  // state-sync body correction: the server calls it with each client's reported
+  // State; the client can call it with each server snapshot.
+  correctBody(
+    entity: Entity,
+    position: Vector3,
+    rotation: Quaternion,
+    velocity: Vector3,
+    angularVelocity: Vector3,
+  ): void {
+    const body = entity.body as unknown as RAPIER.RigidBody | null;
+    if (!body) {
+      return;
+    }
+    body.setTranslation(position, true);
+    body.setRotation(
+      { x: rotation.x, y: rotation.y, z: rotation.z, w: rotation.w },
+      true,
+    );
+    body.setLinvel(velocity, true);
+    body.setAngvel(angularVelocity, true);
+    entity.transform.position.copy(position);
+    entity.transform.rotation.copy(rotation);
+    entity.velocity.copy(velocity);
+    entity.angularVelocity.copy(angularVelocity);
   }
 
   createBodyDesc(entity: Entity): RAPIER.RigidBodyDesc {

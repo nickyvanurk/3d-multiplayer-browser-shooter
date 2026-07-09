@@ -43,7 +43,7 @@ export default class Game {
   range: RangeService;
   networkClient: NetworkClient;
   fixedStep = 1000 / 60;
-  fixedUpdate!: (delta: number, time: number) => number;
+  fixedUpdate!: (delta: number) => number;
   currentInput: InputCommand = InputCommand.empty();
   // Accumulator remainder / fixedStep — the render interpolation fraction [0,1).
   leftoverFrac = 0;
@@ -99,6 +99,9 @@ export default class Game {
       new BrowserMeshProvider(this.viewRegistry.models),
     );
     this.physics.reconcileShips = false;
+    // The owned ship self-controls (roll etc. accumulate in its velocity fields);
+    // the client never broadcasts, so don't overwrite them from the solver.
+    this.physics.writeBackVelocity = false;
     await this.physics.init();
     this.world.physics = this.physics;
 
@@ -162,7 +165,7 @@ export default class Game {
 
     // Advance the sim in fixed sub-steps; leftoverFrac is the interpolation
     // fraction into the next step, always in [0,1).
-    this.leftoverFrac = this.fixedUpdate(delta, time);
+    this.leftoverFrac = this.fixedUpdate(delta);
 
     const alpha = Math.min(1, this.leftoverFrac);
 

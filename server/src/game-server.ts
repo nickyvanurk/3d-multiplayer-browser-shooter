@@ -27,7 +27,7 @@ export class GameServer {
   world: World;
   physics: PhysicsWorld;
   network: NetworkServer;
-  fixedUpdate!: (delta: number, time: number) => number;
+  fixedUpdate!: (delta: number) => number;
 
   constructor(
     id: string,
@@ -94,7 +94,7 @@ export class GameServer {
       delta = 250;
     }
 
-    this.fixedUpdate(delta, time);
+    this.fixedUpdate(delta);
     this.lastTime = time;
   }
 
