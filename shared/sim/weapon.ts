@@ -25,8 +25,7 @@ export class Weapon {
   offset: Vector3;
   delay: number;
   fireInterval: number;
-  lastFiredTimestamp: number | null;
-  firing: boolean;
+  nextFireTime: number;
   parent: WeaponParent;
   _held: boolean;
 
@@ -41,8 +40,7 @@ export class Weapon {
     this.offset = offset ? offset.clone() : new Vector3();
     this.delay = delay;
     this.fireInterval = fireInterval;
-    this.lastFiredTimestamp = null;
-    this.firing = false;
+    this.nextFireTime = 0;
     this.parent = parent!;
     this._held = false;
   }
@@ -50,31 +48,26 @@ export class Weapon {
   tryFire(time: number, spawnBullet: SpawnBullet): void {
     const held = this.parent.firingPrimary;
 
-    // Reactive-query transitions: activation (Active added) resets the timer;
-    // deactivation (Active removed) drops out of the firing state.
+    // A fresh trigger press schedules the first shot at now + delay. `delay` is
+    // the per-weapon stagger that makes the ship's dual cannons alternate; a
+    // delay of 0 is due immediately, so pressing fire shoots this very tick with
+    // no warm-up.
     if (held && !this._held) {
-      this.lastFiredTimestamp = time;
-    }
-    if (!held && this._held) {
-      this.firing = false;
+      this.nextFireTime = time + this.delay;
     }
     this._held = held;
 
-    if (!held) {
+    if (!held || time < this.nextFireTime) {
       return;
     }
 
-    if (!this.firing && this.lastFiredTimestamp! + this.delay < time) {
-      this.lastFiredTimestamp = time;
-      this.firing = true;
-    }
-
-    if (this.firing && this.lastFiredTimestamp! + this.fireInterval < time) {
-      this.lastFiredTimestamp = time;
-      const { position, rotation } = getWeaponTransform(this);
-      const damage = 5;
-      spawnBullet(position, rotation, damage);
-    }
+    // Advance the schedule by exact fireInterval increments (never snap it to
+    // `time`) so cadence — and the offset between two weapons — stays fixed and
+    // never drifts into firing on the same tick.
+    this.nextFireTime += this.fireInterval;
+    const { position, rotation } = getWeaponTransform(this);
+    const damage = 5;
+    spawnBullet(position, rotation, damage);
   }
 }
 
