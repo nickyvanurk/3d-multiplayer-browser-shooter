@@ -91,8 +91,15 @@ export class NetworkClient {
           break;
         }
         case Types.Messages.SPAWN: {
-          const { id, kind, position, rotation, scale } = message!.data;
-          const entity = this.spawnEntity(id, kind, position, rotation, scale);
+          const { id, kind, position, rotation, scale, name } = message!.data;
+          const entity = this.spawnEntity(
+            id,
+            kind,
+            position,
+            rotation,
+            scale,
+            name,
+          );
           if (id === this.localPlayerId && entity) {
             this.snapCameraTo(position, rotation);
             this.onLocalShip?.(entity as Ship);
@@ -115,13 +122,17 @@ export class NetworkClient {
     position: Vector3,
     rotation: Quaternion,
     scale: number,
+    name = '',
   ): Entity | null {
     let entity: Entity;
 
     switch (kind) {
-      case Types.Entities.SPACESHIP:
-        entity = new Ship({ transform: { position, rotation, scale } });
+      case Types.Entities.SPACESHIP: {
+        const ship = new Ship({ transform: { position, rotation, scale } });
+        ship.name = name;
+        entity = ship;
         break;
+      }
       case Types.Entities.ASTEROID:
         entity = new Asteroid({ transform: { position, rotation }, scale });
         break;

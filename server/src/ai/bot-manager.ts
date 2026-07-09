@@ -6,6 +6,7 @@ import {
   createDefaultWeapons,
 } from '../../../shared/sim/entities/ship.ts';
 import { InputCommand } from '../../../shared/sim/input.ts';
+import { generateName } from '../../../shared/names/generate-name.ts';
 import { pickSpawnPosition } from '../../../shared/sim/spawn.ts';
 import type { World } from '../../../shared/sim/world.ts';
 
@@ -102,6 +103,9 @@ export class BotManager {
     // using the bot's seeded RNG so the spawn stays deterministic.
     ship.transform.position = pickSpawnPosition(world, rng);
     ship.randomSpawn = false;
+    // Deterministic callsign from the bot's seeded RNG; set before spawn so the
+    // Spawn broadcast carries it.
+    ship.name = generateName(rng);
 
     world.spawn(ship); // onSpawn: physics body + Spawn broadcast to all clients
 

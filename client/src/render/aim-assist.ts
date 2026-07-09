@@ -5,6 +5,11 @@ import type { SceneManager } from './scene-manager.ts';
 import type { InputController } from '../input/input-controller.ts';
 import type { ProjectionService } from './projection.ts';
 
+// The crosshair locks onto a ship when within its on-screen footprint plus this
+// margin; the floor keeps tiny/distant ships comfortably selectable.
+const LOCK_MARGIN = 16; // px beyond the ship's projected radius
+const MIN_LOCK_RADIUS = 34; // px floor
+
 // Ports aim-assist-system.js: when the cursor hovers near an on-screen ship, snap
 // the aim ray distance to that ship's distance from the camera. Mutates the live
 // input's `aim.distance` (the same object InputController.sample() returns), so the
@@ -50,7 +55,6 @@ export class AimAssistService {
       x: aim.ndc.x * (window.innerWidth / 2),
       y: aim.ndc.y * (window.innerHeight / 2),
     };
-    const targetRadius = 100; // px
 
     // Lead ring first: aiming at the "shoot here" marker of a moving target
     // should converge the guns at the LEAD point (ahead of the ship), not the
@@ -86,11 +90,13 @@ export class AimAssistService {
         y: mouseInPixels.y - position.y,
       };
 
-      const distance = entity.transform.position
-        .clone()
-        .sub(camera.position)
-        .length();
-      const radius = Math.max(64, (targetRadius * 10) / distance);
+      // Lock zone = the ship's actual on-screen footprint (from the projection),
+      // so the crosshair locks anywhere over the ship regardless of its size or
+      // distance — a small floor keeps tiny/distant ships selectable.
+      const radius = Math.max(
+        MIN_LOCK_RADIUS,
+        indicator.screenRadius + LOCK_MARGIN,
+      );
 
       if (mp.x * mp.x + mp.y * mp.y < radius * radius) {
         aim.distance = entity.transform.position

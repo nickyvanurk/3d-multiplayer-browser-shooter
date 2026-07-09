@@ -1,8 +1,8 @@
 import { Vector3, Euler } from 'three';
-import { Entity } from '../entity.ts';
 import type { EntityWorld } from '../entity.ts';
 import type { TransformInit } from '../transform.ts';
-import { type InputCommand, InputBits } from '../input.ts';
+import { InputBits } from '../input.ts';
+import { Ship } from './ship.ts';
 import Types from '../../types.ts';
 
 export interface VendorInit {
@@ -22,40 +22,29 @@ const ORBIT_PERIOD_MS = 900_000;
 const ANGULAR_SPEED = (2 * Math.PI) / ORBIT_PERIOD_MS; // rad/ms
 
 // A server-authoritative NPC transport that flies a fixed circular orbit outside
-// the field — the seed of a future vendor mechanic. Kinematic on both sides: the
-// server drives it from `transform.position` (RapierPhysicsWorld.applyAll), the
-// client dead-reckons the same body so the owned ship physically bumps off it.
-export class Vendor extends Entity {
-  inputBits: number;
-  // Client-only: the replicated inputBits decoded for the renderer (exhaust glow),
-  // mirroring Ship.renderInput. Never re-applied as thrust.
-  renderInput: InputCommand | null;
-  // No AI controller — kept so ViewRegistry.driveExhaust's `controller?.lastInput`
-  // reads cleanly (it falls through to renderInput).
-  controller = null;
-
+// the field — the seed of a future vendor mechanic. It IS a Ship (so it shares
+// all the common ship machinery — name, engine glow, HUD reticle, replication),
+// but a neutral, invulnerable, kinematic one that runs a fixed route instead of
+// combat. Kinematic on both sides: the server drives it from `transform.position`
+// (RapierPhysicsWorld.applyAll), the client dead-reckons the same body so the
+// owned ship physically bumps off it.
+export class Vendor extends Ship {
   constructor({ id, transform, scale = 1 }: VendorInit = {}) {
-    super({
-      id,
-      transform: { ...transform, scale },
-      type: Types.Entities.VENDOR,
-    });
+    super({ id, transform: { ...transform, scale } });
+    // Ship's constructor set this up as a hostile fighter; reconfigure it as the
+    // neutral NPC. (type is reassigned so it still renders the transport model.)
+    this.type = Types.Entities.VENDOR;
     this.velocity = new Vector3();
     this.angularVelocity = new Vector3();
     this.damping = 0.001;
     this.angularDamping = 0.1;
     this.weight = 0;
     this.kinematic = true;
+    this.invulnerable = true;
+    this.faction = 'neutral';
+    this.name = 'Flying Dutchman';
+    this.respawn = false;
     this.inputBits = InputBits.forward; // engine always on → exhaust glows
-    this.renderInput = null;
-  }
-
-  // Fill the trailing input slot so remote clients light the engine from the
-  // replicated thrust bits (mirrors Ship.serializeNetworkState).
-  serializeNetworkState(): number[] {
-    const state = super.serializeNetworkState();
-    state[13] = this.inputBits;
-    return state;
   }
 
   // SERVER ONLY. `time` is the deterministic sim clock (ms). The client never

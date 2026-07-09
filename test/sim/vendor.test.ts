@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { Vector3 } from 'three';
 import { Vendor } from '../../shared/sim/entities/vendor.ts';
+import { Ship } from '../../shared/sim/entities/ship.ts';
+import { CombatSubsystem } from '../../shared/sim/subsystems/combat.ts';
 import { RapierPhysicsWorld } from '../../shared/sim/physics/rapier-physics-world.ts';
 import { NodeMeshProvider } from '../../server/src/physics/node-mesh-provider.ts';
 import { InputBits } from '../../shared/sim/input.ts';
@@ -35,15 +37,30 @@ function fakeBody(
   };
 }
 
-test('Vendor is a kinematic, undamageable NPC of type VENDOR', () => {
+test('Vendor is a kinematic, neutral, invulnerable Ship of type VENDOR', () => {
   const vendor = new Vendor();
+  assert.ok(vendor instanceof Ship); // shares all the common ship machinery
   assert.equal(vendor.type, Types.Entities.VENDOR);
   assert.equal(vendor.kinematic, true);
   assert.equal(vendor.weight, 0);
-  // No health/damage fields → combat duck-typing never touches it.
-  assert.equal((vendor as { health?: number }).health, undefined);
+  assert.equal(vendor.faction, 'neutral');
+  assert.equal(vendor.invulnerable, true);
   // Engine is always on so the exhaust glows.
   assert.equal(vendor.inputBits, InputBits.forward);
+});
+
+test('Vendor takes no damage despite carrying a health value', () => {
+  const combat = new CombatSubsystem();
+  type CombatEntity = Parameters<CombatSubsystem['dealDamage']>[0];
+  const vendor = new Vendor();
+  const before = vendor.health;
+  const attacker = { damage: 25 } as unknown as CombatEntity;
+  combat.dealDamage(
+    attacker,
+    vendor as unknown as CombatEntity,
+    new Set<CombatEntity>(),
+  );
+  assert.equal(vendor.health, before);
 });
 
 test('Vendor packs its thrust bits into network slot [13] for remote exhaust', () => {
@@ -51,8 +68,8 @@ test('Vendor packs its thrust bits into network slot [13] for remote exhaust', (
   const state = vendor.serializeNetworkState();
   assert.equal(state.length, 15);
   assert.equal(state[13], InputBits.forward);
-  // The vendor is undamageable, so its health slot stays 0.
-  assert.equal(state[14], 0);
+  // It inherits Ship's health slot; the value is inert since it never takes hits.
+  assert.equal(state[14], vendor.health);
 });
 
 test('Vendor.update places it on the orbit with a tangent velocity', () => {

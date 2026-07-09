@@ -9,6 +9,11 @@ import { Weapon } from '../weapon.ts';
 
 export const RESPAWN_DELAY = 3000;
 
+// A ship's allegiance, driving HUD colour/iconography (not damage rules — those
+// are FFA + the invulnerable flag). Every other player/bot reads as hostile; the
+// vendor is neutral. `friendly` is reserved for a future team mode.
+export type Faction = 'hostile' | 'neutral' | 'friendly';
+
 // The player ship's dual weapons. Shared so the server (authoritative bullets)
 // and the owning client (predicted bullets) fire from identical mounts/timing.
 export function createDefaultWeapons(ship: Ship): Weapon[] {
@@ -56,6 +61,14 @@ export class Ship extends Entity {
   // renderer. Kept off `controller` so the client sim never re-applies it as
   // thrust (that would double-integrate against the server-corrected velocity).
   renderInput: InputCommand | null;
+  // Display callsign (adjective+noun). Assigned server-side on spawn and
+  // replicated to clients via the Spawn message; the HUD shows it for the
+  // aimed-at ship. Empty until set.
+  name: string;
+  // Allegiance (drives HUD colour/icon). Ships default hostile; Vendor is neutral.
+  faction: Faction;
+  // Combat can't damage this ship even though it carries a health value (vendor).
+  invulnerable: boolean;
 
   constructor(opts: ShipInit = {}) {
     super({ ...opts, type: Types.Entities.SPACESHIP });
@@ -79,6 +92,9 @@ export class Ship extends Entity {
     this.respawnTimer = 0;
     this.inputBits = 0;
     this.renderInput = null;
+    this.name = '';
+    this.faction = 'hostile';
+    this.invulnerable = false;
   }
 
   // Fill the trailing slots the base leaves at 0: the packed input (so remote

@@ -1,11 +1,14 @@
-import { Object3D, Vector2, Vector3 } from 'three';
+import { Object3D, Vector2, Vector3, Box3, Sphere } from 'three';
 
 import Types from '../../../shared/types.ts';
+import type { EntityKind } from '../../../shared/types.ts';
 import {
   DEFAULT_BULLET_SPEED,
   DEFAULT_BULLET_TIMER,
 } from '../../../shared/sim/entities/bullet.ts';
 import type { World } from '../../../shared/sim/world.ts';
+import type { Entity } from '../../../shared/sim/entity.ts';
+import type { ViewRegistry } from './view-registry.ts';
 import type { SceneManager } from './scene-manager.ts';
 
 // The client tracks the server-owned local player id on the shared World.
@@ -26,6 +29,10 @@ export interface Indicator {
   position: Vector2;
   rotation: number;
   onscreen: boolean;
+  // The ship's on-screen radius in pixels (its world bounding radius projected
+  // at its current distance). Drives reticle sizing AND the aim-assist lock zone,
+  // so both track the actual footprint at any ship size / distance. 0 if unknown.
+  screenRadius: number;
 }
 
 // The coasting velocity read off a remote ship's physics body.
@@ -110,16 +117,46 @@ export class ProjectionService {
   // Distance (camera -> lead world point) per enemy, in world units. Aim-assist
   // snaps the weapon convergence to this so bullets meet the target at the lead.
   leadDistances: Map<number, number>;
+  viewRegistry: ViewRegistry;
+  // World-space bounding radius of each ship model at scale 1, computed once per
+  // kind from its loaded model and multiplied by the entity's scale on use.
+  modelRadii: Map<EntityKind, number>;
   private readonly scratchAim: Vector3;
+  private readonly scratchBox: Box3;
+  private readonly scratchSphere: Sphere;
 
-  constructor(world: ClientWorld, sceneManager: SceneManager) {
+  constructor(
+    world: ClientWorld,
+    sceneManager: SceneManager,
+    viewRegistry: ViewRegistry,
+  ) {
     this.world = world;
     this.sceneManager = sceneManager;
+    this.viewRegistry = viewRegistry;
     this.dummy = new Object3D();
-    this.indicators = new Map(); // entity.id -> { position: Vector2, rotation, onscreen }
+    this.indicators = new Map(); // entity.id -> Indicator
     this.leads = new Map();
     this.leadDistances = new Map();
+    this.modelRadii = new Map();
     this.scratchAim = new Vector3();
+    this.scratchBox = new Box3();
+    this.scratchSphere = new Sphere();
+  }
+
+  // World-space bounding radius of a ship, from its model's bounding sphere (at
+  // scale 1, computed once per kind) times the entity's own scale.
+  shipWorldRadius(entity: Entity): number {
+    let base = this.modelRadii.get(entity.type);
+    if (base === undefined) {
+      const model = this.viewRegistry.models.get(entity.type);
+      base = model
+        ? this.scratchBox
+            .setFromObject(model)
+            .getBoundingSphere(this.scratchSphere).radius
+        : 0;
+      this.modelRadii.set(entity.type, base);
+    }
+    return base * entity.transform.scale;
   }
 
   render(): void {
@@ -127,6 +164,9 @@ export class ProjectionService {
 
     const halfWidth = window.innerWidth / 2;
     const halfHeight = window.innerHeight / 2;
+    // Perspective scale: a world length L at distance d spans
+    // L · halfHeight / (d · tan(vFov/2)) pixels vertically.
+    const halfFovTan = Math.tan((camera.fov * Math.PI) / 180 / 2);
 
     const live = new Set<number>();
 
@@ -152,7 +192,12 @@ export class ProjectionService {
 
       let indicator = this.indicators.get(entity.id!);
       if (!indicator) {
-        indicator = { position: new Vector2(), rotation: 0, onscreen: false };
+        indicator = {
+          position: new Vector2(),
+          rotation: 0,
+          onscreen: false,
+          screenRadius: 0,
+        };
         this.indicators.set(entity.id!, indicator);
       }
 
@@ -173,6 +218,16 @@ export class ProjectionService {
         Math.abs(indicator.position.x) >= halfWidth ||
         Math.abs(indicator.position.y) >= halfHeight
       );
+
+      // On-screen radius of the ship: its world bounding radius projected at its
+      // current distance. `dummy.position` is in view space (camera at origin),
+      // so its length is the camera distance.
+      const distance = localPosition.length();
+      indicator.screenRadius =
+        distance > 1e-3
+          ? (this.shipWorldRadius(entity) * halfHeight) /
+            (distance * halfFovTan)
+          : 0;
 
       // Firing-lead point: solve the intercept for enemy ships only (not the
       // friendly Vendor NPC), and only when the aim point sits in front of the

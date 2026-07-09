@@ -84,14 +84,13 @@ export default class Game {
       DEFAULT_KEYBINDINGS,
     );
 
-    this.projection = new ProjectionService(this.world, this.sceneManager);
-    this.particles = new ParticleService(this.sceneManager);
-    this.hud = new HudService(
+    this.projection = new ProjectionService(
       this.world,
       this.sceneManager,
-      this.projection,
       this.viewRegistry,
     );
+    this.particles = new ParticleService(this.sceneManager);
+    this.hud = new HudService(this.world, this.sceneManager, this.projection);
     this.aimAssist = new AimAssistService(
       this.world,
       this.sceneManager,

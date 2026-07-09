@@ -8,6 +8,7 @@ import { Bullet } from '../../../shared/sim/entities/bullet.ts';
 import { InputCommand } from '../../../shared/sim/input.ts';
 import { SnapshotDiffer } from '../../../shared/sim/net/snapshot.ts';
 import { pickSpawnPosition } from '../../../shared/sim/spawn.ts';
+import { generateName } from '../../../shared/names/generate-name.ts';
 
 import type { GameServer } from '../game-server.ts';
 import type Connection from '../connection.ts';
@@ -43,8 +44,16 @@ export class NetworkServer {
         continue;
       }
       const { position, rotation, scale } = entity.transform;
+      const name = (entity as { name?: string }).name ?? '';
       connection.pushMessage(
-        new Messages.Spawn(entity.id!, entity.type, position, rotation, scale),
+        new Messages.Spawn(
+          entity.id!,
+          entity.type,
+          position,
+          rotation,
+          scale,
+          name,
+        ),
       );
     }
 
@@ -71,10 +80,11 @@ export class NetworkServer {
 
         switch (message!.type) {
           case Types.Messages.HELLO: {
-            let name = sanitize(message!.data.name);
-            name = !name ? 'UNKNOWN' : name.substr(0, 15);
+            const cleaned = sanitize(message!.data.name);
+            // No name given → hand out a random callsign so every ship is named.
+            const name = cleaned ? cleaned.substr(0, 15) : generateName();
 
-            const ship = this.spawnShip(world, connection);
+            const ship = this.spawnShip(world, connection, name);
             connection.pushMessage(new Messages.Welcome(ship.id!, name));
             break;
           }
@@ -116,10 +126,13 @@ export class NetworkServer {
     }
   }
 
-  spawnShip(world: World, connection: Connection): Ship {
+  spawnShip(world: World, connection: Connection, name = ''): Ship {
     logger.debug('Spawning spaceship');
 
     const ship = new Ship();
+    // Set before world.spawn: spawning synchronously broadcasts Spawn (with the
+    // name), so it must be assigned first.
+    ship.name = name;
 
     // The server ship is a DYNAMIC body: its pose is snapped to the owning
     // client's State (client-authoritative movement), but between States it
@@ -172,9 +185,17 @@ export class NetworkServer {
     }
 
     const { position, rotation, scale } = entity.transform;
+    const name = (entity as { name?: string }).name ?? '';
     logger.debug(`Broadcast: Spawn entity#${entity.id}`);
     this.broadcastMessage(
-      new Messages.Spawn(entity.id!, entity.type, position, rotation, scale),
+      new Messages.Spawn(
+        entity.id!,
+        entity.type,
+        position,
+        rotation,
+        scale,
+        name,
+      ),
       this.bulletOwnerId(entity),
     );
   }
@@ -203,6 +224,7 @@ export class NetworkServer {
         this.broadcastMessage(new Messages.Despawn(entity.id!));
       } else if (!was && entity.alive) {
         const { position, rotation, scale } = entity.transform;
+        const name = (entity as { name?: string }).name ?? '';
         this.broadcastMessage(
           new Messages.Spawn(
             entity.id!,
@@ -210,6 +232,7 @@ export class NetworkServer {
             position,
             rotation,
             scale,
+            name,
           ),
         );
       }

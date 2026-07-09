@@ -10,6 +10,7 @@ interface CombatEntity extends Entity {
   respawn?: boolean;
   respawnTimer?: number;
   owner?: Entity | null;
+  invulnerable?: boolean;
 }
 
 interface CombatWorld {
@@ -67,6 +68,11 @@ export class CombatSubsystem {
       return;
     }
     if (typeof victim.health !== 'number') {
+      return;
+    }
+    // Invulnerable ships (e.g. the neutral vendor) take no damage even though
+    // they carry a health value.
+    if (victim.invulnerable) {
       return;
     }
     if (damaged.has(victim)) {

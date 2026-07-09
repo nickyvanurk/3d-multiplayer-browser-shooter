@@ -22,5 +22,6 @@ import './aim-math.test.ts';
 import './steering.test.ts';
 import './bot.test.ts';
 import './vendor.test.ts';
+import './names.test.ts';
 import { run } from './harness.ts';
 run();

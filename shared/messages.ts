@@ -63,6 +63,7 @@ export class Spawn {
   position: Vector3;
   rotation: Quaternion;
   scale: number;
+  name: string;
 
   constructor(
     id: number,
@@ -70,21 +71,35 @@ export class Spawn {
     position: Vector3,
     rotation: Quaternion,
     scale: number,
+    name = '',
   ) {
     this.id = id;
     this.kind = kind;
     this.position = position;
     this.rotation = rotation;
     this.scale = scale;
+    this.name = name;
   }
 
-  static deserialize(message: number[]) {
+  // The trailing name slot is a string (ships only); everything before it is
+  // numeric, so the array is mixed — the JSON transport carries that fine.
+  static deserialize(message: (number | string)[]) {
     return {
-      id: message[0],
-      kind: message[1],
-      position: new Vector3(message[2], message[3], message[4]),
-      rotation: new Quaternion(message[5], message[6], message[7], message[8]),
-      scale: message[9],
+      id: message[0] as number,
+      kind: message[1] as number,
+      position: new Vector3(
+        message[2] as number,
+        message[3] as number,
+        message[4] as number,
+      ),
+      rotation: new Quaternion(
+        message[5] as number,
+        message[6] as number,
+        message[7] as number,
+        message[8] as number,
+      ),
+      scale: message[9] as number,
+      name: (message[10] as string) ?? '',
     };
   }
 
@@ -101,6 +116,7 @@ export class Spawn {
       this.rotation.z,
       this.rotation.w,
       this.scale,
+      this.name,
     ];
   }
 }

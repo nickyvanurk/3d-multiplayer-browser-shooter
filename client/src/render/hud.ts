@@ -11,17 +11,12 @@ import {
   Line,
   LineSegments,
   LineBasicMaterial,
-  Box3,
-  Sphere,
 } from 'three';
 import type { Texture } from 'three';
 
-import Types from '../../../shared/types.ts';
-import type { EntityKind } from '../../../shared/types.ts';
 import type { World } from '../../../shared/sim/world.ts';
-import type { Entity } from '../../../shared/sim/entity.ts';
+import type { Ship, Faction } from '../../../shared/sim/entities/ship.ts';
 import type { SceneManager } from './scene-manager.ts';
-import type { ViewRegistry } from './view-registry.ts';
 import type { ProjectionService } from './projection.ts';
 
 // Accent colour for the firing-lead marker (ring + guide line): a muted red that
@@ -41,8 +36,22 @@ const RETICLE_ARM_PX = 14; // max length of each corner arm (big, near boxes)
 const RETICLE_ARM_FRACTION = 0.35;
 const RETICLE_MIN_HALF_PX = 10; // floor on the half-size so far ships still show
 const RETICLE_FALLBACK_DIAMETER_PX = 44; // when a ship can't be distance-sized
-const RETICLE_COLOR_ENEMY = 0xb9524c; // muted red, matching the lead marker
-const RETICLE_COLOR_VENDOR = 0xd1a44c; // gold, for the neutral vendor
+// Reticle/marker colour by allegiance — the HUD reads a ship's faction, never
+// its entity type, so friendly/enemy/NPC are all handled by the same code paths.
+const RETICLE_COLOR_HOSTILE = 0xb9524c; // muted red, matching the lead marker
+const RETICLE_COLOR_NEUTRAL = 0xd1a44c; // gold (the vendor / NPCs)
+const RETICLE_COLOR_FRIENDLY = 0x5fd08a; // green (reserved for a team mode)
+
+function factionColor(faction: Faction): number {
+  if (faction === 'neutral') {
+    return RETICLE_COLOR_NEUTRAL;
+  }
+  if (faction === 'friendly') {
+    return RETICLE_COLOR_FRIENDLY;
+  }
+  return RETICLE_COLOR_HOSTILE;
+}
+
 const RETICLE_BASE_OPACITY = 0.9;
 // Up close the brackets just clutter the ship, so the reticle fades out by
 // distance (camera -> target, world units): full beyond START, gone within END.
@@ -56,7 +65,7 @@ const ARROW_SCALE = 0.2;
 const MAX_HEALTH = 100;
 const HP_BAR_WIDTH = 42; // px
 const HP_BAR_HEIGHT = 5; // px
-const HP_BAR_GAP = 9; // px between the reticle's bottom and the bar
+const HP_BAR_GAP = 26; // px below the reticle — matches the label's LABEL_GAP
 const HP_BAR_BG_COLOR = 0x101010;
 
 // A ring sprite plus the thin line joining a ship's on-screen reticle to it.
@@ -69,6 +78,56 @@ interface LeadMarker {
 interface HpBar {
   bg: Sprite;
   fg: Sprite;
+}
+
+// Target label (aimed-at enemy's callsign + distance), sitting to the RIGHT of
+// the reticle like Everspace 2. Drawn at 2x and scaled down for crisp text; it
+// does NOT fade with the reticle.
+const LABEL_SCALE = 0.5; // canvas px -> screen px
+const LABEL_GAP = 26; // px between the reticle's right edge and the label
+const LABEL_NAME_FONT = "600 34px system-ui, 'Segoe UI', sans-serif";
+const LABEL_DIST_FONT = "500 24px system-ui, 'Segoe UI', sans-serif";
+
+// Render a two-line label (name above, distance below), left-aligned, white with
+// a dark outline for legibility. Returns the texture and its canvas pixel size.
+function makeLabelTexture(
+  name: string,
+  distance: string,
+): { texture: CanvasTexture; width: number; height: number } {
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d')!;
+  ctx.font = LABEL_NAME_FONT;
+  const nameW = ctx.measureText(name).width;
+  ctx.font = LABEL_DIST_FONT;
+  const distW = ctx.measureText(distance).width;
+
+  const padX = 6;
+  const padY = 6;
+  const lineGap = 4;
+  const nameH = 40;
+  const distH = 30;
+  const width = Math.ceil(Math.max(nameW, distW)) + padX * 2;
+  const height = nameH + lineGap + distH + padY * 2;
+  canvas.width = width;
+  canvas.height = height;
+
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+
+  ctx.font = LABEL_NAME_FONT;
+  ctx.strokeText(name, padX, padY);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(name, padX, padY);
+
+  const distY = padY + nameH + lineGap;
+  ctx.font = LABEL_DIST_FONT;
+  ctx.strokeText(distance, padX, distY);
+  ctx.fillStyle = '#c9d2e3'; // slightly dimmer than the name
+  ctx.fillText(distance, padX, distY);
+
+  return { texture: new CanvasTexture(canvas), width, height };
 }
 
 // Draw the hollow "shoot here" ring once into a canvas-backed texture, so the
@@ -112,26 +171,19 @@ export class HudService {
   reticles: Map<number, LineSegments>;
   // Enemy HP bars, shown below the reticle only while the ship is aimed at.
   hpBars: Map<number, HpBar>;
-  viewRegistry: ViewRegistry;
-  // World-space bounding radius of each ship model at scale 1, computed once per
-  // kind from its loaded model and multiplied by the entity's scale on use.
-  modelRadii: Map<EntityKind, number>;
-  private readonly scratchBox: Box3;
-  private readonly scratchSphere: Sphere;
+  // Single reusable name plate for the aimed-at enemy (only one at a time). Does
+  // NOT fade with the reticle. `namePlateText` caches the drawn text.
+  namePlate: Sprite | null;
+  namePlateText: string;
 
   constructor(
     world: World,
     sceneManager: SceneManager,
     projection: ProjectionService,
-    viewRegistry: ViewRegistry,
   ) {
     this.world = world;
     this.sceneManager = sceneManager;
     this.projection = projection;
-    this.viewRegistry = viewRegistry;
-    this.modelRadii = new Map();
-    this.scratchBox = new Box3();
-    this.scratchSphere = new Sphere();
 
     this.halfWidth = window.innerWidth / 2;
     this.halfHeight = window.innerHeight / 2;
@@ -176,6 +228,8 @@ export class HudService {
     this.leadMarkers = new Map();
     this.reticles = new Map();
     this.hpBars = new Map();
+    this.namePlate = null;
+    this.namePlateText = '';
 
     window.addEventListener('resize', this.onWindowResize.bind(this));
   }
@@ -212,6 +266,10 @@ export class HudService {
       }
     }
 
+    // Only one enemy is aimed at at a time, so a single name plate serves; track
+    // whether it was placed this frame and hide it if not.
+    let nameShown = false;
+
     for (const [id, transform2d] of indicators) {
       if (!this.entityIndicators[id]) {
         this.entityIndicators[id] = this.createHudSprite(0, 0);
@@ -230,23 +288,27 @@ export class HudService {
 
       const indicator = this.entityIndicators[id];
 
-      // Same behaviour as ships (edge marker off-screen, reticle once on-screen),
-      // but the vendor gets its own edge sprite and its own reticle colour so it
-      // never reads as an enemy.
-      const entity = this.world.get(Number(id));
-      const isVendor = entity?.type === Types.Entities.VENDOR;
+      // All ships are handled uniformly; only their faction (colour/icon) and
+      // whether they carry damageable health differ, both read as data.
+      const ship = this.world.get(Number(id)) as Ship | undefined;
+      const faction: Faction = ship?.faction ?? 'hostile';
+      const aimed = aimedShipId === Number(id);
 
       if (transform2d.onscreen) {
         // On-screen: draw the line-bracket reticle (sized to the ship, grows as
-        // it nears) and hide the sprite edge marker.
+        // it nears) and hide the sprite edge marker. The ship's on-screen radius
+        // comes from the projection; fall back to a fixed box if unknown.
         indicator.visible = false;
         const diameter =
-          this.reticleDiameter(Number(id)) ?? RETICLE_FALLBACK_DIAMETER_PX;
+          transform2d.screenRadius > 0
+            ? 2 *
+              (transform2d.screenRadius * RETICLE_SPACING + RETICLE_PADDING_PX)
+            : RETICLE_FALLBACK_DIAMETER_PX;
         this.updateReticle(
           Number(id),
           transform2d.position,
           diameter,
-          isVendor,
+          factionColor(faction),
         );
 
         // The lead ring only makes sense while its ship is drawn as a reticle
@@ -258,21 +320,44 @@ export class HudService {
           this.removeLead(Number(id));
         }
 
-        // Enemy HP bar below the reticle, only for the aimed-at ship. Vendor is
-        // undamageable, so it never gets one.
+        // HP bar below the reticle for the aimed-at ship. Invulnerable ships
+        // (the vendor) carry no meaningful health, so they get none — decided
+        // inside updateHealthBar, no faction check here.
         this.updateHealthBar(
           Number(id),
-          entity,
-          isVendor,
+          ship,
           transform2d.position,
           diameter,
-          aimedShipId === Number(id),
+          aimed,
         );
+
+        // Target label (name + distance) to the RIGHT of the reticle for the
+        // aimed-at ship of ANY faction. Unlike the reticle it does NOT fade with
+        // distance; same visibility as the HP bar.
+        const shipName = aimed ? ship?.name : undefined;
+        if (shipName && ship) {
+          const meters = ship.transform.position.distanceTo(
+            this.sceneManager.camera.position,
+          );
+          const distanceLabel = `${(meters / 1000).toFixed(1)}km`;
+          const rightX = transform2d.position.x + diameter / 2 + LABEL_GAP;
+          this.updateNamePlate(
+            shipName,
+            distanceLabel,
+            rightX,
+            transform2d.position.y,
+          );
+          nameShown = true;
+        }
       } else {
-        // Off-screen: the clamped edge marker sprite; hide the reticle.
+        // Off-screen: the clamped edge marker sprite; hide the reticle. Neutral
+        // ships use the vendor icon, everyone else the generic ship arrow.
         indicator.visible = true;
         indicator.material = new SpriteMaterial({
-          map: isVendor ? this.textures.vendor : this.textures.spaceship,
+          map:
+            faction === 'neutral'
+              ? this.textures.vendor
+              : this.textures.spaceship,
         });
         indicator.position.set(x, y, 1);
         this.resetToArrowScale(indicator);
@@ -280,6 +365,10 @@ export class HudService {
         this.removeLead(Number(id));
         this.hideHpBar(Number(id));
       }
+    }
+
+    if (!nameShown) {
+      this.hideNamePlate();
     }
 
     const renderer = this.sceneManager.renderer;
@@ -317,58 +406,15 @@ export class HudService {
     }
   }
 
-  // Screen diameter (px) the reticle should span to bracket this ship: its
-  // projected size plus spacing. Returns null when it can't be sized (unknown
-  // model, or at/behind the camera), so the caller falls back to fixed sizing.
-  reticleDiameter(id: number): number | null {
-    const entity = this.world.get(id);
-    if (!entity) {
-      return null;
-    }
-    const worldRadius = this.shipWorldRadius(entity);
-    if (worldRadius <= 0) {
-      return null;
-    }
-
-    const camera = this.sceneManager.camera;
-    const distance = entity.transform.position.distanceTo(camera.position);
-    if (distance <= 1e-3) {
-      return null;
-    }
-
-    // Perspective: the visible world half-height at `distance` maps to half the
-    // viewport in pixels, so pixels-per-world-unit = (h/2) / (d·tan(vFov/2)).
-    const halfFov = (camera.fov * Math.PI) / 180 / 2;
-    const pxPerWorld = window.innerHeight / 2 / (distance * Math.tan(halfFov));
-    const radiusPx = worldRadius * pxPerWorld;
-    return 2 * (radiusPx * RETICLE_SPACING + RETICLE_PADDING_PX);
-  }
-
-  // World-space bounding radius of a ship, from its model's bounding sphere (at
-  // scale 1, computed once per kind) times the entity's own scale.
-  shipWorldRadius(entity: Entity): number {
-    let base = this.modelRadii.get(entity.type);
-    if (base === undefined) {
-      const model = this.viewRegistry.models.get(entity.type);
-      base = model
-        ? this.scratchBox
-            .setFromObject(model)
-            .getBoundingSphere(this.scratchSphere).radius
-        : 0;
-      this.modelRadii.set(entity.type, base);
-    }
-    return base * entity.transform.scale;
-  }
-
   // Draw/refresh the corner-bracket reticle centered at `center`, sized so its
-  // box spans `diameter` px around the ship. Built from line segments (not a
-  // scaled texture), so the strokes stay 1px-crisp and the arms fixed-length at
-  // any size. Vendor gets its own colour so it never reads as an enemy.
+  // box spans `diameter` px around the ship, in the ship's faction `color`. Built
+  // from line segments (not a scaled texture), so the strokes stay 1px-crisp and
+  // the arms fixed-length at any size.
   updateReticle(
     id: number,
     center: { x: number; y: number },
     diameter: number,
-    isVendor: boolean,
+    color: number,
   ): void {
     let reticle = this.reticles.get(id);
     if (!reticle) {
@@ -398,9 +444,7 @@ export class HudService {
     reticle.visible = true;
     const material = reticle.material as LineBasicMaterial;
     material.opacity = RETICLE_BASE_OPACITY * fade;
-    material.color.setHex(
-      isVendor ? RETICLE_COLOR_VENDOR : RETICLE_COLOR_ENEMY,
-    );
+    material.color.setHex(color);
 
     const half = Math.max(diameter / 2, RETICLE_MIN_HALF_PX);
     const arm = Math.min(RETICLE_ARM_PX, half * RETICLE_ARM_FRACTION);
@@ -467,19 +511,17 @@ export class HudService {
     this.reticles.delete(id);
   }
 
-  // Track this ship's health to spot hits, then show its HP bar below the
-  // reticle when it is aimed at or was recently damaged, else hide it. Health is
-  // replicated from the server (network-client); the vendor has none.
+  // Show the aimed-at ship's HP bar below its reticle, else hide it. Invulnerable
+  // ships (the vendor) carry no meaningful health and never get one. Health is
+  // replicated from the server (network-client).
   updateHealthBar(
     id: number,
-    entity: Entity | undefined,
-    isVendor: boolean,
+    ship: Ship | undefined,
     center: { x: number; y: number },
     reticleDiameter: number,
     aimed: boolean,
   ): void {
-    const health =
-      !isVendor && entity ? (entity as { health?: number }).health : undefined;
+    const health = ship && !ship.invulnerable ? ship.health : undefined;
     if (!aimed || typeof health !== 'number') {
       this.hideHpBar(id);
       return;
@@ -542,6 +584,44 @@ export class HudService {
     bar.bg.material.dispose();
     bar.fg.material.dispose();
     this.hpBars.delete(id);
+  }
+
+  // Show the target label (creating on first use) left-anchored at `leftX`,
+  // vertically centered on `centerY`. The texture is regenerated only when the
+  // displayed text (name + distance) changes.
+  updateNamePlate(
+    name: string,
+    distance: string,
+    leftX: number,
+    centerY: number,
+  ): void {
+    if (!this.namePlate) {
+      this.namePlate = new Sprite(
+        new SpriteMaterial({ transparent: true, depthTest: false }),
+      );
+      this.namePlate.center.set(0, 0.5); // anchor at left-middle → grows right
+      this.sceneOrtho.add(this.namePlate);
+    }
+
+    const text = `${name}|${distance}`;
+    if (text !== this.namePlateText) {
+      this.namePlateText = text;
+      const { texture, width, height } = makeLabelTexture(name, distance);
+      const material = this.namePlate.material as SpriteMaterial;
+      material.map?.dispose();
+      material.map = texture;
+      material.needsUpdate = true;
+      this.namePlate.scale.set(width * LABEL_SCALE, height * LABEL_SCALE, 1);
+    }
+
+    this.namePlate.visible = true;
+    this.namePlate.position.set(leftX, centerY, 3); // above hp bar (2), reticle (1)
+  }
+
+  hideNamePlate(): void {
+    if (this.namePlate) {
+      this.namePlate.visible = false;
+    }
   }
 
   // Place (creating on first use) the lead ring at `lead` and stretch its guide
