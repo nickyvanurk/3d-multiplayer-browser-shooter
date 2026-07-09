@@ -6,7 +6,8 @@ const STORAGE_KEY = 'voidfall.settings';
 
 export const FOV_LIMITS = { min: 60, max: 120 } as const;
 // Chase-camera follow strength: the k in `1 - exp(-k * dt)`. Higher = snappier.
-export const CAMERA_STIFFNESS_LIMITS = { min: 2, max: 30 } as const;
+// Shown in the UI divided by 10 (raw 10..30 -> "1.0".."3.0").
+export const CAMERA_STIFFNESS_LIMITS = { min: 10, max: 30 } as const;
 
 export interface GameSettings {
   horizontalFov: number;
@@ -15,7 +16,7 @@ export interface GameSettings {
 
 const DEFAULTS: GameSettings = {
   horizontalFov: 90,
-  cameraStiffness: 10,
+  cameraStiffness: 15,
 };
 
 function clamp(v: number, min: number, max: number): number {

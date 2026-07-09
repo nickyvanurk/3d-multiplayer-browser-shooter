@@ -90,7 +90,7 @@ export class SettingsMenu {
         min: CAMERA_STIFFNESS_LIMITS.min,
         max: CAMERA_STIFFNESS_LIMITS.max,
         step: 1,
-        format: (v) => String(v),
+        format: (v) => (v / 10).toFixed(1),
         get: () => this.settings.cameraStiffness,
         // Read live by the chase camera each frame; just persist it.
         set: (v) => {
