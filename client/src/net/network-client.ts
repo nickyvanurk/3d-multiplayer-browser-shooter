@@ -199,8 +199,15 @@ export class NetworkClient {
       input,
       health,
     } of entities) {
-      // The local ship is client-authoritative; ignore the server's echo of it.
+      // The local ship is client-authoritative for MOVEMENT, so the server's
+      // echo of its transform/velocity is ignored below. Health is the
+      // exception: combat runs only on the server (never predicted locally), so
+      // it must be mirrored here or the owner's HUD never sees its own damage.
       if (id === this.localPlayerId) {
+        const local = this.world.get(id) as { health?: number } | undefined;
+        if (local && typeof local.health === 'number') {
+          local.health = health;
+        }
         continue;
       }
 
