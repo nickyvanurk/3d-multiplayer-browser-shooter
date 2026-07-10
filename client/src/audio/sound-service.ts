@@ -67,9 +67,17 @@ export class SoundService {
   }
 
   // Positional one-shot of the active segment at a world position. An optional
-  // `pitch` overrides the global base pitch for this one clip.
-  playAt(name: string, position: Vector3, volume = 1, pitch?: number): void {
-    this.spawn(name, this.resolve(name), position, volume, pitch);
+  // `pitch` overrides the global base pitch for this one clip; `refDistance`
+  // (default 30) sets how far the sound carries before it starts attenuating —
+  // a large value keeps big events (explosions) audible across the battlefield.
+  playAt(
+    name: string,
+    position: Vector3,
+    volume = 1,
+    pitch?: number,
+    refDistance = 30,
+  ): void {
+    this.spawn(name, this.resolve(name), position, volume, pitch, refDistance);
   }
 
   // The segment to fire: the chosen one, or a fresh random pick when active < 0
@@ -95,6 +103,7 @@ export class SoundService {
     position: Vector3 | null,
     volume: number,
     pitch?: number,
+    refDistance = 30,
   ): void {
     const buffer = this.buffers.get(name);
     const seg = this.segments.get(name)?.[index];
@@ -117,7 +126,7 @@ export class SoundService {
     sound.setVolume(volume * this.volume * (0.9 + Math.random() * 0.1));
 
     if (position && sound instanceof PositionalAudio) {
-      sound.setRefDistance(30);
+      sound.setRefDistance(refDistance);
       sound.position.copy(position);
       this.scene.add(sound);
       sound.onEnded = () => {

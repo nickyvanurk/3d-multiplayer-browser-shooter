@@ -66,8 +66,8 @@ export default class Game {
   hitVolume = 0.45;
   hitPitch = 2;
   // Ship-destruction explosion cue level/pitch, tunable live from the F3 panel.
-  explosionVolume = 0.9;
-  explosionPitch = 1;
+  explosionVolume = 1.8;
+  explosionPitch = 0.8;
   fixedStep = 1000 / 60;
   fixedUpdate!: (delta: number) => number;
   currentInput: InputCommand = InputCommand.empty();
@@ -128,11 +128,14 @@ export default class Game {
 
     this.viewRegistry.onShipDestroyed = (position) => {
       this.particles.spawnExplosion(position);
+      // Large refDistance so the blast carries ~1km before it attenuates,
+      // unlike the short-range blaster/hit cues.
       this.sound.playAt(
         'explosion',
         position,
         this.explosionVolume,
         this.explosionPitch,
+        1000,
       );
     };
 
