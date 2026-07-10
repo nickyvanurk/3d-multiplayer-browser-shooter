@@ -128,14 +128,15 @@ export default class Game {
 
     this.viewRegistry.onShipDestroyed = (position) => {
       this.particles.spawnExplosion(position);
-      // Large refDistance so the blast carries ~1km before it attenuates,
-      // unlike the short-range blaster/hit cues.
+      // refDistance well above the blaster/hit cues so the blast reads big and
+      // carries, but low enough that it tapers with distance before the 1km
+      // cutoff (playAt's default) rather than hard-cutting at full volume.
       this.sound.playAt(
         'explosion',
         position,
         this.explosionVolume,
         this.explosionPitch,
-        1000,
+        300,
       );
     };
 

@@ -1,5 +1,11 @@
-import { AudioListener, Audio, PositionalAudio, AudioLoader } from 'three';
-import type { Camera, Scene, Vector3 } from 'three';
+import {
+  AudioListener,
+  Audio,
+  PositionalAudio,
+  AudioLoader,
+  Vector3,
+} from 'three';
+import type { Camera, Scene } from 'three';
 
 export interface SoundSegment {
   offset: number;
@@ -22,6 +28,7 @@ export class SoundService {
   private readonly buffers = new Map<string, AudioBuffer>();
   private readonly segments = new Map<string, SoundSegment[]>();
   private readonly active = new Map<string, number>();
+  private readonly listenerPos = new Vector3();
 
   constructor(camera: Camera, scene: Scene) {
     this.listener = new AudioListener();
@@ -70,14 +77,26 @@ export class SoundService {
   // `pitch` overrides the global base pitch for this one clip; `refDistance`
   // (default 30) sets how far the sound carries before it starts attenuating —
   // a large value keeps big events (explosions) audible across the battlefield.
+  // `maxDistance` (default 1000 ≈ 1km) is a hard cutoff: the three.js inverse
+  // rolloff only asymptotes toward zero, so a distant event stays faintly
+  // audible forever; past this range we just don't play it at all.
   playAt(
     name: string,
     position: Vector3,
     volume = 1,
     pitch?: number,
     refDistance = 30,
+    maxDistance = 1000,
   ): void {
-    this.spawn(name, this.resolve(name), position, volume, pitch, refDistance);
+    this.spawn(
+      name,
+      this.resolve(name),
+      position,
+      volume,
+      pitch,
+      refDistance,
+      maxDistance,
+    );
   }
 
   // The segment to fire: the chosen one, or a fresh random pick when active < 0
@@ -104,10 +123,23 @@ export class SoundService {
     volume: number,
     pitch?: number,
     refDistance = 30,
+    maxDistance?: number,
   ): void {
     const buffer = this.buffers.get(name);
     const seg = this.segments.get(name)?.[index];
     if (!buffer || !seg || this.listener.context.state !== 'running') {
+      return;
+    }
+
+    // Hard distance cutoff: skip positional events emitted beyond maxDistance
+    // from the listener (they'd otherwise linger faintly under the inverse
+    // rolloff). Local 2D sounds have no position and are never gated.
+    if (
+      position &&
+      maxDistance !== undefined &&
+      this.listener.getWorldPosition(this.listenerPos).distanceTo(position) >
+        maxDistance
+    ) {
       return;
     }
 
