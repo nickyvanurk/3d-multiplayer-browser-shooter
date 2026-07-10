@@ -27,6 +27,7 @@ import { SettingsMenu } from './ui/settings-menu.ts';
 import { MusicPlayer, defaultPlaylist } from './audio/music-player.ts';
 import { MusicPlayerHud } from './ui/music-player-hud.ts';
 import { VendorHud } from './ui/vendor-hud.ts';
+import { PlayerHud } from './ui/player-hud.ts';
 import { HitMarker } from './ui/hit-marker.ts';
 
 // Plain OOP game. Owns the mirror World, the presentation layer, the client
@@ -61,6 +62,7 @@ export default class Game {
   music: MusicPlayer;
   musicHud: MusicPlayerHud;
   vendorHud: VendorHud;
+  playerHud: PlayerHud;
   hitMarker: HitMarker;
   // Hitmarker cue level/pitch, tunable live from the F3 panel.
   hitVolume = 0.45;
@@ -155,6 +157,13 @@ export default class Game {
     );
     this.networkClient.onStats = (stats) =>
       this.vendorHud.setStats(stats.cargo, stats.cargoCapacity, stats.credits);
+
+    // Bottom-centre pilot status (hull hero + cargo/credits). Reads the owned
+    // ship directly each frame, so it needs no dedicated feed.
+    this.playerHud = new PlayerHud(
+      this.world,
+      () => this.networkClient.localPlayerId,
+    );
 
     this.connection.onConnection(() => console.log('Connected to server'));
     this.connection.onDisconnect(() => console.log('Disconnected from server'));
@@ -397,6 +406,7 @@ export default class Game {
     this.particles.update(delta);
     this.orePickups.update(time);
     this.vendorHud.update();
+    this.playerHud.update();
     this.range.update();
 
     this.viewRegistry.update(alpha, delta);

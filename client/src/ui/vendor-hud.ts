@@ -12,22 +12,17 @@ interface TradeNet {
   sendRepair(): void;
 }
 
-// Bottom-centre economy readout: cargo (with a FULL nudge), credits, and — when
-// the player flies within docking range of the vendor — a Sell/Repair prompt.
-// Sell/repair are one-shot key events (F/R) routed straight to the server, which
-// validates range and funds; the resulting cargo/credits come back via Stats.
+// The vendor's docking prompt: shown bottom-centre only when the player flies
+// within trade range, offering Sell/Repair. Sell/repair are one-shot key events
+// (F/R) routed straight to the server, which validates range and funds; the
+// player's own cargo/credits are shown by PlayerHud (bottom-centre), not here.
 export class VendorHud {
   private readonly world: World;
   private readonly localShipId: () => number | null;
   private readonly net: TradeNet;
 
-  private readonly panel: HTMLDivElement;
-  private readonly cargoEl: HTMLDivElement;
-  private readonly creditsEl: HTMLDivElement;
   private readonly promptEl: HTMLDivElement;
 
-  private cargo = 0;
-  private cargoCapacity = 0;
   private credits = 0;
   private vendorId: number | null = null;
   private inRange = false;
@@ -37,53 +32,28 @@ export class VendorHud {
     this.localShipId = localShipId;
     this.net = net;
 
-    this.panel = document.createElement('div');
-    Object.assign(this.panel.style, {
+    this.promptEl = document.createElement('div');
+    Object.assign(this.promptEl.style, {
       position: 'fixed',
       left: '50%',
-      bottom: '18px',
+      bottom: '84px', // clears the player status panel below it
       transform: 'translateX(-50%)',
       zIndex: '14000',
       font: '13px monospace',
-      color: '#cfd8e6',
-      textAlign: 'center',
+      color: '#d1a44c', // vendor gold, matching the HUD reticle
       textShadow: '0 1px 3px rgba(0,0,0,0.9)',
+      textAlign: 'center',
       pointerEvents: 'none',
       userSelect: 'none',
-    });
-
-    const stats = document.createElement('div');
-    Object.assign(stats.style, {
-      display: 'flex',
-      gap: '18px',
-      justifyContent: 'center',
-    });
-    this.cargoEl = document.createElement('div');
-    this.creditsEl = document.createElement('div');
-    stats.appendChild(this.cargoEl);
-    stats.appendChild(this.creditsEl);
-    this.panel.appendChild(stats);
-
-    this.promptEl = document.createElement('div');
-    Object.assign(this.promptEl.style, {
-      marginTop: '6px',
-      color: '#d1a44c', // vendor gold, matching the HUD reticle
-      fontSize: '12px',
       visibility: 'hidden',
     });
-    this.panel.appendChild(this.promptEl);
-
-    document.body.appendChild(this.panel);
-    this.refreshStats();
+    document.body.appendChild(this.promptEl);
     this.bindKeys();
   }
 
-  // Owner-only cargo/credits from a Stats message.
-  setStats(cargo: number, cargoCapacity: number, credits: number): void {
-    this.cargo = cargo;
-    this.cargoCapacity = cargoCapacity;
+  // Owner-only credits from a Stats message — kept only to gate the repair prompt.
+  setStats(_cargo: number, _cargoCapacity: number, credits: number): void {
     this.credits = credits;
-    this.refreshStats();
   }
 
   // Per frame: recompute docking proximity and show/hide the trade prompt.
@@ -127,15 +97,6 @@ export class VendorHud {
       }
     }
     return undefined;
-  }
-
-  private refreshStats(): void {
-    const full = this.cargoCapacity > 0 && this.cargo >= this.cargoCapacity;
-    this.cargoEl.textContent = `CARGO ${this.cargo}/${this.cargoCapacity}${
-      full ? '  FULL' : ''
-    }`;
-    this.cargoEl.style.color = full ? '#e8b04b' : '#cfd8e6';
-    this.creditsEl.textContent = `CREDITS ${this.credits}`;
   }
 
   private bindKeys(): void {
