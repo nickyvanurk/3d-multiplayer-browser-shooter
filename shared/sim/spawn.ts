@@ -62,7 +62,7 @@ function nearestAsteroidGap(world: SpawnWorld, point: Vector3): number {
 }
 
 // Distance to the nearest OTHER alive ship (Infinity if none).
-function nearestShipDistance(
+export function nearestShipDistance(
   world: SpawnWorld,
   point: Vector3,
   exclude?: Entity,

@@ -3,6 +3,7 @@ import { Vector3, Quaternion } from 'three';
 
 import Types from '../../types.ts';
 import type { EntityKind } from '../../types.ts';
+import { asteroidScale } from '../mining.ts';
 import type { Entity, PhysicsBody } from '../entity.ts';
 import type { Bullet } from '../entities/bullet.ts';
 import type { World } from '../world.ts';
@@ -76,6 +77,9 @@ export class RapierPhysicsWorld implements PhysicsWorld {
   handleToEntity: Map<number, Entity>;
   // Entities that currently own a body, iterated for post-step write-back.
   bodies: Set<Entity>;
+  // Asteroid entity -> the world scale its collider is currently built at, so a
+  // mined rock's collider is only rebuilt when its shrink moves it enough.
+  private asteroidScale: Map<Entity, number>;
 
   private readonly scratchVec: Vector3;
   private readonly scratchVec2: Vector3;
@@ -91,6 +95,7 @@ export class RapierPhysicsWorld implements PhysicsWorld {
     this.vertices = new Map();
     this.handleToEntity = new Map();
     this.bodies = new Set();
+    this.asteroidScale = new Map();
     this.scratchVec = new Vector3();
     this.scratchVec2 = new Vector3();
     this.scratchQuat = new Quaternion();
@@ -144,7 +149,63 @@ export class RapierPhysicsWorld implements PhysicsWorld {
     // memory, so there is no manual destroy() bookkeeping.
     this.world.removeRigidBody(body);
     this.bodies.delete(entity);
+    this.asteroidScale.delete(entity);
     entity.body = null;
+  }
+
+  // Rebuild each mined asteroid's collider to match its ore-driven shrink, so
+  // shots (raycasts) and ships collide with the rock the player actually sees.
+  // Convex-hull rebuilds aren't free, so a collider is only rebuilt once its
+  // target scale has moved a couple percent from what it's currently built at.
+  syncAsteroidScales(world: World): void {
+    for (const entity of world.entities.values()) {
+      if (
+        entity.type !== Types.Entities.ASTEROID ||
+        !entity.body ||
+        entity.alive === false
+      ) {
+        continue;
+      }
+      const ore = entity as unknown as { health: number; maxOre: number };
+      const base = entity.transform.scale;
+      const target = asteroidScale(base, ore.health, ore.maxOre);
+      const built = this.asteroidScale.get(entity) ?? base;
+      // `target` only moves in discrete per-chunk steps, so rebuild whenever it
+      // actually changed (a tiny tolerance guards float noise).
+      if (Math.abs(target - built) > 1e-3) {
+        this.rebuildAsteroidCollider(entity, target);
+        this.asteroidScale.set(entity, target);
+      }
+    }
+  }
+
+  // Swap an asteroid's single collider for one built at `worldScale`. The unit
+  // (scale-1) hull points are cached; scaling them uniformly avoids re-extracting
+  // triangles. The rigid body is kept — only its collider is replaced.
+  private rebuildAsteroidCollider(entity: Entity, worldScale: number): void {
+    const body = entity.body as unknown as RAPIER.RigidBody | null;
+    if (!body || body.numColliders() === 0) {
+      return;
+    }
+    const old = body.collider(0);
+    this.handleToEntity.delete(old.handle);
+    this.world.removeCollider(old, false);
+
+    const unit = this.getConvexVertices(entity.type, 1);
+    const scaled = new Float32Array(unit.length);
+    for (let i = 0; i < unit.length; i++) {
+      scaled[i] = unit[i] * worldScale;
+    }
+    const desc = RAPIER.ColliderDesc.convexHull(scaled);
+    if (!desc) {
+      return;
+    }
+    desc
+      .setRestitution(0)
+      .setFriction(0)
+      .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
+    const collider = this.world.createCollider(desc, body);
+    this.handleToEntity.set(collider.handle, entity);
   }
 
   applyAll(world: World, _delta: number): void {
@@ -213,7 +274,14 @@ export class RapierPhysicsWorld implements PhysicsWorld {
   // physics — they only flip `alive`, and the stepper owns body presence.
   reconcile(world: World): void {
     for (const entity of world.entities.values()) {
-      if (entity.type !== Types.Entities.SPACESHIP) {
+      // Ships die/respawn; asteroids deplete/respawn in place. Both must lose
+      // their collider while dead — a depleted asteroid lingers in the world for
+      // minutes before respawning, and its body would otherwise be an invisible
+      // wall players hit where the mined-out rock used to be.
+      if (
+        entity.type !== Types.Entities.SPACESHIP &&
+        entity.type !== Types.Entities.ASTEROID
+      ) {
         continue;
       }
 

@@ -35,6 +35,10 @@ export class ClientSim {
   // (immediate) hitmarker + sound. The server still owns the actual damage; this
   // is cosmetic feedback only.
   onHitEnemy: ((impact: Vector3) => void) | null;
+  // Emitted when one of our predicted bullets strikes an asteroid, with the
+  // world-space impact point — drives an immediate dust puff at the hit. Cosmetic
+  // (mining damage is server-authoritative).
+  onHitAsteroid: ((impact: Vector3) => void) | null;
 
   private readonly scratch: Vector3;
   private readonly scratch2: Vector3;
@@ -48,6 +52,7 @@ export class ClientSim {
     this.nextBulletId = CLIENT_ID_BASE;
     this.onFire = null;
     this.onHitEnemy = null;
+    this.onHitAsteroid = null;
     this.scratch = new Vector3();
     this.scratch2 = new Vector3();
     // Ship.update spawns bullets through this; we intercept to give them
@@ -157,6 +162,11 @@ export class ClientSim {
       }
     }
 
+    // Match each mined asteroid's collider to its shrinking render (both driven
+    // by the replicated ore), so predicted bullet raycasts and ship bumps meet
+    // the rock at the size shown — not the original full-size hull.
+    this.physics.syncAsteroidScales?.(this.world);
+
     this.physics.applyAll?.(this.world, dt);
     this.physics.step(dt);
     this.physics.drainCollisions(); // discard — hit detection is server-side
@@ -190,13 +200,13 @@ export class ClientSim {
       // leading point and nothing is ever drawn ahead of the impact.
       const hit = this.physics.castSegment(from, step, this.ownedShip);
       if (hit) {
-        // Predicted enemy hit → immediate hitmarker/sound at the impact point
-        // (from + step·toi). Only ships count (not asteroids or the vendor).
+        // Predicted hit at the impact point (from + step·toi): a ship flashes the
+        // hitmarker/sound; an asteroid throws a dust puff where the shot landed.
+        const impact = new Vector3().copy(from).addScaledVector(step, hit.toi);
         if (hit.entity.type === Types.Entities.SPACESHIP) {
-          const impact = new Vector3()
-            .copy(from)
-            .addScaledVector(step, hit.toi);
           this.onHitEnemy?.(impact);
+        } else if (hit.entity.type === Types.Entities.ASTEROID) {
+          this.onHitAsteroid?.(impact);
         }
         bullet.markDestroyed();
       } else {

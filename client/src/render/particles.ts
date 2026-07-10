@@ -5,9 +5,25 @@ import {
   DynamicDrawUsage,
   Vector3,
   Object3D,
+  TextureLoader,
+  Sprite,
+  SpriteMaterial,
+  AdditiveBlending,
 } from 'three';
+import type { Texture } from 'three';
 
 import type { SceneManager } from './scene-manager.ts';
+
+// A short dust puff (SpaceDust.png) that expands and fades, masking the "pop"
+// when an asteroid's render scale snaps to a new ore level. `size` scales with
+// the rock so a big asteroid throws a bigger cloud.
+interface DustPuff {
+  sprite: Sprite;
+  age: number;
+  life: number;
+  size: number;
+}
+const DUST_LIFE_MS = 550;
 
 // A MeshBasicMaterial carrying the extra `maxOpacity` field the fade uses.
 type FadingMaterial = MeshBasicMaterial & { maxOpacity: number };
@@ -27,9 +43,13 @@ export class ParticleService {
   materials: { white: FadingMaterial; orange: FadingMaterial };
   meshes: { dodecahedronWhite: ParticleMesh; dodecahedronOrange: ParticleMesh };
   effects: Effect[];
+  dustTexture: Texture;
+  dustPuffs: DustPuff[];
 
   constructor(sceneManager: SceneManager) {
     this.sceneManager = sceneManager;
+    this.dustTexture = new TextureLoader().load('textures/SpaceDust.png');
+    this.dustPuffs = [];
 
     this.materials = {
       white: new MeshBasicMaterial({
@@ -69,6 +89,41 @@ export class ParticleService {
     this.effects = [];
   }
 
+  // A dust puff at `position`; `size` is the cloud's peak world radius (scale it
+  // with the asteroid so big rocks throw bigger clouds).
+  spawnDust(position: Vector3, size: number): void {
+    const material = new SpriteMaterial({
+      map: this.dustTexture,
+      transparent: true,
+      opacity: 0.7,
+      depthWrite: false,
+      blending: AdditiveBlending,
+      fog: true,
+    });
+    const sprite = new Sprite(material);
+    sprite.position.copy(position);
+    sprite.scale.setScalar(size * 0.4);
+    this.sceneManager.scene.add(sprite);
+    this.dustPuffs.push({ sprite, age: 0, life: DUST_LIFE_MS, size });
+  }
+
+  private updateDust(delta: number): void {
+    for (let i = this.dustPuffs.length - 1; i >= 0; i--) {
+      const puff = this.dustPuffs[i];
+      puff.age += delta;
+      const t = puff.age / puff.life;
+      if (t >= 1) {
+        this.sceneManager.scene.remove(puff.sprite);
+        puff.sprite.material.dispose();
+        this.dustPuffs.splice(i, 1);
+        continue;
+      }
+      // Expand quickly and fade out over the puff's life.
+      puff.sprite.scale.setScalar(puff.size * (0.4 + t));
+      puff.sprite.material.opacity = 0.7 * (1 - t);
+    }
+  }
+
   spawnExplosion(position: Vector3): void {
     const whiteParticles = this.generateParticleBurst(40, 0.5);
     const orangeParticles = this.generateParticleBurst(40, 0.4);
@@ -79,7 +134,9 @@ export class ParticleService {
     });
   }
 
-  update(): void {
+  update(delta = 16): void {
+    this.updateDust(delta);
+
     for (let i = this.effects.length - 1; i >= 0; i--) {
       const effect = this.effects[i];
       const position = effect.position;

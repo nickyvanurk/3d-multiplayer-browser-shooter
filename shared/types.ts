@@ -7,6 +7,15 @@ export const Messages = {
   WORLD: 6,
   STATE: 7,
   FIRE: 8,
+  // Mining economy. OREDROP (server->all): a chunk spawned at a position.
+  // COLLECT (server->all): a chunk was collected, remove it. SELL/REPAIR
+  // (client->server): vendor trade requests. STATS (server->owner): the owner's
+  // cargo/credits changed.
+  COLLECT: 9,
+  SELL: 10,
+  REPAIR: 11,
+  STATS: 12,
+  OREDROP: 13,
 } as const;
 
 export const Entities = {

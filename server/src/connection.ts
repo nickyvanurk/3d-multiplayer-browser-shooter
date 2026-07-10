@@ -30,6 +30,11 @@ export default class Connection {
   latestState: StateData | null;
   // Fire requests are events; every one must be honored, so they queue.
   fireQueue: FireData[];
+  // Vendor trades are idempotent within a tick (a second sell finds an empty
+  // hold; a second repair finds full health), so they latch as booleans rather
+  // than queue.
+  sellRequested: boolean;
+  repairRequested: boolean;
   onCloseCallback?: () => void;
 
   constructor(id: number, connection: ClientSocket, server: Server) {
@@ -41,6 +46,8 @@ export default class Connection {
     this.outgoingMessageQueue = [];
     this.latestState = null;
     this.fireQueue = [];
+    this.sellRequested = false;
+    this.repairRequested = false;
 
     this.connection.on('message', (message) => {
       const data = JSON.parse(message as string) as unknown[];
@@ -58,6 +65,12 @@ export default class Connection {
           break;
         case Types.Messages.FIRE:
           this.fireQueue.push(Messages.Fire.deserialize(data as number[]));
+          break;
+        case Types.Messages.SELL:
+          this.sellRequested = true;
+          break;
+        case Types.Messages.REPAIR:
+          this.repairRequested = true;
           break;
       }
     });
@@ -91,6 +104,19 @@ export default class Connection {
     const fires = this.fireQueue;
     this.fireQueue = [];
     return fires;
+  }
+
+  // Consume this tick's vendor-trade latches, clearing them.
+  drainSell(): boolean {
+    const requested = this.sellRequested;
+    this.sellRequested = false;
+    return requested;
+  }
+
+  drainRepair(): boolean {
+    const requested = this.repairRequested;
+    this.repairRequested = false;
+    return requested;
   }
 
   // Returns the newest reported state and clears it, so a tick with no fresh

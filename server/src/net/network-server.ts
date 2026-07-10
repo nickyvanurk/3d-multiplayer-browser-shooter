@@ -8,7 +8,12 @@ import { Bullet } from '../../../shared/sim/entities/bullet.ts';
 import { InputCommand } from '../../../shared/sim/input.ts';
 import { SnapshotDiffer } from '../../../shared/sim/net/snapshot.ts';
 import { pickSpawnPosition } from '../../../shared/sim/spawn.ts';
+import { sellCargo, repairShip } from '../../../shared/sim/trade.ts';
 import { generateName } from '../../../shared/names/generate-name.ts';
+import type {
+  SpawnEvent,
+  CollectEvent,
+} from '../../../shared/sim/subsystems/mining.ts';
 
 import type { GameServer } from '../game-server.ts';
 import type Connection from '../connection.ts';
@@ -23,6 +28,8 @@ export class NetworkServer {
   ships: Map<number, Ship>;
   differ: SnapshotDiffer;
   lastAlive: Map<number, boolean>;
+  // Last cargo/credits sent to each owner, so Stats only goes out on a change.
+  lastStats: Map<number, { cargo: number; credits: number }>;
 
   constructor(gameServer: GameServer) {
     this.gameServer = gameServer;
@@ -31,6 +38,7 @@ export class NetworkServer {
     this.ships = new Map(); // connection.id -> Ship
     this.differ = new SnapshotDiffer();
     this.lastAlive = new Map(); // ship id -> boolean
+    this.lastStats = new Map(); // connection.id -> { cargo, credits }
   }
 
   addConnection(connection: Connection): void {
@@ -69,6 +77,7 @@ export class NetworkServer {
       this.lastAlive.delete(ship.id!);
     }
 
+    this.lastStats.delete(connection.id);
     this.connections.delete(connection);
     this.gameServer.connectedClients--;
   }
@@ -123,6 +132,72 @@ export class NetworkServer {
         }
         this.spawnBullet(world, ship, fire);
       }
+
+      // Vendor trades: server-authoritative sell/repair, gated on docking range
+      // inside trade.ts. Flags are drained every tick to clear them even when
+      // dead or the vendor is somehow absent.
+      const wantsSell = connection.drainSell();
+      const wantsRepair = connection.drainRepair();
+      if (ship.alive !== false && (wantsSell || wantsRepair)) {
+        const vendor = this.findVendor();
+        if (vendor) {
+          if (wantsSell) {
+            sellCargo(ship, vendor);
+          }
+          if (wantsRepair) {
+            repairShip(ship, vendor);
+          }
+        }
+      }
+    }
+  }
+
+  // The single neutral vendor NPC, or undefined if it is not in the world.
+  private findVendor(): Entity | undefined {
+    for (const entity of this.world.entities.values()) {
+      if (entity.type === Types.Entities.VENDOR) {
+        return entity;
+      }
+    }
+    return undefined;
+  }
+
+  // Server -> all: one OreDrop per freshly-broken chunk (id + impact position),
+  // so every client renders it at the same spot.
+  broadcastSpawned(events: SpawnEvent[]): void {
+    for (const { id, position } of events) {
+      this.broadcastMessage(new Messages.OreDrop(id, position));
+    }
+  }
+
+  // Server -> all: one Collect per authoritatively-collected chunk, so every
+  // client drops its copy.
+  broadcastCollected(events: CollectEvent[]): void {
+    for (const { id } of events) {
+      this.broadcastMessage(new Messages.Collect(id));
+    }
+  }
+
+  // Server -> owner only: push the owner's cargo/credits when either changed
+  // (from a collect or a sell). Kept off the shared snapshot — only the owning
+  // HUD needs them.
+  private sendStatChanges(): void {
+    for (const connection of this.connections) {
+      const ship = this.ships.get(connection.id);
+      if (!ship) {
+        continue;
+      }
+      const last = this.lastStats.get(connection.id);
+      if (last && last.cargo === ship.cargo && last.credits === ship.credits) {
+        continue;
+      }
+      connection.pushMessage(
+        new Messages.Stats(ship.cargo, ship.cargoCapacity, ship.credits),
+      );
+      this.lastStats.set(connection.id, {
+        cargo: ship.cargo,
+        credits: ship.credits,
+      });
     }
   }
 
@@ -208,6 +283,8 @@ export class NetworkServer {
   }
 
   broadcast(world: World, _time: number): void {
+    this.sendStatChanges();
+
     for (const entity of world.entities.values()) {
       if (typeof entity.alive !== 'boolean') {
         continue;

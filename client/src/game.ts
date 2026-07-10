@@ -14,6 +14,7 @@ import { ProjectionService } from './render/projection.ts';
 import { HudService } from './render/hud.ts';
 import { AimAssistService } from './render/aim-assist.ts';
 import { ParticleService } from './render/particles.ts';
+import { OrePickupService } from './render/ore-pickups.ts';
 import { RangeService } from './render/range.ts';
 import { InputController } from './input/input-controller.ts';
 import { DEFAULT_KEYBINDINGS } from './input/keybindings.ts';
@@ -25,6 +26,7 @@ import { consumeFirstVisit } from './first-visit.ts';
 import { SettingsMenu } from './ui/settings-menu.ts';
 import { MusicPlayer, defaultPlaylist } from './audio/music-player.ts';
 import { MusicPlayerHud } from './ui/music-player-hud.ts';
+import { VendorHud } from './ui/vendor-hud.ts';
 import { HitMarker } from './ui/hit-marker.ts';
 
 // Plain OOP game. Owns the mirror World, the presentation layer, the client
@@ -47,6 +49,7 @@ export default class Game {
   inputController: InputController;
   projection: ProjectionService;
   particles: ParticleService;
+  orePickups: OrePickupService;
   hud: HudService;
   aimAssist: AimAssistService;
   range: RangeService;
@@ -57,10 +60,14 @@ export default class Game {
   settingsMenu: SettingsMenu;
   music: MusicPlayer;
   musicHud: MusicPlayerHud;
+  vendorHud: VendorHud;
   hitMarker: HitMarker;
   // Hitmarker cue level/pitch, tunable live from the F3 panel.
   hitVolume = 0.45;
   hitPitch = 2;
+  // Ship-destruction explosion cue level/pitch, tunable live from the F3 panel.
+  explosionVolume = 0.9;
+  explosionPitch = 1;
   fixedStep = 1000 / 60;
   fixedUpdate!: (delta: number) => number;
   currentInput: InputCommand = InputCommand.empty();
@@ -90,6 +97,11 @@ export default class Game {
       this.viewRegistry,
     );
     this.particles = new ParticleService(this.sceneManager);
+    this.orePickups = new OrePickupService(this.sceneManager);
+    // Each chunk throws a small, subtle dust puff where it breaks off — enough to
+    // sell the impact, not enough to flag a sneaky miner from across the field.
+    this.orePickups.onSpawn = (position) =>
+      this.particles.spawnDust(position, 40);
     this.hud = new HudService(this.world, this.sceneManager, this.projection);
     this.aimAssist = new AimAssistService(
       this.world,
@@ -114,8 +126,15 @@ export default class Game {
     this.hitMarker = new HitMarker();
     this.music.start();
 
-    this.viewRegistry.onShipDestroyed = (position) =>
+    this.viewRegistry.onShipDestroyed = (position) => {
       this.particles.spawnExplosion(position);
+      this.sound.playAt(
+        'explosion',
+        position,
+        this.explosionVolume,
+        this.explosionPitch,
+      );
+    };
 
     this.networkClient = new NetworkClient(
       this.connection,
@@ -123,6 +142,15 @@ export default class Game {
       this.sceneManager.camera,
       this.settings,
     );
+
+    // Economy HUD + vendor trade input, fed by the owner-only Stats stream.
+    this.vendorHud = new VendorHud(
+      this.world,
+      () => this.networkClient.localPlayerId,
+      this.networkClient,
+    );
+    this.networkClient.onStats = (stats) =>
+      this.vendorHud.setStats(stats.cargo, stats.cargoCapacity, stats.credits);
 
     this.connection.onConnection(() => console.log('Connected to server'));
     this.connection.onDisconnect(() => console.log('Disconnected from server'));
@@ -141,6 +169,8 @@ export default class Game {
     );
     // Hitmarker cue: a single short clip played on a predicted enemy hit.
     await this.sound.load('hit', 'sfx/hit.mp3');
+    // Ship-destruction cue: a single clip played positionally at the wreck.
+    await this.sound.load('explosion', 'sfx/Explosion_Small.wav');
     const blasterCount = this.sound.getSegments('blaster').length;
     // Chosen defaults (tunable live via the F3 panel): sound 1, pitch 2, vol 0.7.
     this.sound.setActive('blaster', 0);
@@ -219,6 +249,36 @@ export default class Game {
       onChange: previewHit,
     });
 
+    // Explosion cue: its own volume + pitch, auditioned 2D on change.
+    const previewExplosion = () =>
+      this.sound.play('explosion', this.explosionVolume, this.explosionPitch);
+    this.debug.addSlider('Explosion volume', {
+      min: 0,
+      max: 2,
+      step: 0.05,
+      decKey: 'KeyG',
+      incKey: 'KeyH',
+      keyHint: 'G H',
+      get: () => this.explosionVolume,
+      set: (v) => {
+        this.explosionVolume = v;
+      },
+      onChange: previewExplosion,
+    });
+    this.debug.addSlider('Explosion pitch', {
+      min: 0.5,
+      max: 2,
+      step: 0.05,
+      decKey: 'KeyJ',
+      incKey: 'KeyK',
+      keyHint: 'J K',
+      get: () => this.explosionPitch,
+      set: (v) => {
+        this.explosionPitch = v;
+      },
+      onChange: previewExplosion,
+    });
+
     // The client runs its own Rapier world (all ships + the static asteroid
     // field). Meshes come from the GLTF scenes the renderer already loaded.
     // reconcileShips is off: the client manages ship bodies itself.
@@ -245,8 +305,16 @@ export default class Game {
       this.hitMarker.trigger(x, y);
       this.sound.play('hit', this.hitVolume, this.hitPitch);
     };
+    // Every shot that strikes a rock kicks up a small dust puff at the impact.
+    this.clientSim.onHitAsteroid = (impact) =>
+      this.particles.spawnDust(impact, 22);
     this.networkClient.onLocalShip = (ship) =>
       this.clientSim.setOwnedShip(ship);
+    // Ore field mirrors the server: render each chunk where it broke off, and
+    // drop it the moment the server confirms someone scooped it.
+    this.networkClient.onOreDrop = (id, position) =>
+      this.orePickups.spawn(id, position, performance.now());
+    this.networkClient.onCollect = (id) => this.orePickups.collect(id);
 
     // Compose the client physics/ownership hooks on top of ViewRegistry's
     // (attached in the constructor): every spawn/despawn drives both.
@@ -322,7 +390,9 @@ export default class Game {
     // the ship holds a constant screen offset instead of surging.
     this.networkClient.updateCamera(delta, alpha);
 
-    this.particles.update();
+    this.particles.update(delta);
+    this.orePickups.update(time);
+    this.vendorHud.update();
     this.range.update();
 
     this.viewRegistry.update(alpha, delta);

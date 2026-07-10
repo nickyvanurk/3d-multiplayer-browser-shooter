@@ -34,6 +34,9 @@ export interface PhysicsWorld {
   // enqueuing them onto the collision stream. Bullets carry no solver body, so a
   // stepper without this leaves them motionless (Rapier only). Call after step().
   sweepProjectiles?(world: World, dt: number): void;
+  // Rescales each mined asteroid's collider to match its shrinking render (ore
+  // drives both), so shots and ships meet the rock the player sees. Rapier only.
+  syncAsteroidScales?(world: World): void;
   // Snaps a networked body to an authoritative pose+velocity so it coasts and
   // collides until the next correction (state-sync). Rapier only.
   correctBody?(

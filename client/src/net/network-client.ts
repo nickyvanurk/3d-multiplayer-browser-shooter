@@ -17,6 +17,9 @@ import type { SettingsStore } from '../settings.ts';
 // The client mirror World gains a runtime-only pointer to the local player's id.
 type ClientWorld = World & { localPlayerId?: number };
 
+// Owner-only cargo/credits, as carried by the Stats message.
+export type StatsData = ReturnType<typeof Messages.Stats.deserialize>;
+
 // The subset of the Rapier RigidBody used to correct/read a simulated remote
 // entity (entity.body is stored as the opaque PhysicsBody).
 type Vec = { x: number; y: number; z: number };
@@ -47,6 +50,12 @@ export class NetworkClient {
   // Called when the local player's ship becomes known (WELCOME/SPAWN), so the
   // client sim can take ownership of it.
   onLocalShip: ((ship: Ship) => void) | null;
+  // Owner-only cargo/credits update (Stats), for the HUD.
+  onStats: ((stats: StatsData) => void) | null;
+  // A chunk broke off at a position (OreDrop), so the client renders it.
+  onOreDrop: ((id: number, position: Vector3) => void) | null;
+  // A chunk was collected authoritatively (Collect), so the client drops its copy.
+  onCollect: ((id: number) => void) | null;
   _cameraDummy: Object3D;
 
   constructor(
@@ -63,6 +72,9 @@ export class NetworkClient {
     this.name = name;
     this.localPlayerId = null;
     this.onLocalShip = null;
+    this.onStats = null;
+    this.onOreDrop = null;
+    this.onCollect = null;
     this._cameraDummy = new Object3D();
   }
 
@@ -111,6 +123,27 @@ export class NetworkClient {
           break;
         case Types.Messages.WORLD:
           this.applyWorldState(message!.data);
+          break;
+        case Types.Messages.STATS: {
+          const stats = message!.data;
+          // Mirror onto the owned ship so anything reading it (and a late HUD)
+          // sees the authoritative economy, then notify the HUD.
+          const ship = this.world.get(this.localPlayerId ?? -1) as
+            | Ship
+            | undefined;
+          if (ship) {
+            ship.cargo = stats.cargo;
+            ship.cargoCapacity = stats.cargoCapacity;
+            ship.credits = stats.credits;
+          }
+          this.onStats?.(stats);
+          break;
+        }
+        case Types.Messages.OREDROP:
+          this.onOreDrop?.(message!.data.id, message!.data.position);
+          break;
+        case Types.Messages.COLLECT:
+          this.onCollect?.(message!.data.id);
           break;
       }
     }
@@ -271,6 +304,26 @@ export class NetworkClient {
     this.connection.pushMessage(
       new Messages.Fire(position, rotation, bullet.damage ?? 0, bullet.id!),
     );
+    this.connection.sendOutgoingMessages();
+  }
+
+  // Vendor trades: ask the server (which validates docking range + funds) to
+  // sell the hold / repair the hull. The server applies it and echoes the new
+  // cargo/credits back via Stats.
+  sendSell(): void {
+    this.sendReliable(new Messages.Sell());
+  }
+
+  sendRepair(): void {
+    this.sendReliable(new Messages.Repair());
+  }
+
+  private sendReliable(message: { serialize(): unknown[] }): void {
+    const socket = this.connection.getConnection();
+    if (!socket || socket.readyState !== 1) {
+      return;
+    }
+    this.connection.pushMessage(message);
     this.connection.sendOutgoingMessages();
   }
 

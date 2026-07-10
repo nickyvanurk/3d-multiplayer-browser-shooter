@@ -66,9 +66,10 @@ export class SoundService {
     this.spawn(name, this.resolve(name), null, volume, pitch);
   }
 
-  // Positional one-shot of the active segment at a world position.
-  playAt(name: string, position: Vector3, volume = 1): void {
-    this.spawn(name, this.resolve(name), position, volume);
+  // Positional one-shot of the active segment at a world position. An optional
+  // `pitch` overrides the global base pitch for this one clip.
+  playAt(name: string, position: Vector3, volume = 1, pitch?: number): void {
+    this.spawn(name, this.resolve(name), position, volume, pitch);
   }
 
   // The segment to fire: the chosen one, or a fresh random pick when active < 0

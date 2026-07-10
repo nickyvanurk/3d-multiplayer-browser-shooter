@@ -13,6 +13,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 
 import Types from '../../../shared/types.ts';
 import type { EntityKind } from '../../../shared/types.ts';
+import { asteroidScale } from '../../../shared/sim/mining.ts';
 import type { World } from '../../../shared/sim/world.ts';
 import type { Entity } from '../../../shared/sim/entity.ts';
 import type { SceneManager } from './scene-manager.ts';
@@ -74,6 +75,9 @@ export class ViewRegistry {
   // The static asteroid field, rendered as a single instanced draw call instead
   // of one Object3D per rock. Built once the asteroid model has loaded.
   asteroids: InstancedAsteroids | null;
+  // Last world render scale written for each asteroid, so the shrink loop only
+  // rewrites an instance matrix when its ore-remaining actually changed.
+  private asteroidScales: Map<number, number>;
 
   constructor(sceneManager: SceneManager) {
     this.sceneManager = sceneManager;
@@ -87,6 +91,7 @@ export class ViewRegistry {
     this.bulletTipOffset = null;
     this.exhaustMaterials = new Map();
     this.asteroids = null;
+    this.asteroidScales = new Map();
   }
 
   // Port of model-loading-system.js: load every kind's GLTF before views can be
@@ -283,6 +288,7 @@ export class ViewRegistry {
   handleDespawn(entity: Entity): void {
     if (entity.type === Types.Entities.ASTEROID) {
       this.asteroids?.remove(entity.id!);
+      this.asteroidScales.delete(entity.id!);
       const idx = this.pendingSpawns.indexOf(entity);
       if (idx !== -1) {
         this.pendingSpawns.splice(idx, 1);
@@ -336,6 +342,34 @@ export class ViewRegistry {
       if (exhaust) {
         this.driveExhaust(entity, exhaust, dt);
       }
+    }
+
+    this.updateAsteroidShrink();
+  }
+
+  // Shrink each asteroid instance toward its ore-remaining. oreRemaining rides
+  // the health slot from the server; the field is otherwise static, so a matrix
+  // is only rewritten when a rock's rendered scale actually changed.
+  private updateAsteroidShrink(): void {
+    if (!this.asteroids || !this.world) {
+      return;
+    }
+    for (const entity of this.world.entities.values()) {
+      if (entity.type !== Types.Entities.ASTEROID) {
+        continue;
+      }
+      const ore = entity as unknown as { health: number; maxOre: number };
+      const target = asteroidScale(
+        entity.transform.scale,
+        ore.health,
+        ore.maxOre,
+      );
+      const prev = this.asteroidScales.get(entity.id!);
+      if (prev !== undefined && Math.abs(prev - target) < 1e-3) {
+        continue;
+      }
+      this.asteroids.setScale(entity.id!, entity.transform, target);
+      this.asteroidScales.set(entity.id!, target);
     }
   }
 

@@ -293,4 +293,115 @@ class World {
   }
 }
 
-export default { Go, Hello, Welcome, Spawn, Despawn, State, Fire, World };
+// Server -> all clients: an ore chunk broke off at `position` (the shot's impact
+// point). Its position can't be re-derived client-side, so the server sends it;
+// clients render a chunk with this id there.
+export class OreDrop {
+  id: number;
+  position: Vector3;
+
+  constructor(id: number, position: Vector3) {
+    this.id = id;
+    this.position = position;
+  }
+
+  static deserialize(message: number[]) {
+    return {
+      id: message[0],
+      position: new Vector3(message[1], message[2], message[3]),
+    };
+  }
+
+  serialize() {
+    return [
+      Types.Messages.OREDROP,
+      this.id,
+      this.position.x,
+      this.position.y,
+      this.position.z,
+    ];
+  }
+}
+
+// Server -> all clients: an ore chunk was collected authoritatively, so every
+// client removes its copy. Keyed by the chunk's unique id (from OreDrop).
+export class Collect {
+  id: number;
+
+  constructor(id: number) {
+    this.id = id;
+  }
+
+  static deserialize(message: number[]) {
+    return { id: message[0] };
+  }
+
+  serialize() {
+    return [Types.Messages.COLLECT, this.id];
+  }
+}
+
+// Client -> server: "sell my whole hold at the vendor." No payload — the server
+// knows the ship from the connection and validates docking range itself.
+export class Sell {
+  constructor() {}
+
+  static deserialize(): void {}
+
+  serialize() {
+    return [Types.Messages.SELL];
+  }
+}
+
+// Client -> server: "repair my hull at the vendor." No payload; server-validated.
+export class Repair {
+  constructor() {}
+
+  static deserialize(): void {}
+
+  serialize() {
+    return [Types.Messages.REPAIR];
+  }
+}
+
+// Server -> owner only: the owning client's cargo/credits after a change. Kept
+// off the shared broadcast snapshot — only the owner's HUD needs these.
+export class Stats {
+  cargo: number;
+  cargoCapacity: number;
+  credits: number;
+
+  constructor(cargo: number, cargoCapacity: number, credits: number) {
+    this.cargo = cargo;
+    this.cargoCapacity = cargoCapacity;
+    this.credits = credits;
+  }
+
+  static deserialize(message: number[]) {
+    return {
+      cargo: message[0],
+      cargoCapacity: message[1],
+      credits: message[2],
+    };
+  }
+
+  serialize() {
+    return [Types.Messages.STATS, this.cargo, this.cargoCapacity, this.credits];
+  }
+}
+
+export default {
+  Go,
+  Hello,
+  Welcome,
+  Spawn,
+  Despawn,
+  State,
+  Fire,
+  World,
+  OreDrop,
+  Collect,
+  Sell,
+  Repair,
+  Stats,
+};

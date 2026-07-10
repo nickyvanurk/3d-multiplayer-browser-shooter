@@ -24,6 +24,18 @@ export type IncomingMessage =
   | {
       type: typeof Types.Messages.WORLD;
       data: ReturnType<typeof Messages.World.deserialize>;
+    }
+  | {
+      type: typeof Types.Messages.OREDROP;
+      data: ReturnType<typeof Messages.OreDrop.deserialize>;
+    }
+  | {
+      type: typeof Types.Messages.COLLECT;
+      data: ReturnType<typeof Messages.Collect.deserialize>;
+    }
+  | {
+      type: typeof Types.Messages.STATS;
+      data: ReturnType<typeof Messages.Stats.deserialize>;
     };
 
 type MessageData =
@@ -31,7 +43,10 @@ type MessageData =
   | ReturnType<typeof Messages.Welcome.deserialize>
   | ReturnType<typeof Messages.Spawn.deserialize>
   | ReturnType<typeof Messages.Despawn.deserialize>
-  | ReturnType<typeof Messages.World.deserialize>;
+  | ReturnType<typeof Messages.World.deserialize>
+  | ReturnType<typeof Messages.OreDrop.deserialize>
+  | ReturnType<typeof Messages.Collect.deserialize>
+  | ReturnType<typeof Messages.Stats.deserialize>;
 
 export default class Connection {
   connection: WebSocket;
@@ -88,6 +103,15 @@ export default class Connection {
           break;
         case Types.Messages.WORLD:
           data = Messages.World.deserialize(data as number[]);
+          break;
+        case Types.Messages.OREDROP:
+          data = Messages.OreDrop.deserialize(data as number[]);
+          break;
+        case Types.Messages.COLLECT:
+          data = Messages.Collect.deserialize(data as number[]);
+          break;
+        case Types.Messages.STATS:
+          data = Messages.Stats.deserialize(data as number[]);
           break;
       }
 

@@ -48,6 +48,22 @@ export class InstancedAsteroids {
     this.mesh.instanceMatrix.needsUpdate = true;
   }
 
+  // Rewrite an existing rock's instance matrix at a new world scale (same
+  // position/rotation). Asteroids are otherwise static, so this is only called
+  // when a rock's ore-remaining changes — it shrinks as it is mined.
+  setScale(id: number, transform: Transform, scale: number): void {
+    const index = this.idToIndex.get(id);
+    if (index === undefined) {
+      return;
+    }
+    this.dummy.position.copy(transform.position);
+    this.dummy.quaternion.copy(transform.rotation);
+    this.dummy.scale.setScalar(scale);
+    this.dummy.updateMatrix();
+    this.mesh.setMatrixAt(index, this.dummy.matrix);
+    this.mesh.instanceMatrix.needsUpdate = true;
+  }
+
   remove(id: number): void {
     const index = this.idToIndex.get(id);
     if (index === undefined) {

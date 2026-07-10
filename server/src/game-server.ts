@@ -11,6 +11,7 @@ import { NetworkServer } from './net/network-server.ts';
 import { BotManager } from './ai/bot-manager.ts';
 import { RespawnSubsystem } from '../../shared/sim/subsystems/respawn.ts';
 import { CombatSubsystem } from '../../shared/sim/subsystems/combat.ts';
+import { MiningSubsystem } from '../../shared/sim/subsystems/mining.ts';
 import { Asteroid } from '../../shared/sim/entities/asteroid.ts';
 import { Vendor } from '../../shared/sim/entities/vendor.ts';
 
@@ -31,6 +32,7 @@ export class GameServer {
   physics: PhysicsWorld;
   network: NetworkServer;
   bots: BotManager;
+  mining: MiningSubsystem;
   fixedUpdate!: (delta: number) => number;
 
   constructor(
@@ -70,10 +72,13 @@ export class GameServer {
     };
 
     // Addendum order: respawn runs before combat so a ship killed this tick
-    // begins its countdown next tick.
+    // begins its countdown next tick; mining runs after combat so it sees the
+    // asteroid ore (health) that combat depleted this tick.
+    this.mining = new MiningSubsystem();
     this.world
       .addSubsystem(new RespawnSubsystem())
-      .addSubsystem(new CombatSubsystem());
+      .addSubsystem(new CombatSubsystem())
+      .addSubsystem(this.mining);
 
     logger.info(`${this.id} running`);
   }
@@ -140,6 +145,15 @@ export class GameServer {
     for (const s of this.world.subsystems) {
       s.update(this.world, dt, time);
     }
+
+    // 3a. Shrink mined asteroids' colliders to match their ore level, so the
+    //     next tick's shots and ship bumps meet the rock at the size clients see.
+    this.physics.syncAsteroidScales?.(this.world);
+
+    // 3b. Broadcast chunks the mining subsystem spawned (at their impact points)
+    //     and collected this tick, so every client mirrors the ore field.
+    this.network.broadcastSpawned(this.mining.drainSpawned());
+    this.network.broadcastCollected(this.mining.drainCollected());
 
     // 4. Reap destroyed entities.
     this.world.reap();

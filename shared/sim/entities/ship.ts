@@ -6,6 +6,7 @@ import { InputCommand } from '../input.ts';
 import { Bullet } from './bullet.ts';
 import Types from '../../types.ts';
 import { Weapon } from '../weapon.ts';
+import { DEFAULT_CARGO_CAPACITY } from '../mining.ts';
 
 export const RESPAWN_DELAY = 3000;
 
@@ -69,6 +70,11 @@ export class Ship extends Entity {
   faction: Faction;
   // Combat can't damage this ship even though it carries a health value (vendor).
   invulnerable: boolean;
+  // Mining economy: ore hauled in the hold (capped at cargoCapacity) and credits
+  // banked at the vendor. Server-authoritative; replicated to the owner only.
+  cargo: number;
+  cargoCapacity: number;
+  credits: number;
 
   constructor(opts: ShipInit = {}) {
     super({ ...opts, type: Types.Entities.SPACESHIP });
@@ -95,6 +101,9 @@ export class Ship extends Entity {
     this.name = '';
     this.faction = 'hostile';
     this.invulnerable = false;
+    this.cargo = 0;
+    this.cargoCapacity = DEFAULT_CARGO_CAPACITY;
+    this.credits = 0;
   }
 
   // Fill the trailing slots the base leaves at 0: the packed input (so remote

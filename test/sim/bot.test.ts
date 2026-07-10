@@ -45,9 +45,15 @@ test('bot aims at and fires on a target dead ahead in range', () => {
   const aim = bot.controller?.lastInput.aim;
   assert.ok(aim, 'expected an aim/steer command');
   // Guns point toward the +Z enemy.
-  assert.ok(aim!.direction.z > 0.5, `expected aim toward +Z enemy, got ${aim!.direction.z}`);
+  assert.ok(
+    aim!.direction.z > 0.5,
+    `expected aim toward +Z enemy, got ${aim!.direction.z}`,
+  );
   // Already lined up on a dead-ahead target: almost no steering deflection.
-  assert.ok(Math.abs(aim!.mouse.x) < 0.2, `expected small yaw input, got ${aim!.mouse.x}`);
+  assert.ok(
+    Math.abs(aim!.mouse.x) < 0.2,
+    `expected small yaw input, got ${aim!.mouse.x}`,
+  );
   // It commits and opens fire within a couple of seconds.
   assert.ok(fired, 'expected the bot to fire at a dead-ahead target');
 });
@@ -67,7 +73,10 @@ test('bot steers toward a target off to one side', () => {
   const aim = bot.controller?.lastInput.aim;
   assert.ok(aim, 'expected a steer command');
   // Target on the +X side → non-trivial yaw deflection toward it.
-  assert.ok(Math.abs(aim!.mouse.x) > 0.3, `expected a yaw turn, got ${aim!.mouse.x}`);
+  assert.ok(
+    Math.abs(aim!.mouse.x) > 0.3,
+    `expected a yaw turn, got ${aim!.mouse.x}`,
+  );
 });
 
 test('bot ignores a target outside detection range', () => {
@@ -123,7 +132,11 @@ test('BotManager fills to target headcount and yields to humans', () => {
   mgr.reconcile(3000);
   assert.equal(countShips(world), 2);
   mgr.reconcile(4000);
-  assert.equal(countShips(world), 0, 'all bots yield when the world is full of humans');
+  assert.equal(
+    countShips(world),
+    0,
+    'all bots yield when the world is full of humans',
+  );
 });
 
 test('BotManager reconcile is rate-limited between calls', () => {

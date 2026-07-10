@@ -1,4 +1,6 @@
+import type { Vector3 } from 'three';
 import { RESPAWN_DELAY } from '../entities/ship.ts';
+import { ASTEROID_RESPAWN_DELAY, MINING_DAMAGE_FACTOR } from '../mining.ts';
 import type { Entity } from '../entity.ts';
 
 // The combat-relevant view of an entity: base Entity plus the optional
@@ -9,8 +11,17 @@ interface CombatEntity extends Entity {
   destroyOnCollision?: boolean;
   respawn?: boolean;
   respawnTimer?: number;
+  // Asteroids come back in place and much slower than ships (see combat's
+  // per-entity delay below). `maxOre` marks a victim as rock: guns chip it at a
+  // reduced (mining) rate rather than dealing full combat damage.
+  respawnInPlace?: boolean;
+  maxOre?: number;
   owner?: Entity | null;
   invulnerable?: boolean;
+  // Present on asteroids: stamped with the impact point so mining drops ore where
+  // the shot landed. sweepProjectiles moves the bullet onto its exact hit point
+  // before recording the collision, so the attacker's position IS that point.
+  lastImpact?: Vector3;
 }
 
 interface CombatWorld {
@@ -52,7 +63,10 @@ export class CombatSubsystem {
           continue;
         }
         entity.alive = false;
-        entity.respawnTimer = RESPAWN_DELAY;
+        // Asteroids stay gone for minutes; ships come back in seconds.
+        entity.respawnTimer = entity.respawnInPlace
+          ? ASTEROID_RESPAWN_DELAY
+          : RESPAWN_DELAY;
       } else {
         entity.markDestroyed();
       }
@@ -79,7 +93,17 @@ export class CombatSubsystem {
       return;
     }
 
-    victim.health -= attacker.damage;
+    // Rock is mined, not destroyed: a combat weapon chips ore off it slowly, so
+    // asteroids (maxOre set) take a fraction of the damage a ship would.
+    const damage =
+      victim.maxOre !== undefined
+        ? attacker.damage * MINING_DAMAGE_FACTOR
+        : attacker.damage;
+    victim.health -= damage;
     damaged.add(victim);
+
+    // Remember where this shot landed so mining breaks the next chunk off the
+    // face being shot (only asteroids carry lastImpact).
+    victim.lastImpact?.copy(attacker.transform.position);
   }
 }
