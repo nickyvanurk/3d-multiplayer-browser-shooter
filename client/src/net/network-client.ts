@@ -15,6 +15,10 @@ import {
   extrapolateRotation,
   resolveWorldVelocity,
 } from '../../../shared/sim/net/extrapolate.ts';
+import {
+  captureError,
+  SMOOTHING,
+} from '../../../shared/sim/net/visual-smoothing.ts';
 import type { World } from '../../../shared/sim/world.ts';
 import type { Entity } from '../../../shared/sim/entity.ts';
 import type { Transform } from '../../../shared/sim/transform.ts';
@@ -302,6 +306,26 @@ export class NetworkClient {
         angularVelocity,
         age,
       );
+
+      // Fiedler visual smoothing: convert this correction's pop into a render
+      // error offset (ships + vendor) so the mesh glides to the corrected pose
+      // instead of snapping. Read the pre-correction transform BEFORE the
+      // branches below overwrite it. Bullets are excluded (short-lived; a
+      // decaying offset would visibly bend the straight tracer path).
+      if (
+        entity.type === Types.Entities.SPACESHIP ||
+        entity.type === Types.Entities.VENDOR
+      ) {
+        captureError(
+          entity.transform.errorPosition,
+          entity.transform.errorRotation,
+          entity.transform.position,
+          entity.transform.rotation,
+          pose.position,
+          pose.rotation,
+          SMOOTHING.teleport,
+        );
+      }
 
       if (entity.type === Types.Entities.VENDOR) {
         entity.transform.position.copy(pose.position);

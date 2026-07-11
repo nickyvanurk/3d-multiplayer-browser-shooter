@@ -10,6 +10,7 @@ import './input.test.ts';
 import './messages.test.ts';
 import './time-sync.test.ts';
 import './extrapolate.test.ts';
+import './visual-smoothing.test.ts';
 import './ping-server.test.ts';
 import './network-client-sync.test.ts';
 import './snapshot.test.ts';

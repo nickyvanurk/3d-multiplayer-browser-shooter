@@ -124,6 +124,11 @@ export class ProjectionService {
   private readonly scratchAim: Vector3;
   private readonly scratchBox: Box3;
   private readonly scratchSphere: Sphere;
+  // Smoothed render position (authoritative pose + Fiedler error offset) and a
+  // scratch for its screen projection, so HUD indicators/leads track the drawn
+  // mesh instead of the hard-snapping authoritative position.
+  private readonly scratchRender: Vector3;
+  private readonly scratchProject: Vector3;
 
   constructor(
     world: ClientWorld,
@@ -141,6 +146,8 @@ export class ProjectionService {
     this.scratchAim = new Vector3();
     this.scratchBox = new Box3();
     this.scratchSphere = new Sphere();
+    this.scratchRender = new Vector3();
+    this.scratchProject = new Vector3();
   }
 
   // World-space bounding radius of a ship, from its model's bounding sphere (at
@@ -202,13 +209,18 @@ export class ProjectionService {
       }
 
       const transform = entity.transform;
-      const projection = transform.position.clone().project(camera);
+      // Track the smoothed render pose (mesh position), not the snapping
+      // authoritative transform, so indicators/leads don't pop on corrections.
+      const renderPos = this.scratchRender
+        .copy(transform.position)
+        .add(transform.errorPosition);
+      const projection = this.scratchProject.copy(renderPos).project(camera);
 
       indicator.position.x = projection.x * halfWidth;
       indicator.position.y = projection.y * halfHeight;
 
       this.dummy.quaternion.copy(camera.quaternion);
-      this.dummy.position.copy(transform.position);
+      this.dummy.position.copy(renderPos);
       this.dummy.applyMatrix4(camera.matrixWorldInverse);
       const localPosition = this.dummy.position;
       indicator.rotation = Math.atan2(localPosition.y, localPosition.x);
@@ -237,14 +249,14 @@ export class ProjectionService {
       const body = entity.body as unknown as LinvelBody | null;
       if (muzzle && entity.type === Types.Entities.SPACESHIP && body?.linvel) {
         const vel = body.linvel();
-        const t = interceptTime(muzzle, transform.position, vel, BULLET_SPEED);
+        const t = interceptTime(muzzle, renderPos, vel, BULLET_SPEED);
         // t within the bullet's lifetime means a shot can actually reach the
         // intercept before it despawns; past that the target is out of range.
         if (t !== null && t <= BULLET_LIFETIME) {
           const aim = this.scratchAim
             .set(vel.x, vel.y, vel.z)
             .multiplyScalar(t)
-            .add(transform.position);
+            .add(renderPos);
 
           this.dummy.quaternion.copy(camera.quaternion);
           this.dummy.position.copy(aim);

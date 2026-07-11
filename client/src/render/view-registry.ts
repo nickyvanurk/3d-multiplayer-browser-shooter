@@ -14,6 +14,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import Types from '../../../shared/types.ts';
 import type { EntityKind } from '../../../shared/types.ts';
 import { asteroidScale } from '../../../shared/sim/mining.ts';
+import { decayError } from '../../../shared/sim/net/visual-smoothing.ts';
 import type { World } from '../../../shared/sim/world.ts';
 import type { Entity } from '../../../shared/sim/entity.ts';
 import type { SceneManager } from './scene-manager.ts';
@@ -330,13 +331,20 @@ export class ViewRegistry {
       // per-entity/per-frame allocations (was 3 clones each). Only moving
       // entities (ships, bullets) reach here; the static asteroid field is an
       // instanced mesh whose matrices are set once on spawn.
+      // Interpolated authoritative pose, plus the Fiedler visual-smoothing error
+      // offset (zero for entities that never accumulate one, e.g. bullets).
       mesh.position
         .copy(transform.prevPosition)
-        .lerp(transform.position, alpha);
+        .lerp(transform.position, alpha)
+        .add(transform.errorPosition);
       mesh.quaternion
         .copy(transform.prevRotation)
-        .slerp(transform.rotation, alpha);
+        .slerp(transform.rotation, alpha)
+        .multiply(transform.errorRotation);
       mesh.scale.setScalar(transform.scale);
+
+      // Decay the render error toward zero so the last correction glides out.
+      decayError(transform.errorPosition, transform.errorRotation, delta);
 
       const exhaust = this.exhaustMaterials.get(id);
       if (exhaust) {
