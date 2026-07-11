@@ -482,7 +482,7 @@ export default class Game {
 
     // Camera follows the ship's interpolated pose (same alpha as the mesh) so
     // the ship holds a constant screen offset instead of surging.
-    this.networkClient.updateCamera(delta, alpha);
+    this.networkClient.updateCamera(delta, alpha, this.inputController.orbit);
 
     // Engine loops off the local throttle: boost roars over everything, otherwise
     // a low rumble while translating (roll alone isn't thrust). updateLoops fades

@@ -20,6 +20,7 @@ import type { Entity } from '../../../shared/sim/entity.ts';
 import type { Transform } from '../../../shared/sim/transform.ts';
 import type Connection from '../connection.ts';
 import type { SettingsStore } from '../settings.ts';
+import type { OrbitState } from '../input/input-controller.ts';
 
 // The client mirror World gains a runtime-only pointer to the local player's id.
 type ClientWorld = World & { localPlayerId?: number };
@@ -424,13 +425,13 @@ export class NetworkClient {
   // interpolation fraction — the camera MUST use the same interpolated pose as
   // the ship mesh, or the two sit on different timelines and the ship surges
   // toward/away from the camera at the sim-step rate.
-  updateCamera(delta: number, alpha: number): void {
+  updateCamera(delta: number, alpha: number, orbit: OrbitState): void {
     if (this.localPlayerId == null) {
       return;
     }
     const ship = this.world.get(this.localPlayerId);
     if (ship) {
-      this.followCamera(ship.transform, delta, alpha);
+      this.followCamera(ship.transform, delta, alpha, orbit);
     }
   }
 
@@ -445,20 +446,41 @@ export class NetworkClient {
     this.camera.quaternion.copy(obj.quaternion);
   }
 
-  followCamera(transform: Transform, delta: number, alpha: number): void {
+  followCamera(
+    transform: Transform,
+    delta: number,
+    alpha: number,
+    orbit: OrbitState,
+  ): void {
     const obj = this._cameraDummy;
     // Interpolated pose — identical basis to ViewRegistry's mesh rendering.
     obj.position.copy(transform.prevPosition).lerp(transform.position, alpha);
     obj.quaternion
       .copy(transform.prevRotation)
       .slerp(transform.rotation, alpha);
-    obj.translateY(4);
-    obj.translateZ(-14);
-    obj.rotateY(Math.PI);
+    if (orbit.active) {
+      // Orbit around the ship centre (obj currently sits at it) at a fixed
+      // distance, always facing it so the ship stays pinned mid-screen. Yaw
+      // swings about the ship's up, pitch about the yawed right axis; translateZ
+      // backs onto the sphere and rotateY(pi) turns to look straight at centre.
+      obj.rotateY(orbit.yaw);
+      obj.rotateX(orbit.pitch);
+      obj.translateZ(-14);
+      obj.rotateY(Math.PI);
+      // Direct 1:1 control so the view tracks the mouse without smoothing lag.
+      this.camera.position.copy(obj.position);
+      this.camera.quaternion.copy(obj.quaternion);
+    } else {
+      // Chase pose: lifted 4 above for framing, 14 behind, facing forward.
+      obj.translateY(4);
+      obj.translateZ(-14);
+      obj.rotateY(Math.PI);
 
-    const factor =
-      1 - Math.exp(-this.settings.cameraStiffness * (delta / 1000));
-    this.camera.position.lerp(obj.position, factor);
-    this.camera.quaternion.slerp(obj.quaternion, factor);
+      // Releasing Alt leaves the target at the chase pose; this lerp snaps back.
+      const factor =
+        1 - Math.exp(-this.settings.cameraStiffness * (delta / 1000));
+      this.camera.position.lerp(obj.position, factor);
+      this.camera.quaternion.slerp(obj.quaternion, factor);
+    }
   }
 }
