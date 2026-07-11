@@ -16,6 +16,10 @@ export const Messages = {
   REPAIR: 11,
   STATS: 12,
   OREDROP: 13,
+  // Clock sync. PING (client->server): client send time. PONG (server->client):
+  // echoed send time + server clock. Feeds TimeSyncManager.
+  PING: 14,
+  PONG: 15,
 } as const;
 
 export const Entities = {

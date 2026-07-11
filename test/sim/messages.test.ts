@@ -53,3 +53,33 @@ test('Fire round-trips muzzle transform, damage and bullet id', () => {
   assert.equal(out.damage, 5);
   assert.equal(out.bulletId, 1_000_042);
 });
+
+test('Ping round-trips the client send time', () => {
+  const wire = new Messages.Ping(1234.5).serialize();
+  assert.deepEqual(wire, [Types.Messages.PING, 1234.5]);
+  const data = Messages.Ping.deserialize(wire.slice(1) as number[]);
+  assert.equal(data.sentTime, 1234.5);
+});
+
+test('Pong echoes sentTime and carries serverTime', () => {
+  const wire = new Messages.Pong(1234.5, 9000).serialize();
+  assert.deepEqual(wire, [Types.Messages.PONG, 1234.5, 9000]);
+  const data = Messages.Pong.deserialize(wire.slice(1) as number[]);
+  assert.equal(data.sentTime, 1234.5);
+  assert.equal(data.serverTime, 9000);
+});
+
+test('World carries a serverTime prefix before the entity run', () => {
+  const entities = [
+    { id: 42, state: [1, 2, 3, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0] },
+  ];
+  const wire = new Messages.World(entities, 7777).serialize();
+  assert.equal(wire[0], Types.Messages.WORLD);
+  assert.equal(wire[1], 7777); // serverTime
+  assert.equal(wire[2], 42); // first entity id
+
+  const decoded = Messages.World.deserialize(wire.slice(1) as number[]);
+  assert.equal(decoded.serverTime, 7777);
+  assert.equal(decoded.entities.length, 1);
+  assert.equal(decoded.entities[0].id, 42);
+});

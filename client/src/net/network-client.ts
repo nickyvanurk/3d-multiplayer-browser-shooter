@@ -1,5 +1,5 @@
-import { Object3D, Vector3 } from 'three';
-import type { Camera, Quaternion } from 'three';
+import { Object3D, Quaternion, Vector3 } from 'three';
+import type { Camera } from 'three';
 
 import Types from '../../../shared/types.ts';
 import Messages from '../../../shared/messages.ts';
@@ -8,6 +8,13 @@ import { InputCommand } from '../../../shared/sim/input.ts';
 import { Asteroid } from '../../../shared/sim/entities/asteroid.ts';
 import { Bullet } from '../../../shared/sim/entities/bullet.ts';
 import { Vendor } from '../../../shared/sim/entities/vendor.ts';
+import { TimeSyncManager } from '../../../shared/sim/net/time-sync.ts';
+import {
+  snapshotAge,
+  extrapolatePosition,
+  extrapolateRotation,
+  resolveWorldVelocity,
+} from '../../../shared/sim/net/extrapolate.ts';
 import type { World } from '../../../shared/sim/world.ts';
 import type { Entity } from '../../../shared/sim/entity.ts';
 import type { Transform } from '../../../shared/sim/transform.ts';
@@ -56,7 +63,12 @@ export class NetworkClient {
   onOreDrop: ((id: number, position: Vector3) => void) | null;
   // A chunk was collected authoritatively (Collect), so the client drops its copy.
   onCollect: ((id: number) => void) | null;
+  timeSync: TimeSyncManager;
   _cameraDummy: Object3D;
+  // Reused per-entity in applyWorldState to avoid per-snapshot allocation.
+  _extrapPos = new Vector3();
+  _extrapRot = new Quaternion();
+  _worldVel = new Vector3();
 
   constructor(
     connection: Connection,
@@ -75,6 +87,7 @@ export class NetworkClient {
     this.onStats = null;
     this.onOreDrop = null;
     this.onCollect = null;
+    this.timeSync = new TimeSyncManager();
     this._cameraDummy = new Object3D();
   }
 
@@ -145,6 +158,11 @@ export class NetworkClient {
         case Types.Messages.COLLECT:
           this.onCollect?.(message!.data.id);
           break;
+        case Types.Messages.PONG: {
+          const { sentTime, serverTime, receiveTime } = message!.data;
+          this.timeSync.onTimeResponse(sentTime, serverTime, receiveTime);
+          break;
+        }
       }
     }
   }
@@ -187,9 +205,34 @@ export class NetworkClient {
   // Interpolation bookkeeping the old transform-system relied on: remember the
   // previous transform, then copy in the new one. ViewRegistry.update(alpha)
   // lerps prev -> current each render frame.
+  // Resolve the entity's velocity to world space, then advance pose by `age`.
+  // Bullets store local +z forward velocity and carry no body; everything with a
+  // physics body reports world-space linvel already. Returns shared scratch
+  // objects — copy out immediately, never hold across another call.
+  extrapolatedPose(
+    entity: Entity,
+    position: Vector3,
+    rotation: Quaternion,
+    velocity: Vector3,
+    angularVelocity: Vector3,
+    age: number,
+  ): { position: Vector3; rotation: Quaternion } {
+    resolveWorldVelocity(this._worldVel, entity.type, velocity, rotation);
+    extrapolatePosition(this._extrapPos, position, this._worldVel, age);
+    extrapolateRotation(this._extrapRot, rotation, angularVelocity, age);
+    return { position: this._extrapPos, rotation: this._extrapRot };
+  }
+
   applyWorldState(
-    entities: ReturnType<typeof Messages.World.deserialize>,
+    snapshot: ReturnType<typeof Messages.World.deserialize>,
   ): void {
+    const { entities } = snapshot;
+    // How far the snapshot lags the synced server clock; 0 while unsynced.
+    const age = snapshotAge(
+      this.serverNow(),
+      snapshot.serverTime,
+      this.isSynced(),
+    );
     for (const {
       id,
       position,
@@ -243,9 +286,21 @@ export class NetworkClient {
       // that velocity between snapshots (prev is snapshotted there for interp).
       // Not routed through the body-correction branch below (setTranslation would
       // fight the kinematic body and skip the prev snapshot).
+      // Advance the received pose to the present server time (age past the
+      // snapshot). Velocities fed to the body below stay RAW — only the pose is
+      // extrapolated; the body then coasts on the true velocity.
+      const pose = this.extrapolatedPose(
+        entity,
+        position,
+        rotation,
+        velocity,
+        angularVelocity,
+        age,
+      );
+
       if (entity.type === Types.Entities.VENDOR) {
-        entity.transform.position.copy(position);
-        entity.transform.rotation.copy(rotation);
+        entity.transform.position.copy(pose.position);
+        entity.transform.rotation.copy(pose.rotation);
         entity.velocity.copy(velocity);
         continue;
       }
@@ -255,20 +310,20 @@ export class NetworkClient {
         // Remote entity simulated in the client physics world: correct the body
         // to the server's authoritative state and let it coast on this velocity
         // until the next snapshot. ClientSim snapshots prev for render interp.
-        body.setTranslation(position, true);
-        body.setRotation(rotation, true);
+        body.setTranslation(pose.position, true);
+        body.setRotation(pose.rotation, true);
         body.setLinvel(velocity, true);
         body.setAngvel(angularVelocity, true);
-        entity.transform.position.copy(position);
-        entity.transform.rotation.copy(rotation);
+        entity.transform.position.copy(pose.position);
+        entity.transform.rotation.copy(pose.rotation);
       } else {
         // Pure mirror (no physics body, e.g. remote bullets): interpolate
         // prev -> current for render.
         const transform = entity.transform;
         transform.prevPosition = transform.position.clone();
         transform.prevRotation = transform.rotation.clone();
-        transform.position.copy(position);
-        transform.rotation.copy(rotation);
+        transform.position.copy(pose.position);
+        transform.rotation.copy(pose.rotation);
       }
     }
   }
@@ -332,6 +387,28 @@ export class NetworkClient {
     }
     this.connection.pushMessage(message);
     this.connection.sendOutgoingMessages();
+  }
+
+  sendPing(): void {
+    const socket = this.connection.getConnection();
+    if (!socket || socket.readyState !== 1) {
+      return;
+    }
+    this.connection.pushMessage(new Messages.Ping(performance.now()));
+    this.connection.sendOutgoingMessages();
+  }
+
+  // Called on (re)connect: a new server process has an unrelated clock origin.
+  resetSync(): void {
+    this.timeSync.reset();
+  }
+
+  serverNow(): number {
+    return this.timeSync.serverNow();
+  }
+
+  isSynced(): boolean {
+    return this.timeSync.isSynced();
   }
 
   // Drive the chase camera from the owned ship. `alpha` is the render

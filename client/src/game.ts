@@ -165,7 +165,10 @@ export default class Game {
       () => this.networkClient.localPlayerId,
     );
 
-    this.connection.onConnection(() => console.log('Connected to server'));
+    this.connection.onConnection(() => {
+      console.log('Connected to server');
+      this.networkClient.resetSync();
+    });
     this.connection.onDisconnect(() => console.log('Disconnected from server'));
     this.connection.onError((error) => console.log(error));
   }
@@ -368,6 +371,9 @@ export default class Game {
 
     this.lastTime = performance.now();
     requestAnimationFrame(this.frame.bind(this));
+
+    // ~1 Hz clock-sync probe; TimeSyncManager tracks drift from the rolling window.
+    setInterval(() => this.networkClient.sendPing(), 1000);
   }
 
   frame(): void {

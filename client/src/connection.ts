@@ -36,6 +36,12 @@ export type IncomingMessage =
   | {
       type: typeof Types.Messages.STATS;
       data: ReturnType<typeof Messages.Stats.deserialize>;
+    }
+  | {
+      type: typeof Types.Messages.PONG;
+      data: ReturnType<typeof Messages.Pong.deserialize> & {
+        receiveTime: number;
+      };
     };
 
 type MessageData =
@@ -46,7 +52,8 @@ type MessageData =
   | ReturnType<typeof Messages.World.deserialize>
   | ReturnType<typeof Messages.OreDrop.deserialize>
   | ReturnType<typeof Messages.Collect.deserialize>
-  | ReturnType<typeof Messages.Stats.deserialize>;
+  | ReturnType<typeof Messages.Stats.deserialize>
+  | (ReturnType<typeof Messages.Pong.deserialize> & { receiveTime: number });
 
 export default class Connection {
   connection: WebSocket;
@@ -113,6 +120,11 @@ export default class Connection {
         case Types.Messages.STATS:
           data = Messages.Stats.deserialize(data as number[]);
           break;
+        case Types.Messages.PONG: {
+          const pong = Messages.Pong.deserialize(data as number[]);
+          data = { ...pong, receiveTime: performance.now() };
+          break;
+        }
       }
 
       this.incomingMessageQueue.push({

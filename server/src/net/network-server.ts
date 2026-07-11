@@ -82,7 +82,7 @@ export class NetworkServer {
     this.gameServer.connectedClients--;
   }
 
-  processIncoming(world: World, _time: number): void {
+  processIncoming(world: World, time: number): void {
     for (const connection of this.connections) {
       while (connection.hasIncomingMessage()) {
         const message = connection.popMessage();
@@ -98,6 +98,13 @@ export class NetworkServer {
             break;
           }
         }
+      }
+
+      // Answer clock-sync probes with the current server clock so the client can
+      // estimate latency + delta. `time` is this tick's monotonic fixed-timestep
+      // sim clock (not wall-clock).
+      for (const sentTime of connection.drainPing()) {
+        connection.pushMessage(new Messages.Pong(sentTime, time));
       }
 
       const ship = this.ships.get(connection.id);
@@ -282,7 +289,7 @@ export class NetworkServer {
     this.broadcastMessage(new Messages.Despawn(entity.id!));
   }
 
-  broadcast(world: World, _time: number): void {
+  broadcast(world: World, time: number): void {
     this.sendStatChanges();
 
     for (const entity of world.entities.values()) {
@@ -336,7 +343,7 @@ export class NetworkServer {
           (c) => this.bulletOwnerId(world.get(c.id)) !== connection.id,
         );
         if (relevant.length) {
-          connection.pushMessage(new Messages.World(relevant));
+          connection.pushMessage(new Messages.World(relevant, time));
         }
       }
     }

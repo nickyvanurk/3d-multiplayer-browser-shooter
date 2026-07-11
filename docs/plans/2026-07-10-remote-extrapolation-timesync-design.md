@@ -44,7 +44,7 @@ applies 25 ms hysteresis. Surface used here:
 
 - `PING` (client→server): `[sentTime]` — client `performance.now()` at send.
 - `PONG` (server→client): `[sentTime, serverTime]` — echoes `sentTime`, adds
-  server `performance.now()`.
+  the server's current tick clock.
 
 **Server** (`network-server.ts` / `connection.ts`): on `PING`, immediately
 reply `PONG` with the echoed `sentTime` and the current server clock.
@@ -56,10 +56,16 @@ so an instance avoids cross-session leakage). After the socket opens, start a
 ~1 Hz ping loop (`setInterval`, pushing `PING`); it keeps running to track
 drift. On `PONG`, call
 `onTimeResponse(sent, serverTime, performance.now())`. Call `reset()` on
-(re)connect — a new server process has an unrelated `performance.now()` origin.
+(re)connect — a restarted server's tick clock restarts from 0, so the old delta
+is meaningless.
 
-Both clocks are monotonic millisecond clocks (`performance.now()` client, Node
-`performance.now()` server), exactly what the algorithm expects.
+Both are monotonic millisecond clocks: the client uses `performance.now()`; the
+server stamps its tick clock — the deterministic fixed-timestep accumulator
+(`createFixedTimestep`'s `elapsed`, advancing at real-time rate from 0), NOT
+`performance.now()`. NetStorm only needs relative deltas, so any monotonic
+server clock works — but PONG and WORLD MUST be stamped from this SAME clock (do
+not "fix" either to `performance.now()`), or `age = serverNow() − serverTime`
+desyncs.
 
 ### 2. Timestamping snapshots
 
@@ -74,8 +80,9 @@ and returns `{ serverTime, entities }`.
 Ripples to:
 
 - `network-server.ts` `broadcast()`: already receives `time` (the tick's
-  server `performance.now()`) — pass it into `new Messages.World(relevant, time)`.
-  Computed once per tick, shared by all connections.
+  server clock, the same value passed to `processIncoming` for PONG) — pass it
+  into `new Messages.World(relevant, time)`. Computed once per tick, shared by
+  all connections, so WORLD and PONG share a clock domain.
 - `connection.ts` (client) dispatch + the `IncomingMessage` union `WORLD`
   variant: `data` gains `serverTime`.
 - `network-client.ts` `applyWorldState(data)`: reads `data.serverTime` and

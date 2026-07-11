@@ -238,15 +238,57 @@ export class Fire {
   }
 }
 
-class World {
-  entities: WorldStateEntry[];
+// Client -> server: a clock-sync probe carrying the client's performance.now()
+// at send. The server echoes it back in a Pong.
+export class Ping {
+  sentTime: number;
 
-  constructor(entities: WorldStateEntry[]) {
-    this.entities = entities;
+  constructor(sentTime: number) {
+    this.sentTime = sentTime;
   }
 
   static deserialize(message: number[]) {
-    const data: {
+    return { sentTime: message[0] };
+  }
+
+  serialize() {
+    return [Types.Messages.PING, this.sentTime];
+  }
+}
+
+// Server -> client: the echoed client send time plus the server's clock at
+// reply. The client computes latency + clock delta from (sentTime, serverTime,
+// receiveTime).
+export class Pong {
+  sentTime: number;
+  serverTime: number;
+
+  constructor(sentTime: number, serverTime: number) {
+    this.sentTime = sentTime;
+    this.serverTime = serverTime;
+  }
+
+  static deserialize(message: number[]) {
+    return { sentTime: message[0], serverTime: message[1] };
+  }
+
+  serialize() {
+    return [Types.Messages.PONG, this.sentTime, this.serverTime];
+  }
+}
+
+class World {
+  entities: WorldStateEntry[];
+  serverTime: number;
+
+  constructor(entities: WorldStateEntry[], serverTime: number) {
+    this.entities = entities;
+    this.serverTime = serverTime;
+  }
+
+  static deserialize(message: number[]) {
+    const serverTime = message[0];
+    const entities: {
       id: number;
       position: Vector3;
       rotation: Quaternion;
@@ -256,10 +298,10 @@ class World {
       health: number;
     }[] = [];
 
-    // 16 numbers per entity: id + 15 network-state values (the last two are the
-    // packed input bitmask and health, non-zero only for ships).
-    for (let i = 0; i < message.length; i += 16) {
-      data.push({
+    // After the serverTime prefix: 16 numbers per entity (id + 15 network-state
+    // values; the last two are the packed input bitmask and health).
+    for (let i = 1; i < message.length; i += 16) {
+      entities.push({
         id: message[i],
         position: new Vector3(message[i + 1], message[i + 2], message[i + 3]),
         rotation: new Quaternion(
@@ -279,11 +321,11 @@ class World {
       });
     }
 
-    return data;
+    return { serverTime, entities };
   }
 
   serialize() {
-    const data: number[] = [Types.Messages.WORLD];
+    const data: number[] = [Types.Messages.WORLD, this.serverTime];
 
     for (const { id, state } of this.entities) {
       data.push(id, ...state);
@@ -404,4 +446,6 @@ export default {
   Sell,
   Repair,
   Stats,
+  Ping,
+  Pong,
 };
