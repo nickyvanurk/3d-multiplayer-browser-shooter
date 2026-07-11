@@ -12,6 +12,15 @@ export interface SoundSegment {
   duration: number;
 }
 
+// A continuously-looping 2D voice (e.g. the ship's engine). Unlike a one-shot it
+// stays alive and inaudible until driven; `current` is smoothed toward `target`
+// so the loop fades in/out instead of clicking on.
+interface LoopVoice {
+  sound: Audio;
+  target: number;
+  current: number;
+}
+
 // Spatial SFX via three.js. An AudioListener rides the camera; positional
 // one-shots pan/attenuate by distance (remote players' shots), while plain 2D
 // one-shots stay centered (the local player's own shots). A clip may pack many
@@ -28,6 +37,7 @@ export class SoundService {
   private readonly buffers = new Map<string, AudioBuffer>();
   private readonly segments = new Map<string, SoundSegment[]>();
   private readonly active = new Map<string, number>();
+  private readonly loops = new Map<string, LoopVoice>();
   private readonly listenerPos = new Vector3();
 
   constructor(camera: Camera, scene: Scene) {
@@ -114,6 +124,52 @@ export class SoundService {
   // 2D audition of a specific segment (debug panel), independent of the active one.
   preview(name: string, index: number, volume = 1): void {
     this.spawn(name, index, null, volume);
+  }
+
+  // Register a looping 2D voice (the local ship's engine). It stays silent until
+  // setLoopTarget drives it, and starts lazily on the first audible frame once
+  // the audio context is running.
+  setupLoop(name: string, pitch = 1): void {
+    const buffer = this.buffers.get(name);
+    if (!buffer) {
+      return;
+    }
+    const sound = new Audio(this.listener);
+    sound.setBuffer(buffer);
+    sound.setLoop(true);
+    sound.setPlaybackRate(pitch);
+    sound.setVolume(0);
+    this.loops.set(name, { sound, target: 0, current: 0 });
+  }
+
+  // Set a loop's desired gain; updateLoops smooths the actual volume toward it.
+  setLoopTarget(name: string, target: number): void {
+    const voice = this.loops.get(name);
+    if (voice) {
+      voice.target = target;
+    }
+  }
+
+  setLoopPitch(name: string, pitch: number): void {
+    this.loops.get(name)?.sound.setPlaybackRate(pitch);
+  }
+
+  // Advance every loop voice one frame: ease its volume toward the target (~150ms
+  // time constant) and start the node the first time it becomes audible. Loops are
+  // never stopped once started — they fade to silence and keep looping, so there
+  // are no restart clicks when the player pulses the throttle.
+  updateLoops(delta: number): void {
+    const k = Math.min(1, delta / 150);
+    for (const voice of this.loops.values()) {
+      voice.current += (voice.target - voice.current) * k;
+      if (this.listener.context.state !== 'running') {
+        continue;
+      }
+      if (voice.current > 0.0005 && !voice.sound.isPlaying) {
+        voice.sound.play();
+      }
+      voice.sound.setVolume(voice.current);
+    }
   }
 
   private spawn(

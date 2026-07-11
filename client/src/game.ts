@@ -74,6 +74,12 @@ export default class Game {
   // Ship-destruction explosion cue level/pitch, tunable live from the F3 panel.
   explosionVolume = 1.8;
   explosionPitch = 0.8;
+  // Local-ship engine loops: a low idle-thrust rumble while translating and a
+  // louder roar while boosting. Volume/pitch tunable live from the F3 panel.
+  engineMoveVolume = 0.08;
+  engineMovePitch = 0.75;
+  engineBoostVolume = 0.32;
+  engineBoostPitch = 1.2;
   fixedStep = 1000 / 60;
   fixedUpdate!: (delta: number) => number;
   currentInput: InputCommand = InputCommand.empty();
@@ -192,6 +198,17 @@ export default class Game {
     await this.sound.load('hit', 'sfx/hit.mp3');
     // Ship-destruction cue: a single clip played positionally at the wreck.
     await this.sound.load('explosion', 'sfx/Explosion_Small.wav');
+    // Engine loops: continuous 2D voices driven by the local ship's throttle.
+    await this.sound.load(
+      'engineMove',
+      'sfx/Sci-Fi Spaceship Heavy Engine Loop 1.wav',
+    );
+    await this.sound.load(
+      'engineBoost',
+      'sfx/Sci-Fi Spaceship Engine Loop 3.wav',
+    );
+    this.sound.setupLoop('engineMove', this.engineMovePitch);
+    this.sound.setupLoop('engineBoost', this.engineBoostPitch);
     const blasterCount = this.sound.getSegments('blaster').length;
     // Chosen defaults (tunable live via the F3 panel): sound 1, pitch 2, vol 0.7.
     this.sound.setActive('blaster', 0);
@@ -298,6 +315,59 @@ export default class Game {
         this.explosionPitch = v;
       },
       onChange: previewExplosion,
+    });
+
+    // Engine loops: their own volume + pitch. No preview — you hear them live as
+    // you fly; the sliders just retune the running loops.
+    this.debug.addSlider('Engine move volume', {
+      min: 0,
+      max: 1,
+      step: 0.02,
+      decKey: 'KeyZ',
+      incKey: 'KeyX',
+      keyHint: 'Z X',
+      get: () => this.engineMoveVolume,
+      set: (v) => {
+        this.engineMoveVolume = v;
+      },
+    });
+    this.debug.addSlider('Engine move pitch', {
+      min: 0.5,
+      max: 2,
+      step: 0.05,
+      decKey: 'KeyV',
+      incKey: 'KeyB',
+      keyHint: 'V B',
+      get: () => this.engineMovePitch,
+      set: (v) => {
+        this.engineMovePitch = v;
+        this.sound.setLoopPitch('engineMove', v);
+      },
+    });
+    this.debug.addSlider('Engine boost volume', {
+      min: 0,
+      max: 1.5,
+      step: 0.02,
+      decKey: 'KeyN',
+      incKey: 'KeyM',
+      keyHint: 'N M',
+      get: () => this.engineBoostVolume,
+      set: (v) => {
+        this.engineBoostVolume = v;
+      },
+    });
+    this.debug.addSlider('Engine boost pitch', {
+      min: 0.5,
+      max: 2,
+      step: 0.05,
+      decKey: 'KeyO',
+      incKey: 'KeyP',
+      keyHint: 'O P',
+      get: () => this.engineBoostPitch,
+      set: (v) => {
+        this.engineBoostPitch = v;
+        this.sound.setLoopPitch('engineBoost', v);
+      },
     });
 
     // The client runs its own Rapier world (all ships + the static asteroid
@@ -413,6 +483,27 @@ export default class Game {
     // Camera follows the ship's interpolated pose (same alpha as the mesh) so
     // the ship holds a constant screen offset instead of surging.
     this.networkClient.updateCamera(delta, alpha);
+
+    // Engine loops off the local throttle: boost roars over everything, otherwise
+    // a low rumble while translating (roll alone isn't thrust). updateLoops fades
+    // the running voices toward these targets.
+    const eng = this.inputController.input;
+    const translating =
+      eng.forward ||
+      eng.backward ||
+      eng.strafeLeft ||
+      eng.strafeRight ||
+      eng.strafeUp ||
+      eng.strafeDown;
+    this.sound.setLoopTarget(
+      'engineBoost',
+      eng.boost ? this.engineBoostVolume : 0,
+    );
+    this.sound.setLoopTarget(
+      'engineMove',
+      !eng.boost && translating ? this.engineMoveVolume : 0,
+    );
+    this.sound.updateLoops(delta);
 
     this.particles.update(delta);
     this.orePickups.update(time);
