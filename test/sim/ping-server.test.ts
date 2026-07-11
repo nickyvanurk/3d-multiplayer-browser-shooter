@@ -1,58 +1,40 @@
 import assert from 'node:assert/strict';
 import Types from '../../shared/types.ts';
+import Messages from '../../shared/messages.ts';
+import Connection from '../../server/src/connection.ts';
 import { test } from './harness.ts';
-import { NetworkServer } from '../../server/src/net/network-server.ts';
 
-// A minimal fake Connection exposing just what NetworkServer.processIncoming
-// touches for the ping path.
-function fakeConnection(id: number) {
-  const outgoing: unknown[][] = [];
+// A minimal fake ws socket: captures the registered event handlers and every
+// payload sent back, so we can emit a PING and inspect the immediate reply.
+function fakeSocket() {
+  const handlers: Record<string, (arg: unknown) => void> = {};
+  const sent: unknown[][] = [];
   return {
-    id,
-    pings: [] as number[],
-    incoming: [] as unknown[],
-    hasIncomingMessage() {
-      return this.incoming.length > 0;
+    on(event: string, cb: (arg: unknown) => void) {
+      handlers[event] = cb;
     },
-    popMessage() {
-      return this.incoming.shift();
+    send(data: string) {
+      sent.push(JSON.parse(data));
     },
-    drainPing() {
-      const p = this.pings;
-      this.pings = [];
-      return p;
+    emit(event: string, arg: unknown) {
+      handlers[event]?.(arg);
     },
-    drainState() {
-      return null;
-    },
-    drainFire() {
-      return [];
-    },
-    drainSell() {
-      return false;
-    },
-    drainRepair() {
-      return false;
-    },
-    pushMessage(m: { serialize(): unknown[] }) {
-      outgoing.push(m.serialize());
-    },
-    sendOutgoingMessages() {},
-    outgoing,
+    sent,
   };
 }
 
-test('server answers a PING with a PONG echoing sentTime + server clock', () => {
-  const conn = fakeConnection(1);
-  conn.pings.push(555); // client sent-time awaiting a pong
+test('server answers a PING immediately with a PONG echoing sentTime + a server clock', () => {
+  const socket = fakeSocket();
+  // biome-ignore lint/suspicious/noExplicitAny: fake socket/server stubs
+  new Connection(1, socket as any, {} as any);
 
-  const world = { entities: new Map() } as any;
-  const gameServer = { world, physics: {}, connectedClients: 0 } as any;
-  const net = new NetworkServer(gameServer);
-  net.connections = new Set([conn]) as any;
+  // The client sends a PING carrying its send time.
+  socket.emit('message', JSON.stringify(new Messages.Ping(555).serialize()));
 
-  net.processIncoming(world, 8000); // server clock = 8000
-
-  assert.equal(conn.outgoing.length, 1);
-  assert.deepEqual(conn.outgoing[0], [Types.Messages.PONG, 555, 8000]);
+  assert.equal(socket.sent.length, 1); // answered on receipt, not on a tick
+  const [type, sentTime, serverTime] = socket.sent[0] as number[];
+  assert.equal(type, Types.Messages.PONG);
+  assert.equal(sentTime, 555); // echoed verbatim
+  assert.equal(typeof serverTime, 'number'); // stamped with the server wall clock
+  assert.ok(serverTime > 0);
 });

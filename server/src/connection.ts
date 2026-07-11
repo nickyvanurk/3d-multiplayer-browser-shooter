@@ -1,3 +1,4 @@
+import { performance } from 'perf_hooks';
 import type WebSocket from 'ws';
 
 import logger from './utils/logger.ts';
@@ -30,8 +31,6 @@ export default class Connection {
   latestState: StateData | null;
   // Fire requests are events; every one must be honored, so they queue.
   fireQueue: FireData[];
-  // Clock-sync probes are events; each PING must be answered, so they queue.
-  pingQueue: number[];
   // Vendor trades are idempotent within a tick (a second sell finds an empty
   // hold; a second repair finds full health), so they latch as booleans rather
   // than queue.
@@ -48,7 +47,6 @@ export default class Connection {
     this.outgoingMessageQueue = [];
     this.latestState = null;
     this.fireQueue = [];
-    this.pingQueue = [];
     this.sellRequested = false;
     this.repairRequested = false;
 
@@ -70,7 +68,17 @@ export default class Connection {
           this.fireQueue.push(Messages.Fire.deserialize(data as number[]));
           break;
         case Types.Messages.PING:
-          this.pingQueue.push((data as number[])[0]);
+          // Answer immediately (not on the tick) and stamp the reply with the
+          // server's wall clock, so the client's measured RTT is pure network
+          // latency without a tick-wait, and the latency stays symmetric.
+          this.connection.send(
+            JSON.stringify(
+              new Messages.Pong(
+                (data as number[])[0],
+                performance.now(),
+              ).serialize(),
+            ),
+          );
           break;
         case Types.Messages.SELL:
           this.sellRequested = true;
@@ -110,12 +118,6 @@ export default class Connection {
     const fires = this.fireQueue;
     this.fireQueue = [];
     return fires;
-  }
-
-  drainPing(): number[] {
-    const pings = this.pingQueue;
-    this.pingQueue = [];
-    return pings;
   }
 
   // Consume this tick's vendor-trade latches, clearing them.

@@ -29,6 +29,7 @@ import { MusicPlayerHud } from './ui/music-player-hud.ts';
 import { VendorHud } from './ui/vendor-hud.ts';
 import { PlayerHud } from './ui/player-hud.ts';
 import { HitMarker } from './ui/hit-marker.ts';
+import { StatsHud } from './ui/stats-hud.ts';
 
 // Plain OOP game. Owns the mirror World, the presentation layer, the client
 // physics world, the NetworkClient, and the client-authoritative ClientSim.
@@ -64,6 +65,9 @@ export default class Game {
   vendorHud: VendorHud;
   playerHud: PlayerHud;
   hitMarker: HitMarker;
+  statsHud: StatsHud;
+  // Smoothed frames-per-second for the stats overlay (EMA of 1000/frameDelta).
+  fps = 0;
   // Hitmarker cue level/pitch, tunable live from the F3 panel.
   hitVolume = 0.45;
   hitPitch = 2;
@@ -126,6 +130,7 @@ export default class Game {
     this.music = new MusicPlayer(defaultPlaylist(), consumeFirstVisit());
     this.musicHud = new MusicPlayerHud(this.music);
     this.hitMarker = new HitMarker();
+    this.statsHud = new StatsHud();
     this.music.start();
 
     this.viewRegistry.onShipDestroyed = (position) => {
@@ -414,6 +419,17 @@ export default class Game {
     this.vendorHud.update();
     this.playerHud.update();
     this.range.update();
+
+    // Smooth FPS off the frame delta and refresh the corner readout.
+    if (delta > 0) {
+      const instant = 1000 / delta;
+      this.fps = this.fps === 0 ? instant : this.fps * 0.9 + instant * 0.1;
+    }
+    this.statsHud.update(
+      this.fps,
+      this.networkClient.getPing(),
+      this.networkClient.isSynced(),
+    );
 
     this.viewRegistry.update(alpha, delta);
     this.sceneManager.render(alpha);

@@ -1,3 +1,5 @@
+import { performance } from 'perf_hooks';
+
 import logger from '../utils/logger.ts';
 import { sanitize } from '../utils/sanitize.ts';
 import Types from '../../../shared/types.ts';
@@ -82,7 +84,7 @@ export class NetworkServer {
     this.gameServer.connectedClients--;
   }
 
-  processIncoming(world: World, time: number): void {
+  processIncoming(world: World, _time: number): void {
     for (const connection of this.connections) {
       while (connection.hasIncomingMessage()) {
         const message = connection.popMessage();
@@ -98,13 +100,6 @@ export class NetworkServer {
             break;
           }
         }
-      }
-
-      // Answer clock-sync probes with the current server clock so the client can
-      // estimate latency + delta. `time` is this tick's monotonic fixed-timestep
-      // sim clock (not wall-clock).
-      for (const sentTime of connection.drainPing()) {
-        connection.pushMessage(new Messages.Pong(sentTime, time));
       }
 
       const ship = this.ships.get(connection.id);
@@ -289,8 +284,14 @@ export class NetworkServer {
     this.broadcastMessage(new Messages.Despawn(entity.id!));
   }
 
-  broadcast(world: World, time: number): void {
+  broadcast(world: World, _time: number): void {
     this.sendStatChanges();
+
+    // Stamp this snapshot with the server wall clock — the SAME clock the PING
+    // handler echoes in its PONG — so the client's synced clock and the snapshot
+    // timestamps share one domain (age = serverNow() - serverTime). One value
+    // per tick, shared by every connection.
+    const now = performance.now();
 
     for (const entity of world.entities.values()) {
       if (typeof entity.alive !== 'boolean') {
@@ -343,7 +344,7 @@ export class NetworkServer {
           (c) => this.bulletOwnerId(world.get(c.id)) !== connection.id,
         );
         if (relevant.length) {
-          connection.pushMessage(new Messages.World(relevant, time));
+          connection.pushMessage(new Messages.World(relevant, now));
         }
       }
     }

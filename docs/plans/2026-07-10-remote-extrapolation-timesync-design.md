@@ -43,12 +43,14 @@ applies 25 ms hysteresis. Surface used here:
 `shared/messages.ts`:
 
 - `PING` (client→server): `[sentTime]` — client `performance.now()` at send.
-- `PONG` (server→client): `[sentTime, serverTime]` — echoes `sentTime`, adds
-  the server's current tick clock.
+- `PONG` (server→client): `[sentTime, serverTime]` — echoes `sentTime`, adds the
+  server's `performance.now()`.
 
-**Server** (`network-server.ts` / `connection.ts`): on `PING`, immediately
-reply `PONG` with the echoed `sentTime` and the current server clock.
-Stateless, no per-client bookkeeping.
+**Server** (`connection.ts`): answer `PING` **immediately in the socket message
+handler** (not on the game tick), stamping `serverTime = performance.now()`.
+Replying immediately keeps the measured RTT to pure network latency (no
+~half-a-tick wait) and keeps the round-trip latency symmetric, which de-biases
+the clock-delta estimate. Stateless, no per-client bookkeeping, no queue.
 
 **Client**: `NetworkClient` owns a `TimeSyncManager` **instance** (not the
 gaming-platform module-level singleton — voidfall has one connection per game,
@@ -56,16 +58,13 @@ so an instance avoids cross-session leakage). After the socket opens, start a
 ~1 Hz ping loop (`setInterval`, pushing `PING`); it keeps running to track
 drift. On `PONG`, call
 `onTimeResponse(sent, serverTime, performance.now())`. Call `reset()` on
-(re)connect — a restarted server's tick clock restarts from 0, so the old delta
-is meaningless.
+(re)connect — a new server process has an unrelated `performance.now()` origin,
+so the old delta is meaningless.
 
-Both are monotonic millisecond clocks: the client uses `performance.now()`; the
-server stamps its tick clock — the deterministic fixed-timestep accumulator
-(`createFixedTimestep`'s `elapsed`, advancing at real-time rate from 0), NOT
-`performance.now()`. NetStorm only needs relative deltas, so any monotonic
-server clock works — but PONG and WORLD MUST be stamped from this SAME clock (do
-not "fix" either to `performance.now()`), or `age = serverNow() − serverTime`
-desyncs.
+Both sides use monotonic `performance.now()` (client and server). NetStorm only
+needs relative deltas, so the two clocks' unrelated origins are fine — but PONG
+and WORLD MUST be stamped from the SAME server clock (both `performance.now()`),
+or `age = serverNow() − serverTime` desyncs.
 
 ### 2. Timestamping snapshots
 
@@ -79,10 +78,10 @@ and returns `{ serverTime, entities }`.
 
 Ripples to:
 
-- `network-server.ts` `broadcast()`: already receives `time` (the tick's
-  server clock, the same value passed to `processIncoming` for PONG) — pass it
-  into `new Messages.World(relevant, time)`. Computed once per tick, shared by
-  all connections, so WORLD and PONG share a clock domain.
+- `network-server.ts` `broadcast()`: stamp `now = performance.now()` once at the
+  top and pass it into `new Messages.World(relevant, now)` — the same wall clock
+  the PONG handler uses, so WORLD and PONG share a clock domain. One value per
+  tick, shared by all connections.
 - `connection.ts` (client) dispatch + the `IncomingMessage` union `WORLD`
   variant: `data` gains `serverTime`.
 - `network-client.ts` `applyWorldState(data)`: reads `data.serverTime` and

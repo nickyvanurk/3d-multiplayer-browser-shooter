@@ -64,6 +64,8 @@ export class NetworkClient {
   // A chunk was collected authoritatively (Collect), so the client drops its copy.
   onCollect: ((id: number) => void) | null;
   timeSync: TimeSyncManager;
+  // Smoothed round-trip time (ms) from the last PONGs, for the stats overlay.
+  pingMs = 0;
   _cameraDummy: Object3D;
   // Reused per-entity in applyWorldState to avoid per-snapshot allocation.
   _extrapPos = new Vector3();
@@ -161,6 +163,8 @@ export class NetworkClient {
         case Types.Messages.PONG: {
           const { sentTime, serverTime, receiveTime } = message!.data;
           this.timeSync.onTimeResponse(sentTime, serverTime, receiveTime);
+          const rtt = receiveTime - sentTime;
+          this.pingMs = this.pingMs === 0 ? rtt : this.pingMs * 0.8 + rtt * 0.2;
           break;
         }
       }
@@ -409,6 +413,11 @@ export class NetworkClient {
 
   isSynced(): boolean {
     return this.timeSync.isSynced();
+  }
+
+  // Smoothed round-trip time in ms (0 until the first PONG).
+  getPing(): number {
+    return this.pingMs;
   }
 
   // Drive the chase camera from the owned ship. `alpha` is the render
