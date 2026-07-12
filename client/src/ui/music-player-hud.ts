@@ -1,4 +1,5 @@
 import type { MusicPlayer } from '../audio/music-player.ts';
+import type { Keybindings } from '../input/keybindings.ts';
 
 // A compact "now playing" widget pinned bottom-left, styled to match the
 // settings menu / debug overlay. Keyboard-first (arrow keys drive the player;
@@ -9,6 +10,7 @@ import type { MusicPlayer } from '../audio/music-player.ts';
 //   M      show / hide this widget
 export class MusicPlayerHud {
   private readonly player: MusicPlayer;
+  private readonly keybindings: Keybindings;
   private readonly panel: HTMLDivElement;
   private readonly titleEl: HTMLDivElement;
   private readonly playBtn: HTMLButtonElement;
@@ -16,8 +18,9 @@ export class MusicPlayerHud {
   private readonly volText: HTMLSpanElement;
   private visible = true;
 
-  constructor(player: MusicPlayer) {
+  constructor(player: MusicPlayer, keybindings: Keybindings) {
     this.player = player;
+    this.keybindings = keybindings;
 
     this.panel = document.createElement('div');
     Object.assign(this.panel.style, {
@@ -138,28 +141,29 @@ export class MusicPlayerHud {
       ) {
         return;
       }
+      const kb = this.keybindings;
       switch (e.code) {
-        case 'ArrowLeft':
+        case kb.musicPrev:
           e.preventDefault();
           this.player.prev();
           break;
-        case 'ArrowRight':
+        case kb.musicNext:
           e.preventDefault();
           this.player.next();
           break;
-        case 'ArrowUp':
+        case kb.musicVolUp:
           e.preventDefault();
           this.player.changeVolume(0.05);
           break;
-        case 'ArrowDown':
+        case kb.musicVolDown:
           e.preventDefault();
           this.player.changeVolume(-0.05);
           break;
-        case 'KeyP':
+        case kb.musicPlayPause:
           e.preventDefault();
           this.player.toggle();
           break;
-        case 'KeyM':
+        case kb.musicPanelToggle:
           e.preventDefault();
           this.toggleVisible();
           break;

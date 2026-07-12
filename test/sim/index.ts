@@ -35,5 +35,6 @@ import './respawn-asteroid.test.ts';
 import './trade.test.ts';
 import './progression.test.ts';
 import './apply-extrapolation.test.ts';
+import './rebind.test.ts';
 import { run } from './harness.ts';
 run();

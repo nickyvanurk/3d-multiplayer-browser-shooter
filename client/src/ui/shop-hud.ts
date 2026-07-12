@@ -1,6 +1,7 @@
 import type { World } from '../../../shared/sim/world.ts';
 import type { Ship } from '../../../shared/sim/entities/ship.ts';
 import type { InputController } from '../input/input-controller.ts';
+import type { Keybindings } from '../input/keybindings.ts';
 import {
   ORE_SELL_PRICE,
   REPAIR_COST,
@@ -87,6 +88,7 @@ export class ShopHud {
   private readonly inputController: InputController;
   private readonly isInRange: () => boolean;
   private readonly net: ShopNet;
+  private readonly keybindings: Keybindings;
   private readonly crosshair: HTMLElement | null;
 
   private readonly backdrop: HTMLDivElement;
@@ -109,12 +111,14 @@ export class ShopHud {
     inputController: InputController,
     isInRange: () => boolean,
     net: ShopNet,
+    keybindings: Keybindings,
   ) {
     this.world = world;
     this.localShipId = localShipId;
     this.inputController = inputController;
     this.isInRange = isInRange;
     this.net = net;
+    this.keybindings = keybindings;
     this.crosshair = document.querySelector<HTMLElement>('.crosshair');
 
     this.backdrop = document.createElement('div');
@@ -476,7 +480,7 @@ export class ShopHud {
 
   private bindKeys(): void {
     window.addEventListener('keydown', (e) => {
-      if (e.repeat || e.code !== 'KeyF') {
+      if (e.repeat || e.code !== this.keybindings.shopToggle) {
         return;
       }
       const t = e.target as HTMLElement | null;

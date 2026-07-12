@@ -2,6 +2,14 @@
 // FOV is stored as horizontal degrees (game convention); the renderer converts
 // to the vertical FOV three.js expects based on the current aspect ratio.
 
+import {
+  DEFAULT_KEYBINDINGS,
+  mergeKeybindings,
+  type Keybindings,
+  type KeybindingAction,
+} from './input/keybindings.ts';
+import { applyBinding } from './input/rebind.ts';
+
 const STORAGE_KEY = 'voidfall.settings';
 
 export const FOV_LIMITS = { min: 60, max: 120 } as const;
@@ -12,11 +20,13 @@ export const CAMERA_STIFFNESS_LIMITS = { min: 10, max: 30 } as const;
 export interface GameSettings {
   horizontalFov: number;
   cameraStiffness: number;
+  keybindings: Keybindings;
 }
 
 const DEFAULTS: GameSettings = {
   horizontalFov: 90,
   cameraStiffness: 15,
+  keybindings: { ...DEFAULT_KEYBINDINGS },
 };
 
 function clamp(v: number, min: number, max: number): number {
@@ -52,6 +62,31 @@ export class SettingsStore {
     this.save();
   }
 
+  // The live bindings object, shared with the InputController and HUDs so a
+  // rebind takes effect immediately. Callers must not replace it — mutate via
+  // rebind()/resetKeybindings() so the shared reference stays valid.
+  get keybindings(): Keybindings {
+    return this.settings.keybindings;
+  }
+
+  // Assign a key/button to an action (warn + unbind other on conflict), persist,
+  // and return the actions whose binding was cleared by the conflict rule.
+  rebind(action: KeybindingAction, value: string | number): KeybindingAction[] {
+    const { bindings, unbound } = applyBinding(
+      this.settings.keybindings,
+      action,
+      value,
+    );
+    Object.assign(this.settings.keybindings, bindings);
+    this.save();
+    return unbound;
+  }
+
+  resetKeybindings(): void {
+    Object.assign(this.settings.keybindings, DEFAULT_KEYBINDINGS);
+    this.save();
+  }
+
   private load(): GameSettings {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -70,6 +105,7 @@ export class SettingsStore {
           CAMERA_STIFFNESS_LIMITS.min,
           CAMERA_STIFFNESS_LIMITS.max,
         ),
+        keybindings: mergeKeybindings(parsed.keybindings),
       };
     } catch {
       return { ...DEFAULTS };

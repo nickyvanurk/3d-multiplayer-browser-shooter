@@ -182,7 +182,7 @@ export class InputController {
     // Hold Alt to enter free-look; release to snap back. preventDefault stops
     // the browser stealing focus to the menu bar on a bare Alt press.
     document.addEventListener('keydown', (event) => {
-      if (event.code !== 'AltLeft' && event.code !== 'AltRight') {
+      if (event.code !== this.keybindings.cameraOrbit) {
         return;
       }
       event.preventDefault();
@@ -191,7 +191,7 @@ export class InputController {
       }
     });
     document.addEventListener('keyup', (event) => {
-      if (event.code !== 'AltLeft' && event.code !== 'AltRight') {
+      if (event.code !== this.keybindings.cameraOrbit) {
         return;
       }
       event.preventDefault();

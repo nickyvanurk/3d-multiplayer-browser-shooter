@@ -17,7 +17,6 @@ import { ParticleService } from './render/particles.ts';
 import { OrePickupService } from './render/ore-pickups.ts';
 import { RangeService } from './render/range.ts';
 import { InputController } from './input/input-controller.ts';
-import { DEFAULT_KEYBINDINGS } from './input/keybindings.ts';
 import { NetworkClient } from './net/network-client.ts';
 import { SoundService } from './audio/sound-service.ts';
 import { DebugPanel } from './debug/debug-panel.ts';
@@ -109,7 +108,7 @@ export default class Game {
 
     this.inputController = new InputController(
       this.sceneManager.camera,
-      DEFAULT_KEYBINDINGS,
+      this.settings.keybindings,
     );
 
     this.projection = new ProjectionService(
@@ -143,7 +142,7 @@ export default class Game {
     );
 
     this.music = new MusicPlayer(defaultPlaylist(), consumeFirstVisit());
-    this.musicHud = new MusicPlayerHud(this.music);
+    this.musicHud = new MusicPlayerHud(this.music, this.settings.keybindings);
     this.hitMarker = new HitMarker();
     this.statsHud = new StatsHud();
 
@@ -185,6 +184,7 @@ export default class Game {
       this.inputController,
       () => this.vendorHud.isInRange(),
       this.networkClient,
+      this.settings.keybindings,
     );
 
     // Bottom-centre pilot status (hull hero + cargo/credits). Reads the owned
