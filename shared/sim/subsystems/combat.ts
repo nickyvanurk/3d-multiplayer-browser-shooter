@@ -16,6 +16,9 @@ interface CombatEntity extends Entity {
   // reduced (mining) rate rather than dealing full combat damage.
   respawnInPlace?: boolean;
   maxOre?: number;
+  // Bullets: a per-shot rock-mining multiplier (mining laser >> default). Absent
+  // on the cannons, which fall back to the global MINING_DAMAGE_FACTOR.
+  miningFactor?: number;
   owner?: Entity | null;
   invulnerable?: boolean;
   // Present on asteroids: stamped with the impact point so mining drops ore where
@@ -94,11 +97,11 @@ export class CombatSubsystem {
     }
 
     // Rock is mined, not destroyed: a combat weapon chips ore off it slowly, so
-    // asteroids (maxOre set) take a fraction of the damage a ship would.
+    // asteroids (maxOre set) take a fraction of the damage a ship would. A mining
+    // laser carries its own higher factor; other bullets use the global default.
+    const factor = attacker.miningFactor ?? MINING_DAMAGE_FACTOR;
     const damage =
-      victim.maxOre !== undefined
-        ? attacker.damage * MINING_DAMAGE_FACTOR
-        : attacker.damage;
+      victim.maxOre !== undefined ? attacker.damage * factor : attacker.damage;
     victim.health -= damage;
     damaged.add(victim);
 

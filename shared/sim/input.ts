@@ -17,6 +17,7 @@ export interface InputCommandData {
   strafeDown?: boolean;
   boost?: boolean;
   weaponPrimary?: boolean;
+  weaponSecondary?: boolean;
   aim?: Aim | null;
 }
 
@@ -47,6 +48,7 @@ export class InputCommand {
   strafeDown!: boolean;
   boost!: boolean;
   weaponPrimary!: boolean;
+  weaponSecondary!: boolean;
   aim!: Aim | null;
   seq: number;
 
@@ -64,6 +66,7 @@ export class InputCommand {
         strafeDown: false,
         boost: false,
         weaponPrimary: false,
+        weaponSecondary: false,
         aim: null,
       },
       data,

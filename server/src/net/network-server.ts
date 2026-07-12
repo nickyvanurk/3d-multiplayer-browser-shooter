@@ -10,7 +10,13 @@ import { Bullet } from '../../../shared/sim/entities/bullet.ts';
 import { InputCommand } from '../../../shared/sim/input.ts';
 import { SnapshotDiffer } from '../../../shared/sim/net/snapshot.ts';
 import { pickSpawnPosition } from '../../../shared/sim/spawn.ts';
-import { sellCargo, repairShip } from '../../../shared/sim/trade.ts';
+import {
+  sellCargo,
+  repairShip,
+  buyMiningLaser,
+  equipSlot,
+} from '../../../shared/sim/trade.ts';
+import { Items, MINING_LASER_FACTOR } from '../../../shared/sim/mining.ts';
 import { generateName } from '../../../shared/names/generate-name.ts';
 import type {
   SpawnEvent,
@@ -32,6 +38,15 @@ export class NetworkServer {
   lastAlive: Map<number, boolean>;
   // Last cargo/credits sent to each owner, so Stats only goes out on a change.
   lastStats: Map<number, { cargo: number; credits: number }>;
+  // Last credits/loadout sent to each owner, so Loadout only goes out on a change.
+  lastLoadout: Map<
+    number,
+    {
+      hasMiningLaser: boolean;
+      primaryItem: number;
+      secondaryItem: number;
+    }
+  >;
 
   constructor(gameServer: GameServer) {
     this.gameServer = gameServer;
@@ -41,6 +56,7 @@ export class NetworkServer {
     this.differ = new SnapshotDiffer();
     this.lastAlive = new Map(); // ship id -> boolean
     this.lastStats = new Map(); // connection.id -> { cargo, credits }
+    this.lastLoadout = new Map(); // connection.id -> { hasMiningLaser, primaryItem, secondaryItem }
   }
 
   addConnection(connection: Connection): void {
@@ -80,6 +96,7 @@ export class NetworkServer {
     }
 
     this.lastStats.delete(connection.id);
+    this.lastLoadout.delete(connection.id);
     this.connections.delete(connection);
     this.gameServer.connectedClients--;
   }
@@ -140,7 +157,12 @@ export class NetworkServer {
       // dead or the vendor is somehow absent.
       const wantsSell = connection.drainSell();
       const wantsRepair = connection.drainRepair();
-      if (ship.alive !== false && (wantsSell || wantsRepair)) {
+      const wantsBuy = connection.drainBuy();
+      const wantsEquip = connection.drainEquip();
+      if (
+        ship.alive !== false &&
+        (wantsSell || wantsRepair || wantsBuy !== null || wantsEquip !== null)
+      ) {
         const vendor = this.findVendor();
         if (vendor) {
           if (wantsSell) {
@@ -148,6 +170,12 @@ export class NetworkServer {
           }
           if (wantsRepair) {
             repairShip(ship, vendor);
+          }
+          if (wantsBuy === Items.MINING_LASER) {
+            buyMiningLaser(ship, vendor);
+          }
+          if (wantsEquip !== null) {
+            equipSlot(ship, wantsEquip.slot, wantsEquip.itemId, vendor);
           }
         }
       }
@@ -203,6 +231,40 @@ export class NetworkServer {
     }
   }
 
+  // Server -> owner only: push the owner's item ownership + equipped weapons when
+  // any changed (buy/equip), and once on spawn so the client builds the right
+  // weapons from the start. Credits are handled by sendStatChanges, so a credit
+  // change alone does NOT re-send this (which would needlessly rebuild weapons).
+  private sendLoadoutChanges(): void {
+    for (const connection of this.connections) {
+      const ship = this.ships.get(connection.id);
+      if (!ship) {
+        continue;
+      }
+      const last = this.lastLoadout.get(connection.id);
+      if (
+        last &&
+        last.hasMiningLaser === ship.hasMiningLaser &&
+        last.primaryItem === ship.primaryItem &&
+        last.secondaryItem === ship.secondaryItem
+      ) {
+        continue;
+      }
+      connection.pushMessage(
+        new Messages.Loadout(
+          ship.hasMiningLaser,
+          ship.primaryItem,
+          ship.secondaryItem,
+        ),
+      );
+      this.lastLoadout.set(connection.id, {
+        hasMiningLaser: ship.hasMiningLaser,
+        primaryItem: ship.primaryItem,
+        secondaryItem: ship.secondaryItem,
+      });
+    }
+  }
+
   spawnShip(world: World, connection: Connection, name = ''): Ship {
     logger.debug('Spawning spaceship');
 
@@ -236,9 +298,20 @@ export class NetworkServer {
     ship: Ship,
     fire: ReturnType<typeof Messages.Fire.deserialize>,
   ): void {
+    // A laser shot is honoured only if the ship actually owns and mounts the
+    // mining laser (in either slot). The client's miningFactor is treated as a
+    // mere "this is a laser shot" flag — the server substitutes its OWN authoritative
+    // magnitude, so a tampered client can't send a huge factor and one-shot rocks.
+    const laserEquipped =
+      ship.hasMiningLaser &&
+      (ship.primaryItem === Items.MINING_LASER ||
+        ship.secondaryItem === Items.MINING_LASER);
+    const miningFactor =
+      laserEquipped && fire.miningFactor ? MINING_LASER_FACTOR : undefined;
     const bullet = new Bullet({
       transform: { position: fire.position, rotation: fire.rotation },
       damage: fire.damage,
+      miningFactor,
     });
     bullet.owner = ship;
     // world.spawn -> onSpawn: physics body + onEntitySpawned broadcast.
@@ -286,6 +359,7 @@ export class NetworkServer {
 
   broadcast(world: World, _time: number): void {
     this.sendStatChanges();
+    this.sendLoadoutChanges();
 
     // Stamp this snapshot with the server wall clock — the SAME clock the PING
     // handler echoes in its PONG — so the client's synced clock and the snapshot
@@ -320,6 +394,18 @@ export class NetworkServer {
             name,
           ),
         );
+        // A player ship coming back from the dead is re-Spawned to clients, which
+        // rebuild it from defaults (0 cargo/credits, no secondary weapon). Force a
+        // fresh Stats + Loadout by dropping the "last sent" record, so its economy
+        // and equipped mining laser re-sync instead of reading blank until the
+        // next change. (Bots have no connection, so this skips them.)
+        const owner = (entity as Ship).controller?.connection as
+          | Connection
+          | undefined;
+        if (owner) {
+          this.lastStats.delete(owner.id);
+          this.lastLoadout.delete(owner.id);
+        }
       }
 
       this.lastAlive.set(entity.id!, entity.alive);

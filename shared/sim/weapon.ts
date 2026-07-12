@@ -1,8 +1,11 @@
 import { Vector3, Quaternion, Ray, Matrix4 } from 'three';
 import type { Transform } from './transform.ts';
 
+export type WeaponSlot = 'primary' | 'secondary';
+
 export interface WeaponParent {
   firingPrimary: boolean;
+  firingSecondary: boolean;
   transform: Transform;
   aim: Ray | null;
   aimDistance: number;
@@ -13,12 +16,16 @@ export interface WeaponInit {
   delay?: number;
   fireInterval?: number;
   parent?: WeaponParent;
+  slot?: WeaponSlot;
+  damage?: number;
+  miningFactor?: number;
 }
 
 type SpawnBullet = (
   position: Vector3,
   rotation: Quaternion,
   damage: number,
+  miningFactor?: number,
 ) => void;
 
 export class Weapon {
@@ -27,6 +34,9 @@ export class Weapon {
   fireInterval: number;
   nextFireTime: number;
   parent: WeaponParent;
+  slot: WeaponSlot;
+  damage: number;
+  miningFactor: number | undefined;
   _held: boolean;
 
   constructor(
@@ -35,6 +45,9 @@ export class Weapon {
       delay = 0,
       fireInterval = 100,
       parent,
+      slot = 'primary',
+      damage = 5,
+      miningFactor,
     }: WeaponInit = {} as WeaponInit,
   ) {
     this.offset = offset ? offset.clone() : new Vector3();
@@ -42,11 +55,17 @@ export class Weapon {
     this.fireInterval = fireInterval;
     this.nextFireTime = 0;
     this.parent = parent!;
+    this.slot = slot;
+    this.damage = damage;
+    this.miningFactor = miningFactor;
     this._held = false;
   }
 
   tryFire(time: number, spawnBullet: SpawnBullet): void {
-    const held = this.parent.firingPrimary;
+    const held =
+      this.slot === 'secondary'
+        ? this.parent.firingSecondary
+        : this.parent.firingPrimary;
 
     // A fresh trigger press schedules the first shot at now + delay. `delay` is
     // the per-weapon stagger that makes the ship's dual cannons alternate; a
@@ -66,8 +85,7 @@ export class Weapon {
     // never drifts into firing on the same tick.
     this.nextFireTime += this.fireInterval;
     const { position, rotation } = getWeaponTransform(this);
-    const damage = 5;
-    spawnBullet(position, rotation, damage);
+    spawnBullet(position, rotation, this.damage, this.miningFactor);
   }
 }
 

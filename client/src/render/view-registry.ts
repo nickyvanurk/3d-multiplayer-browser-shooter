@@ -66,10 +66,17 @@ export class ViewRegistry {
   ready: boolean;
   pendingSpawns: Entity[];
   onShipDestroyed: ((position: Vector3) => void) | null;
+  // Fired as each kind's GLTF finishes loading, so the game can fill in state
+  // that model gates but the renderer doesn't own (e.g. the vendor's physics
+  // body, deferred until its deprioritized mesh streams in).
+  onModelReady: ((kind: EntityKind) => void) | null;
   // The projectile model is a long beam whose pivot sits at its tail, so it would
   // be drawn extending forward past whatever it hits. Cache how far its tip leads
   // the pivot so bullet views can be shifted to put the tip at the origin.
   bulletTipOffset: number | null;
+  // Shared red material for mining-laser tracers, so the beam reads as a distinct
+  // red weapon (built lazily the first time a laser bullet is drawn).
+  laserMaterial: MeshBasicMaterial | null;
   // Per-ship clone of the "Exhaust" material, keyed by entity id, whose emissive
   // intensity `update()` drives from that ship's thrust input.
   exhaustMaterials: Map<number, MeshStandardMaterial>;
@@ -89,20 +96,25 @@ export class ViewRegistry {
     this.ready = false;
     this.pendingSpawns = [];
     this.onShipDestroyed = null; // (position) => void, wired by Task 19/20 particles
+    this.onModelReady = null;
     this.bulletTipOffset = null;
+    this.laserMaterial = null;
     this.exhaustMaterials = new Map();
     this.asteroids = null;
     this.asteroidScales = new Map();
   }
 
-  // Port of model-loading-system.js: load every kind's GLTF before views can be
-  // created (mirrors the old Loaded/ResourceEntity gating). Resolves when ready.
+  // Progressive GLTF load. Each kind is fetched independently and reveals its
+  // own queued spawns the moment it lands (flushPending), so the world fills in
+  // background -> asteroids -> ships as bytes arrive rather than all-or-nothing.
+  // The returned promise resolves on the ESSENTIAL kinds (asteroid, ship); the
+  // projectile then the heavy vendor mesh are deprioritized and streamed in
+  // after, each filling in its view/body on arrival.
   load(): Promise<void> {
     const loader = new GLTFLoader().setPath('models/');
 
-    const loads = Object.entries(MODEL_PATHS).map(([type, path]) => {
-      const kind = Number(type);
-      return new Promise<void>((resolve, reject) => {
+    const loadOne = (kind: EntityKind, path: string): Promise<void> =>
+      new Promise<void>((resolve, reject) => {
         loader.load(
           path,
           (gltf) => {
@@ -117,6 +129,11 @@ export class ViewRegistry {
             }
 
             this.models.set(kind, gltf.scene);
+            if (kind === Types.Entities.ASTEROID) {
+              this.buildAsteroidField();
+            }
+            this.flushPending(kind);
+            this.onModelReady?.(kind);
             console.log(`Loaded model ${path}`);
             resolve();
           },
@@ -127,16 +144,51 @@ export class ViewRegistry {
           },
         );
       });
-    });
 
-    return Promise.all(loads).then(() => {
+    // Only the ship + asteroid field are needed to spawn into a coherent sector,
+    // so they alone gate the returned promise (and physics init) — getting in-game
+    // waits for nothing else. The projectile mesh loads next (no bullets exist at
+    // spawn; a shot fired in the first instant simply pops in when it lands), then
+    // the far-away 2.3 MB vendor last. Each deprioritized kind fills in its
+    // view/body when it arrives, and gets the full download pipe in turn.
+    return Promise.all([
+      loadOne(Types.Entities.ASTEROID, MODEL_PATHS[Types.Entities.ASTEROID]),
+      loadOne(Types.Entities.SPACESHIP, MODEL_PATHS[Types.Entities.SPACESHIP]),
+    ]).then(() => {
       this.ready = true;
-      this.buildAsteroidField();
-      for (const entity of this.pendingSpawns) {
-        this.createView(entity);
-      }
-      this.pendingSpawns.length = 0;
+      void loadOne(
+        Types.Entities.BULLET,
+        MODEL_PATHS[Types.Entities.BULLET],
+      ).then(() =>
+        loadOne(Types.Entities.VENDOR, MODEL_PATHS[Types.Entities.VENDOR]),
+      );
     });
+  }
+
+  // Whether the mesh a given kind renders from is loaded yet. Asteroids draw
+  // from the shared instanced field, which only exists once its model is in.
+  hasModel(kind: EntityKind): boolean {
+    if (kind === Types.Entities.ASTEROID) {
+      return this.asteroids !== null;
+    }
+    return this.models.has(kind);
+  }
+
+  // Create views for any queued spawns whose model has now loaded, keeping the
+  // rest queued. Called each time a kind's GLTF lands.
+  private flushPending(_kind: EntityKind): void {
+    if (this.pendingSpawns.length === 0) {
+      return;
+    }
+    const remaining: Entity[] = [];
+    for (const entity of this.pendingSpawns) {
+      if (this.hasModel(entity.type)) {
+        this.createView(entity);
+      } else {
+        remaining.push(entity);
+      }
+    }
+    this.pendingSpawns = remaining;
   }
 
   // Extract the asteroid model's geometry + material into a single InstancedMesh.
@@ -188,7 +240,7 @@ export class ViewRegistry {
   }
 
   handleSpawn(entity: Entity): void {
-    if (!this.ready) {
+    if (!this.hasModel(entity.type)) {
       this.pendingSpawns.push(entity);
       return;
     }
@@ -274,6 +326,19 @@ export class ViewRegistry {
     const mesh = model.clone();
     if (entity.type !== Types.Entities.BULLET) {
       return mesh;
+    }
+
+    // Mining-laser tracers carry a miningFactor; paint their (shared-material)
+    // clone red so the mining beam is visually distinct from the orange cannons.
+    if ((entity as { miningFactor?: number }).miningFactor) {
+      if (!this.laserMaterial) {
+        this.laserMaterial = new MeshBasicMaterial({ color: 0xff2b2b });
+      }
+      mesh.traverse((child) => {
+        if ((child as Mesh).isMesh) {
+          (child as Mesh).material = this.laserMaterial!;
+        }
+      });
     }
 
     if (this.bulletTipOffset === null) {

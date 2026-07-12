@@ -52,6 +52,39 @@ test('Fire round-trips muzzle transform, damage and bullet id', () => {
   );
   assert.equal(out.damage, 5);
   assert.equal(out.bulletId, 1_000_042);
+  // No mining factor supplied → absent on the wire (0) → undefined on the far end.
+  assert.equal(out.miningFactor, undefined);
+});
+
+test('Fire round-trips an explicit mining factor', () => {
+  const msg = new Messages.Fire(
+    new Vector3(1, 2, 3),
+    new Quaternion(0, 0, 0, 1),
+    1,
+    1_000_007,
+    1.5,
+  );
+
+  const out = Messages.Fire.deserialize(msg.serialize().slice(1) as number[]);
+  assert.equal(out.miningFactor, 1.5);
+});
+
+test('Loadout round-trips ownership and the per-slot item ids', () => {
+  const wire = new Messages.Loadout(true, 0, -1).serialize();
+  assert.equal(wire[0], Types.Messages.LOADOUT);
+
+  const out = Messages.Loadout.deserialize(wire.slice(1) as number[]);
+  assert.equal(out.hasMiningLaser, true);
+  assert.equal(out.primaryItem, 0);
+  assert.equal(out.secondaryItem, -1);
+});
+
+test('Equip round-trips slot and item id', () => {
+  const out = Messages.Equip.deserialize(
+    new Messages.Equip(1, 0).serialize().slice(1) as number[],
+  );
+  assert.equal(out.slot, 1);
+  assert.equal(out.itemId, 0);
 });
 
 test('Ping round-trips the client send time', () => {

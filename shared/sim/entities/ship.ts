@@ -6,7 +6,12 @@ import { InputCommand } from '../input.ts';
 import { Bullet } from './bullet.ts';
 import Types from '../../types.ts';
 import { Weapon } from '../weapon.ts';
-import { DEFAULT_CARGO_CAPACITY } from '../mining.ts';
+import type { WeaponSlot } from '../weapon.ts';
+import {
+  DEFAULT_CARGO_CAPACITY,
+  MINING_LASER_FACTOR,
+  Items,
+} from '../mining.ts';
 
 export const RESPAWN_DELAY = 3000;
 
@@ -15,21 +20,62 @@ export const RESPAWN_DELAY = 3000;
 // vendor is neutral. `friendly` is reserved for a future team mode.
 export type Faction = 'hostile' | 'neutral' | 'friendly';
 
-// The player ship's dual weapons. Shared so the server (authoritative bullets)
-// and the owning client (predicted bullets) fire from identical mounts/timing.
-export function createDefaultWeapons(ship: Ship): Weapon[] {
+// The dual cannons. Fired on whichever slot they're mounted in (a weapon's `slot`
+// picks the LMB/RMB trigger), so they can sit in either the primary or secondary
+// slot. Shared so the server (authoritative bullets) and the owning client
+// (predicted bullets) fire from identical mounts/timing.
+export function createDefaultWeapons(
+  ship: Ship,
+  slot: WeaponSlot = 'primary',
+): Weapon[] {
   const left = new Weapon({
     offset: new Vector3(1.3, 0.9, 5),
     delay: 160, // half of fireInterval: interleaves the two guns evenly
     fireInterval: 320,
+    slot,
   });
   const right = new Weapon({
     offset: new Vector3(-1.3, 0.9, 5),
     fireInterval: 320,
+    slot,
   });
   left.parent = ship;
   right.parent = ship;
   return [left, right];
+}
+
+// The mining laser: a single centre-muzzle weapon. Fires fast with negligible
+// combat damage but a high mining factor, so it chips ore far quicker than the
+// cannons while being a poor weapon against ships. Mountable in either slot.
+export function createMiningLaser(
+  ship: Ship,
+  slot: WeaponSlot = 'secondary',
+): Weapon {
+  const laser = new Weapon({
+    offset: new Vector3(0, -0.6, 5),
+    fireInterval: 120,
+    slot,
+    damage: 1,
+    miningFactor: MINING_LASER_FACTOR,
+  });
+  laser.parent = ship;
+  return laser;
+}
+
+// Build the weapon(s) for a shop item mounted in `slot`, or none for an empty
+// slot (-1). The single source of truth for turning a loadout item into weapons.
+export function weaponsForItem(
+  ship: Ship,
+  itemId: number,
+  slot: WeaponSlot,
+): Weapon[] {
+  if (itemId === Items.CANNONS) {
+    return createDefaultWeapons(ship, slot);
+  }
+  if (itemId === Items.MINING_LASER) {
+    return [createMiningLaser(ship, slot)];
+  }
+  return [];
 }
 
 export interface ShipInit {
@@ -50,6 +96,7 @@ export class Ship extends Entity {
   aimDistance: number;
   weapons: Weapon[];
   firingPrimary: boolean;
+  firingSecondary: boolean;
   controller: ShipController | null;
   respawn: boolean;
   randomSpawn: boolean;
@@ -75,6 +122,13 @@ export class Ship extends Entity {
   cargo: number;
   cargoCapacity: number;
   credits: number;
+  // Loadout: the item id mounted in each weapon slot (-1 = empty) and whether the
+  // mining laser is owned. Any owned weapon can go in either slot. The cannons are
+  // owned by every ship; the mining laser is bought. Server-authoritative;
+  // replicated to the owner via Loadout and persisted across respawn.
+  hasMiningLaser: boolean;
+  primaryItem: number;
+  secondaryItem: number;
 
   constructor(opts: ShipInit = {}) {
     super({ ...opts, type: Types.Entities.SPACESHIP });
@@ -91,6 +145,7 @@ export class Ship extends Entity {
     this.aimDistance = 0;
     this.weapons = [];
     this.firingPrimary = false;
+    this.firingSecondary = false;
     this.controller = null;
     this.respawn = true;
     this.randomSpawn = true;
@@ -104,6 +159,9 @@ export class Ship extends Entity {
     this.cargo = 0;
     this.cargoCapacity = DEFAULT_CARGO_CAPACITY;
     this.credits = 0;
+    this.hasMiningLaser = false;
+    this.primaryItem = Items.CANNONS;
+    this.secondaryItem = -1;
   }
 
   // Fill the trailing slots the base leaves at 0: the packed input (so remote
@@ -127,6 +185,7 @@ export class Ship extends Entity {
       strafeDown,
       boost,
       weaponPrimary,
+      weaponSecondary,
       aim,
     } = input;
 
@@ -164,6 +223,7 @@ export class Ship extends Entity {
     }
 
     this.firingPrimary = !!weaponPrimary;
+    this.firingSecondary = !!weaponSecondary;
   }
 
   update(dt: number, world: EntityWorld, time: number): void {
@@ -185,9 +245,13 @@ export class Ship extends Entity {
     this.applyInput(input, dt);
 
     for (const weapon of this.weapons) {
-      weapon.tryFire(time, (position, rotation, damage) => {
+      weapon.tryFire(time, (position, rotation, damage, miningFactor) => {
         const bullet = world.spawn(
-          new Bullet({ transform: { position, rotation }, damage }),
+          new Bullet({
+            transform: { position, rotation },
+            damage,
+            miningFactor,
+          }),
         );
         bullet.owner = this;
         return bullet;

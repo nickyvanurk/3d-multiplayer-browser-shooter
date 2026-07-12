@@ -200,17 +200,20 @@ export class Fire {
   rotation: Quaternion;
   damage: number;
   bulletId: number;
+  miningFactor: number | undefined;
 
   constructor(
     position: Vector3,
     rotation: Quaternion,
     damage: number,
     bulletId: number,
+    miningFactor?: number,
   ) {
     this.position = position;
     this.rotation = rotation;
     this.damage = damage;
     this.bulletId = bulletId;
+    this.miningFactor = miningFactor;
   }
 
   static deserialize(message: number[]) {
@@ -219,6 +222,9 @@ export class Fire {
       rotation: new Quaternion(message[3], message[4], message[5], message[6]),
       damage: message[7],
       bulletId: message[8],
+      // Optional trailing slot: 0/absent means "no override" (ordinary cannon
+      // fire falls back to the global mining factor), so map it to undefined.
+      miningFactor: message[9] || undefined,
     };
   }
 
@@ -234,6 +240,7 @@ export class Fire {
       this.rotation.w,
       this.damage,
       this.bulletId,
+      this.miningFactor ?? 0,
     ];
   }
 }
@@ -432,6 +439,80 @@ export class Stats {
   }
 }
 
+// Client -> server: "buy this item at the vendor." Server knows the ship from the
+// connection and validates docking range + funds itself.
+export class Buy {
+  itemId: number;
+
+  constructor(itemId: number) {
+    this.itemId = itemId;
+  }
+
+  static deserialize(message: number[]) {
+    return { itemId: message[0] };
+  }
+
+  serialize() {
+    return [Types.Messages.BUY, this.itemId];
+  }
+}
+
+// Client -> server: mount `itemId` in `slot` (0 = primary, 1 = secondary), or
+// itemId -1 to unequip that slot.
+export class Equip {
+  slot: number;
+  itemId: number;
+
+  constructor(slot: number, itemId: number) {
+    this.slot = slot;
+    this.itemId = itemId;
+  }
+
+  static deserialize(message: number[]) {
+    return { slot: message[0], itemId: message[1] };
+  }
+
+  serialize() {
+    return [Types.Messages.EQUIP, this.slot, this.itemId];
+  }
+}
+
+// Server -> owner only: item ownership + the item in each weapon slot, after a
+// buy/equip. Credits are NOT here — they ride the Stats message — so a credit-only
+// change never triggers a client weapon rebuild. Kept off the shared snapshot.
+export class Loadout {
+  hasMiningLaser: boolean;
+  primaryItem: number;
+  secondaryItem: number;
+
+  constructor(
+    hasMiningLaser: boolean,
+    primaryItem: number,
+    secondaryItem: number,
+  ) {
+    this.hasMiningLaser = hasMiningLaser;
+    this.primaryItem = primaryItem;
+    this.secondaryItem = secondaryItem;
+  }
+
+  static deserialize(message: number[]) {
+    return {
+      hasMiningLaser: !!message[0],
+      primaryItem: message[1],
+      secondaryItem: message[2],
+    };
+  }
+
+  serialize() {
+    return [
+      Types.Messages.LOADOUT,
+      this.hasMiningLaser ? 1 : 0,
+      this.primaryItem,
+      this.secondaryItem,
+    ];
+  }
+}
+
 export default {
   Go,
   Hello,
@@ -446,6 +527,9 @@ export default {
   Sell,
   Repair,
   Stats,
+  Buy,
+  Equip,
+  Loadout,
   Ping,
   Pong,
 };

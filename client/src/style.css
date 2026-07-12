@@ -6,6 +6,50 @@
 body {
   overflow: hidden;
   cursor: none;
+  /* Paint the sector's dark clear-colour before WebGL ever draws, so the boot
+     never flashes the browser's default white page. */
+  background: #020207;
+}
+
+/* Covers the sector while it loads and, crucially, while the world exists but
+   the local ship hasn't spawned yet — otherwise the scene renders from the
+   camera's origin pose and visibly lurches when the camera snaps onto the
+   player. Opaque so that pre-spawn frame is never seen; faded out (see
+   Game.hideBootOverlay) the instant the ship appears, revealing the sector
+   already correctly framed. */
+#boot-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #020207;
+  pointer-events: none;
+  transition: opacity 0.6s ease;
+}
+
+#boot-overlay.hidden {
+  opacity: 0;
+}
+
+#boot-overlay .label {
+  color: #8fb7c8;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 15px;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  animation: boot-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes boot-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.8;
+  }
 }
 
 canvas {

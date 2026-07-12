@@ -1,5 +1,6 @@
 import Types from '../../shared/types';
 import Messages from '../../shared/messages';
+import { serverWebSocketUrl } from './config';
 
 export interface OutgoingMessage {
   serialize(): unknown[];
@@ -38,6 +39,10 @@ export type IncomingMessage =
       data: ReturnType<typeof Messages.Stats.deserialize>;
     }
   | {
+      type: typeof Types.Messages.LOADOUT;
+      data: ReturnType<typeof Messages.Loadout.deserialize>;
+    }
+  | {
       type: typeof Types.Messages.PONG;
       data: ReturnType<typeof Messages.Pong.deserialize> & {
         receiveTime: number;
@@ -53,6 +58,7 @@ type MessageData =
   | ReturnType<typeof Messages.OreDrop.deserialize>
   | ReturnType<typeof Messages.Collect.deserialize>
   | ReturnType<typeof Messages.Stats.deserialize>
+  | ReturnType<typeof Messages.Loadout.deserialize>
   | (ReturnType<typeof Messages.Pong.deserialize> & { receiveTime: number });
 
 export default class Connection {
@@ -64,13 +70,9 @@ export default class Connection {
   onErrorCallback?: (event: Event) => void;
 
   constructor() {
-    let host = location.origin.replace(/^http/, 'ws') + '/voidfall/';
-
-    if (import.meta.env.DEV) {
-      host = 'ws://localhost:1337';
-    }
-
-    this.connection = new WebSocket(host);
+    // Points at the game server (dev, same-origin, or a build-time override for
+    // off-server hosting like CrazyGames) — see config.serverWebSocketUrl.
+    this.connection = new WebSocket(serverWebSocketUrl());
 
     this.incomingMessageQueue = [];
     this.outgoingMessageQueue = [];
@@ -119,6 +121,9 @@ export default class Connection {
           break;
         case Types.Messages.STATS:
           data = Messages.Stats.deserialize(data as number[]);
+          break;
+        case Types.Messages.LOADOUT:
+          data = Messages.Loadout.deserialize(data as number[]);
           break;
         case Types.Messages.PONG: {
           const pong = Messages.Pong.deserialize(data as number[]);

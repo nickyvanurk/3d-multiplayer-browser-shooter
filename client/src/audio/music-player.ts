@@ -1,32 +1,37 @@
+import { serverBaseUrl } from '../config';
+
 export interface Track {
   title: string;
   url: string;
 }
 
-// Playlist files, served from client/public/music. For first-time visitors
-// "blade of grass" (index 0) is pinned first; everyone else gets a full shuffle
-// (see buildOrder).
+// Playlist files, served from the GAME SERVER (server/public/music), never
+// bundled into the client build — the 610 MB of audio would otherwise bloat
+// every CrazyGames upload. For first-time visitors "blade of grass" (index 0)
+// is pinned first; everyone else gets a full shuffle (see buildOrder).
 const MUSIC_FILES = [
-  'blade of grass.wav',
-  'Astroid.wav',
-  'Boss Mode.wav',
-  'Icebreaker.wav',
-  'Long.wav',
-  'Not Alone.wav',
-  'chill house.wav',
-  'edge.wav',
-  'electric sunrise.wav',
-  'neon green.wav',
-  'tropic yo.wav',
-  'voyage.wav',
+  'blade of grass.ogg',
+  'Astroid.ogg',
+  'Boss Mode.ogg',
+  'Icebreaker.ogg',
+  'Long.ogg',
+  'Not Alone.ogg',
+  'chill house.ogg',
+  'edge.ogg',
+  'electric sunrise.ogg',
+  'neon green.ogg',
+  'tropic yo.ogg',
+  'voyage.ogg',
 ] as const;
 
 const VOLUME_KEY = 'voidfall.music.volume';
 
 export function defaultPlaylist(): Track[] {
+  // Hosted on the game server (server/public/music), not the client build.
+  const base = serverBaseUrl();
   return MUSIC_FILES.map((file) => ({
-    title: file.replace(/\.wav$/i, ''),
-    url: `music/${encodeURIComponent(file)}`,
+    title: file.replace(/\.ogg$/i, ''),
+    url: `${base}/music/${encodeURIComponent(file)}`,
   }));
 }
 

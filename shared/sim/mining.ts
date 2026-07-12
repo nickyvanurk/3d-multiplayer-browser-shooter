@@ -28,6 +28,34 @@ const ORE_PER_SCALE = 30;
 // Doesn't touch ship-vs-ship combat, only rock.
 export const MINING_DAMAGE_FACTOR = 0.3;
 
+// A dedicated mining laser mines 50% faster than the default weapon. Its bullets
+// carry this factor instead of the global one above (a pure rock multiplier; the
+// laser's low combat damage keeps it a poor weapon against ships).
+//
+// Rate derivation (ore/second, both barrels on target):
+//   dual cannons  = 2 guns × (1000/320ms) × 5 dmg × 0.3   = 9.375 ore/s
+//   mining laser  = 1 gun  × (1000/120ms) × 1 dmg × FACTOR = 8.333·FACTOR ore/s
+// For the laser to mine 1.5× the cannons: FACTOR = 1.5 × 9.375 / 8.333 = 1.6875.
+export const MINING_LASER_FACTOR = 1.6875;
+
+// Shop wares / equippable weapons. Item ids are the wire currency for Buy/Equip
+// messages; kept small and stable. The cannons are the default primary weapon
+// (owned by every ship); the mining laser is a purchasable secondary.
+export const Items = {
+  MINING_LASER: 0,
+  CANNONS: 1,
+} as const;
+
+// Weapon slots on the wire (Equip message). Primary is the LMB slot, secondary
+// the RMB slot.
+export const Slots = {
+  PRIMARY: 0,
+  SECONDARY: 1,
+} as const;
+
+// Vendor price of the mining laser (credits).
+export const MINING_LASER_PRICE = 200;
+
 // Cargo units a collected chunk adds to the miner's hold.
 export const ORE_PER_CHUNK = 1;
 

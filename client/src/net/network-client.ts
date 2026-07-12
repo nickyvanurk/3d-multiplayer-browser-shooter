@@ -32,6 +32,9 @@ type ClientWorld = World & { localPlayerId?: number };
 // Owner-only cargo/credits, as carried by the Stats message.
 export type StatsData = ReturnType<typeof Messages.Stats.deserialize>;
 
+// Owner-only item ownership + equipped weapons, as carried by the Loadout message.
+export type LoadoutData = ReturnType<typeof Messages.Loadout.deserialize>;
+
 // The subset of the Rapier RigidBody used to correct/read a simulated remote
 // entity (entity.body is stored as the opaque PhysicsBody).
 type Vec = { x: number; y: number; z: number };
@@ -64,6 +67,8 @@ export class NetworkClient {
   onLocalShip: ((ship: Ship) => void) | null;
   // Owner-only cargo/credits update (Stats), for the HUD.
   onStats: ((stats: StatsData) => void) | null;
+  // Owner-only loadout update (Loadout), for the shop + weapon rebuild.
+  onLoadout: ((loadout: LoadoutData) => void) | null;
   // A chunk broke off at a position (OreDrop), so the client renders it.
   onOreDrop: ((id: number, position: Vector3) => void) | null;
   // A chunk was collected authoritatively (Collect), so the client drops its copy.
@@ -92,6 +97,7 @@ export class NetworkClient {
     this.localPlayerId = null;
     this.onLocalShip = null;
     this.onStats = null;
+    this.onLoadout = null;
     this.onOreDrop = null;
     this.onCollect = null;
     this.timeSync = new TimeSyncManager();
@@ -157,6 +163,21 @@ export class NetworkClient {
             ship.credits = stats.credits;
           }
           this.onStats?.(stats);
+          break;
+        }
+        case Types.Messages.LOADOUT: {
+          const loadout = message!.data;
+          // Mirror the equipped state onto the owned ship (it drives the client
+          // weapon rebuild), then notify. Credits arrive via Stats, not here.
+          const ship = this.world.get(this.localPlayerId ?? -1) as
+            | Ship
+            | undefined;
+          if (ship) {
+            ship.hasMiningLaser = loadout.hasMiningLaser;
+            ship.primaryItem = loadout.primaryItem;
+            ship.secondaryItem = loadout.secondaryItem;
+          }
+          this.onLoadout?.(loadout);
           break;
         }
         case Types.Messages.OREDROP:
@@ -393,7 +414,13 @@ export class NetworkClient {
 
     const { position, rotation } = bullet.transform;
     this.connection.pushMessage(
-      new Messages.Fire(position, rotation, bullet.damage ?? 0, bullet.id!),
+      new Messages.Fire(
+        position,
+        rotation,
+        bullet.damage ?? 0,
+        bullet.id!,
+        bullet.miningFactor,
+      ),
     );
     this.connection.sendOutgoingMessages();
   }
@@ -407,6 +434,16 @@ export class NetworkClient {
 
   sendRepair(): void {
     this.sendReliable(new Messages.Repair());
+  }
+
+  // Shop: buy an item / (un)equip it in the secondary slot. The server validates
+  // docking range + funds and echoes the new state back via Loadout.
+  sendBuy(itemId: number): void {
+    this.sendReliable(new Messages.Buy(itemId));
+  }
+
+  sendEquip(slot: number, itemId: number): void {
+    this.sendReliable(new Messages.Equip(slot, itemId));
   }
 
   private sendReliable(message: { serialize(): unknown[] }): void {

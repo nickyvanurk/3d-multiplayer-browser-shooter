@@ -10,22 +10,27 @@ const HULL_CRITICAL_FRAC = 0.25;
 // in-world reticles, so the player's own instruments read as unmistakably "you".
 const SELF_CYAN = '#5ad1ff';
 
-// Bottom-centre pilot status: a hull gauge (hero) with cargo and credits folded
-// in as slim readouts. Everything it shows lives on the owned Ship — health replicates
-// every frame, cargo/credits are mirrored from the owner-only Stats stream — so
-// this reads straight off the entity and needs no separate feed.
+// Top-left pilot status: stacked, skewed gauge bars — Hull, Cargo, then a slim XP
+// bar — beside a gold diamond level badge, echoing the Everspace-style corner readout.
+// Labels stay on each row so the reading is unambiguous. Credits are intentionally
+// omitted here — they surface only in the vendor shop. Hull and cargo live on the owned
+// Ship (health replicates every frame, cargo from the owner-only Stats stream), so those
+// read straight off the entity. Level/XP have no progression backend yet — they default
+// to level 1 / empty and update via setLevel()/setXp() once that data exists.
 export class PlayerHud {
   private readonly world: World;
   private readonly localShipId: () => number | null;
 
   private readonly root: HTMLDivElement;
   private readonly emblem: HTMLDivElement;
+  private readonly levelNum: HTMLSpanElement;
   private readonly hullFill: HTMLDivElement;
   private readonly hullVal: HTMLDivElement;
   private readonly cargoFill: HTMLDivElement;
   private readonly cargoVal: HTMLDivElement;
   private readonly cargoFullTag: HTMLSpanElement;
-  private readonly creditsVal: HTMLDivElement;
+  private readonly xpFill: HTMLDivElement;
+  private readonly xpVal: HTMLSpanElement;
 
   // Only touch the DOM when a value actually changes — the render loop calls
   // update() every frame and most frames move nothing.
@@ -33,7 +38,6 @@ export class PlayerHud {
   private lastCritical = false;
   private lastCargo = -1;
   private lastCargoCap = -1;
-  private lastCredits = -1;
 
   constructor(world: World, localShipId: () => number | null) {
     this.world = world;
@@ -44,39 +48,55 @@ export class PlayerHud {
     this.root = document.createElement('div');
     this.root.className = 'vf-phud';
     this.root.innerHTML = `
-      <div class="vf-phud__grp">
-        <div class="vf-phud__emblem"><span></span></div>
-        <span class="vf-phud__label">Hull</span>
-        <div class="vf-phud__bar vf-phud__bar--hull">
-          <div class="vf-phud__fill vf-phud__fill--hull"></div>
-          <div class="vf-phud__notches vf-phud__notches--10"></div>
+      <div class="vf-phud__emblem"><span class="vf-phud__lvl-num">1</span></div>
+      <div class="vf-phud__rows">
+        <div class="vf-phud__row">
+          <span class="vf-phud__label">Hull</span>
+          <div class="vf-phud__bar vf-phud__bar--hull">
+            <div class="vf-phud__fill vf-phud__fill--hull"></div>
+            <div class="vf-phud__notches vf-phud__notches--10"></div>
+          </div>
+          <span class="vf-phud__val vf-phud__val--hull">100</span>
         </div>
-        <span class="vf-phud__val vf-phud__val--hull">100</span>
-      </div>
-      <div class="vf-phud__div"></div>
-      <div class="vf-phud__grp">
-        <span class="vf-phud__label">Cargo</span>
-        <div class="vf-phud__bar vf-phud__bar--cargo">
-          <div class="vf-phud__fill vf-phud__fill--cargo"></div>
-          <div class="vf-phud__notches vf-phud__notches--20"></div>
+        <div class="vf-phud__row">
+          <span class="vf-phud__label">Cargo</span>
+          <div class="vf-phud__bar vf-phud__bar--cargo">
+            <div class="vf-phud__fill vf-phud__fill--cargo"></div>
+            <div class="vf-phud__notches vf-phud__notches--20"></div>
+          </div>
+          <span class="vf-phud__val vf-phud__val--cargo">0/0<span class="vf-phud__full">Full</span></span>
         </div>
-        <span class="vf-phud__val vf-phud__val--cargo">0/0<span class="vf-phud__full">Full</span></span>
-      </div>
-      <div class="vf-phud__div"></div>
-      <div class="vf-phud__grp vf-phud__grp--credits">
-        <span class="vf-phud__coin">&#x2b16;</span>
-        <span class="vf-phud__val vf-phud__val--credits">0</span>
-        <span class="vf-phud__unit">cr</span>
+        <div class="vf-phud__row vf-phud__row--xp">
+          <span class="vf-phud__label">XP</span>
+          <div class="vf-phud__bar vf-phud__bar--xp">
+            <div class="vf-phud__fill vf-phud__fill--xp"></div>
+          </div>
+          <span class="vf-phud__val vf-phud__val--xp">0%</span>
+        </div>
       </div>`;
     document.body.appendChild(this.root);
 
     this.emblem = this.root.querySelector('.vf-phud__emblem')!;
+    this.levelNum = this.root.querySelector('.vf-phud__lvl-num')!;
     this.hullFill = this.root.querySelector('.vf-phud__fill--hull')!;
     this.hullVal = this.root.querySelector('.vf-phud__val--hull')!;
     this.cargoFill = this.root.querySelector('.vf-phud__fill--cargo')!;
     this.cargoVal = this.root.querySelector('.vf-phud__val--cargo')!;
     this.cargoFullTag = this.root.querySelector('.vf-phud__full')!;
-    this.creditsVal = this.root.querySelector('.vf-phud__val--credits')!;
+    this.xpFill = this.root.querySelector('.vf-phud__fill--xp')!;
+    this.xpVal = this.root.querySelector('.vf-phud__val--xp')!;
+  }
+
+  // Level + XP aren't wired to a real progression system yet — default to level 1
+  // with an empty bar. Call these once that data exists.
+  setLevel(level: number): void {
+    this.levelNum.textContent = String(Math.max(1, Math.floor(level)));
+  }
+
+  setXp(frac: number): void {
+    const pct = Math.max(0, Math.min(1, frac)) * 100;
+    this.xpFill.style.width = `${pct}%`;
+    this.xpVal.textContent = `${Math.round(pct)}%`;
   }
 
   // Per frame: pull the owned ship's live stats onto the gauges. No ship (dead /
@@ -115,11 +135,6 @@ export class PlayerHud {
       this.cargoFill.classList.toggle('vf-phud__fill--full', full);
       this.cargoFullTag.style.display = full ? 'inline' : 'none';
     }
-
-    if (ship.credits !== this.lastCredits) {
-      this.lastCredits = ship.credits;
-      this.creditsVal.textContent = ship.credits.toLocaleString('en-US');
-    }
   }
 
   private static injectStyles(): void {
@@ -130,72 +145,67 @@ export class PlayerHud {
     style.id = 'vf-phud-styles';
     style.textContent = `
 .vf-phud {
-  --u: clamp(15px, 1.2vw, 23px);
-  --cut: calc(var(--u) * 0.6);
-  position: fixed; left: 50%; bottom: calc(var(--u) * 0.9); transform: translateX(-50%);
+  --u: clamp(14px, 1.05vw, 20px);
+  --skew: -15deg;
+  position: fixed; left: calc(var(--u) * 1); top: calc(var(--u) * 0.95);
   z-index: 14000;
-  display: flex; align-items: center; gap: calc(var(--u) * 0.85);
-  padding: calc(var(--u) * 0.5) calc(var(--u) * 1.05) calc(var(--u) * 0.6);
+  display: flex; align-items: center; gap: calc(var(--u) * 0.7);
   font-family: system-ui, 'Segoe UI', sans-serif;
   color: #cfd8e6; pointer-events: none; user-select: none;
-  background: linear-gradient(180deg, rgba(12,18,30,0.66), rgba(8,12,20,0.54));
-  backdrop-filter: blur(8px) saturate(1.1);
-  border: 1px solid rgba(90,209,255,0.24);
-  box-shadow: 0 calc(var(--u) * 0.3) calc(var(--u) * 1.1) rgba(0,0,0,0.55),
-    inset 0 0 0 1px rgba(255,255,255,0.03);
-  clip-path: polygon(var(--cut) 0, calc(100% - var(--cut)) 0, 100% var(--cut),
-    100% 100%, 0 100%, 0 var(--cut));
-}
-.vf-phud::before {
-  content: ''; position: absolute; left: var(--cut); right: var(--cut); top: 0;
-  height: 2px; background: linear-gradient(90deg, transparent, ${SELF_CYAN}, transparent);
-  box-shadow: 0 0 calc(var(--u) * 0.4) rgba(90,209,255,0.5);
-}
-.vf-phud__grp { display: flex; align-items: center; gap: calc(var(--u) * 0.55); }
-.vf-phud__grp--credits { gap: calc(var(--u) * 0.3); }
-.vf-phud__div {
-  flex: none; width: 1px; height: calc(var(--u) * 1.75);
-  background: linear-gradient(180deg, transparent, rgba(255,255,255,0.16), transparent);
+  filter: drop-shadow(0 calc(var(--u) * 0.15) calc(var(--u) * 0.5) rgba(0,0,0,0.6));
 }
 .vf-phud__emblem {
-  width: calc(var(--u) * 1.7); height: calc(var(--u) * 1.7);
+  width: calc(var(--u) * 2.35); height: calc(var(--u) * 2.35);
   display: grid; place-items: center; flex: none;
-  margin-right: calc(var(--u) * -0.1);
-}
-.vf-phud__emblem > span {
-  width: calc(var(--u) * 1); height: calc(var(--u) * 1);
-  border: 2px solid ${SELF_CYAN}; border-radius: calc(var(--u) * 0.14);
-  transform: rotate(45deg); position: relative;
-  box-shadow: 0 0 calc(var(--u) * 0.5) rgba(90,209,255,0.5),
-    inset 0 0 calc(var(--u) * 0.28) rgba(90,209,255,0.28);
+  margin: 0 calc(var(--u) * 0.55);
+  transform: rotate(45deg);
+  border-radius: calc(var(--u) * 0.16);
+  background: linear-gradient(150deg, #26200f, #14100a);
+  border: 2px solid #d9a53b;
+  box-shadow: 0 0 calc(var(--u) * 0.5) rgba(217,165,59,0.4),
+    inset 0 0 calc(var(--u) * 0.3) rgba(217,165,59,0.22),
+    inset 0 0 0 1px rgba(255,225,150,0.15);
   transition: border-color 180ms, box-shadow 180ms;
 }
-.vf-phud__emblem > span::after {
-  content: ''; position: absolute; inset: calc(var(--u) * 0.26); border-radius: 1px;
-  background: ${SELF_CYAN}; box-shadow: 0 0 calc(var(--u) * 0.34) rgba(90,209,255,0.7);
-  transition: background 180ms;
+.vf-phud__lvl-num {
+  transform: rotate(-45deg);
+  font-family: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, monospace;
+  font-size: calc(var(--u) * 1.0); font-weight: 700; line-height: 1;
+  color: #ffe9b8; text-shadow: 0 0 calc(var(--u) * 0.3) rgba(255,207,94,0.55);
 }
-.vf-phud__emblem--critical > span {
-  border-color: #ef5a50; box-shadow: 0 0 calc(var(--u) * 0.55) rgba(239,90,80,0.6);
+.vf-phud__emblem--critical {
+  border-color: #ef5a50;
+  box-shadow: 0 0 calc(var(--u) * 0.55) rgba(239,90,80,0.5),
+    inset 0 0 calc(var(--u) * 0.3) rgba(239,90,80,0.22);
 }
-.vf-phud__emblem--critical > span::after { background: #ef5a50; }
+.vf-phud__rows {
+  display: grid; grid-template-columns: max-content max-content max-content;
+  align-items: center;
+  column-gap: calc(var(--u) * 0.6); row-gap: calc(var(--u) * 0.42);
+}
+.vf-phud__row { display: contents; }
 .vf-phud__label {
   font-size: calc(var(--u) * 0.5); font-weight: 600;
   letter-spacing: calc(var(--u) * 0.085); text-transform: uppercase; color: #8492ac;
+  min-width: calc(var(--u) * 2.6);
 }
 .vf-phud__bar {
-  position: relative; flex: none; border-radius: calc(var(--u) * 0.11); overflow: hidden;
-  background: rgba(255,255,255,0.06); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
+  position: relative; flex: none; overflow: hidden;
+  width: calc(var(--u) * 13); height: calc(var(--u) * 0.62);
+  transform: skewX(var(--skew));
+  background: rgba(255,255,255,0.06);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06),
+    inset 0 1px 0 rgba(255,255,255,0.05);
 }
-.vf-phud__bar--hull { width: calc(var(--u) * 11); height: calc(var(--u) * 0.5); }
-.vf-phud__bar--cargo { width: calc(var(--u) * 6.5); height: calc(var(--u) * 0.4); }
+.vf-phud__bar--cargo { height: calc(var(--u) * 0.56); }
+.vf-phud__bar--xp { height: calc(var(--u) * 0.34); }
 .vf-phud__fill {
-  width: 0; height: 100%; border-radius: inherit;
+  width: 0; height: 100%;
   transition: width 180ms ease-out, background 220ms;
 }
 .vf-phud__fill--hull {
   background: linear-gradient(90deg, #2f96d6, ${SELF_CYAN});
-  box-shadow: 0 0 calc(var(--u) * 0.4) rgba(90,209,255,0.55);
+  box-shadow: 0 0 calc(var(--u) * 0.45) rgba(90,209,255,0.55);
 }
 .vf-phud__fill--hull.vf-phud__fill--critical {
   background: linear-gradient(90deg, #b5322b, #ef5a50);
@@ -206,6 +216,10 @@ export class PlayerHud {
 .vf-phud__fill--cargo.vf-phud__fill--full {
   background: linear-gradient(90deg, #c9962f, #ffcf5e);
   box-shadow: 0 0 calc(var(--u) * 0.4) rgba(232,176,75,0.6);
+}
+.vf-phud__fill--xp {
+  background: linear-gradient(90deg, #6d4bd1, #a78bfa);
+  box-shadow: 0 0 calc(var(--u) * 0.35) rgba(167,139,250,0.5);
 }
 .vf-phud__notches { position: absolute; inset: 0; pointer-events: none; }
 .vf-phud__notches--10 {
@@ -220,22 +234,13 @@ export class PlayerHud {
   font-family: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, monospace;
   font-size: calc(var(--u) * 0.66); font-weight: 600; font-variant-numeric: tabular-nums;
   color: #e6edf6; text-align: right; white-space: nowrap;
+  min-width: calc(var(--u) * 2.6);
 }
-.vf-phud__val--hull { min-width: calc(var(--u) * 1.7); }
 .vf-phud__full {
   display: none; margin-left: calc(var(--u) * 0.28);
   padding: calc(var(--u) * 0.04) calc(var(--u) * 0.24); border-radius: calc(var(--u) * 0.1);
   font-family: system-ui, sans-serif; font-size: calc(var(--u) * 0.42); font-weight: 700;
   letter-spacing: 0.8px; color: #1a1204; background: #ffcf5e; vertical-align: 12%;
-}
-.vf-phud__coin {
-  color: #e8b04b; font-size: calc(var(--u) * 0.74);
-  text-shadow: 0 0 calc(var(--u) * 0.34) rgba(232,176,75,0.5);
-}
-.vf-phud__val--credits { color: #e6edf6; }
-.vf-phud__unit {
-  font-size: calc(var(--u) * 0.46); font-weight: 600; letter-spacing: 1px;
-  color: #6f7c93; text-transform: uppercase;
 }
 @keyframes vf-phud-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 @media (prefers-reduced-motion: reduce) {

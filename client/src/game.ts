@@ -27,6 +27,7 @@ import { SettingsMenu } from './ui/settings-menu.ts';
 import { MusicPlayer, defaultPlaylist } from './audio/music-player.ts';
 import { MusicPlayerHud } from './ui/music-player-hud.ts';
 import { VendorHud } from './ui/vendor-hud.ts';
+import { ShopHud } from './ui/shop-hud.ts';
 import { PlayerHud } from './ui/player-hud.ts';
 import { HitMarker } from './ui/hit-marker.ts';
 import { StatsHud } from './ui/stats-hud.ts';
@@ -63,6 +64,7 @@ export default class Game {
   music: MusicPlayer;
   musicHud: MusicPlayerHud;
   vendorHud: VendorHud;
+  shopHud: ShopHud;
   playerHud: PlayerHud;
   hitMarker: HitMarker;
   statsHud: StatsHud;
@@ -82,6 +84,10 @@ export default class Game {
   engineBoostPitch = 1.2;
   fixedStep = 1000 / 60;
   fixedUpdate!: (delta: number) => number;
+  // Flips true once models + physics + the client sim are ready. Until then the
+  // render loop only paints the background + starfield; the sim/network stay
+  // idle so an empty, un-simulated world never steps.
+  simReady = false;
   currentInput: InputCommand = InputCommand.empty();
   // Accumulator remainder / fixedStep — the render interpolation fraction [0,1).
   leftoverFrac = 0;
@@ -137,7 +143,6 @@ export default class Game {
     this.musicHud = new MusicPlayerHud(this.music);
     this.hitMarker = new HitMarker();
     this.statsHud = new StatsHud();
-    this.music.start();
 
     this.viewRegistry.onShipDestroyed = (position) => {
       this.particles.spawnExplosion(position);
@@ -160,14 +165,23 @@ export default class Game {
       this.settings,
     );
 
-    // Economy HUD + vendor trade input, fed by the owner-only Stats stream.
+    // Vendor docking prompt (proximity only). The owner-only Stats/Loadout streams
+    // are mirrored straight onto the owned ship by NetworkClient, so the shop and
+    // player HUD read economy state live off the entity — no dedicated feed here.
     this.vendorHud = new VendorHud(
       this.world,
       () => this.networkClient.localPlayerId,
+    );
+
+    // The shop modal (F to open while docked): sell/repair/buy/equip, all routed
+    // to the server. Gated on the vendor docking range the VendorHud computes.
+    this.shopHud = new ShopHud(
+      this.world,
+      () => this.networkClient.localPlayerId,
+      this.inputController,
+      () => this.vendorHud.isInRange(),
       this.networkClient,
     );
-    this.networkClient.onStats = (stats) =>
-      this.vendorHud.setStats(stats.cargo, stats.cargoCapacity, stats.credits);
 
     // Bottom-centre pilot status (hull hero + cargo/credits). Reads the owned
     // ship directly each frame, so it needs no dedicated feed.
@@ -185,27 +199,162 @@ export default class Game {
   }
 
   async init(): Promise<void> {
+    // Paint immediately: start the render loop before any asset finishes so the
+    // dark starfield shows on the first frame instead of after the whole load.
+    // frame() only renders the background until `simReady`.
+    this.lastTime = performance.now();
+    requestAnimationFrame(this.frame.bind(this));
+
+    // Essential meshes only (ship + asteroid field); projectile and the far-away
+    // vendor stream in afterwards and fill in their view/body on arrival (see
+    // ViewRegistry). Audio + music are started AFTER simReady below so they never
+    // compete for bandwidth with the assets that gate getting in-game.
     await this.viewRegistry.load();
 
+    // The client runs its own Rapier world (all ships + the static asteroid
+    // field). Meshes come from the GLTF scenes the renderer already loaded.
+    // reconcileShips is off: the client manages ship bodies itself.
+    this.physics = new RapierPhysicsWorld(
+      new BrowserMeshProvider(this.viewRegistry.models),
+    );
+    this.physics.reconcileShips = false;
+    // The owned ship self-controls (roll etc. accumulate in its velocity fields);
+    // the client never broadcasts, so don't overwrite them from the solver.
+    this.physics.writeBackVelocity = false;
+    await this.physics.init();
+    this.world.physics = this.physics;
+
+    this.clientSim = new ClientSim(this.world, this.physics);
+    this.clientSim.onFire = (bullet) => this.networkClient.sendFire(bullet);
+    // Predicted enemy hit: project the world impact point to the screen, flash
+    // the hitmarker there and play the hit cue right away (server still owns the
+    // authoritative damage).
+    this.clientSim.onHitEnemy = (impact) => {
+      const camera = this.sceneManager.camera;
+      const ndc = impact.clone().project(camera);
+      const x = (ndc.x * 0.5 + 0.5) * window.innerWidth;
+      const y = (-ndc.y * 0.5 + 0.5) * window.innerHeight;
+      this.hitMarker.trigger(x, y);
+      this.sound.play('hit', this.hitVolume, this.hitPitch);
+    };
+    // Every shot that strikes a rock kicks up a small dust puff at the impact.
+    this.clientSim.onHitAsteroid = (impact) =>
+      this.particles.spawnDust(impact, 22);
+    this.networkClient.onLocalShip = (ship) => {
+      this.clientSim.setOwnedShip(ship);
+      // The player is in the sector — drop the boot message.
+      this.hideBootOverlay();
+    };
+    // A Loadout change (buy/equip) rebuilds the owned ship's weapons so the mining
+    // laser is mounted/removed in the secondary slot.
+    this.networkClient.onLoadout = () => this.clientSim.rebuildLoadout();
+    // Ore field mirrors the server: render each chunk where it broke off, and
+    // drop it the moment the server confirms someone scooped it.
+    this.networkClient.onOreDrop = (id, position) =>
+      this.orePickups.spawn(id, position, performance.now());
+    this.networkClient.onCollect = (id) => this.orePickups.collect(id);
+
+    // The vendor mesh is deprioritized, so a VENDOR may spawn before its model
+    // (and thus its convex hull) exists. Add its physics body only once the mesh
+    // has streamed in; ViewRegistry fires onModelReady when that happens.
+    this.viewRegistry.onModelReady = (kind) => {
+      if (kind !== Types.Entities.VENDOR) {
+        return;
+      }
+      for (const entity of this.world.entities.values()) {
+        if (entity.type === Types.Entities.VENDOR && !entity.body) {
+          this.clientSim.onSpawn(entity);
+        }
+      }
+    };
+
+    // Compose the client physics/ownership hooks on top of ViewRegistry's
+    // (attached in the constructor): every spawn/despawn drives both.
+    const viewSpawn = this.world.onSpawn;
+    const viewDespawn = this.world.onDespawn;
+    this.world.onSpawn = (entity) => {
+      viewSpawn?.(entity);
+      // Defer the vendor's physics body until its (deprioritized) mesh loads —
+      // the view is already queued; onModelReady adds the body. Everything else
+      // gets its body now.
+      if (
+        entity.type !== Types.Entities.VENDOR ||
+        this.viewRegistry.hasModel(Types.Entities.VENDOR)
+      ) {
+        this.clientSim.onSpawn(entity);
+      }
+      // Blaster on every bullet spawn. The local player's own shots (client-range
+      // ids) play 2D so they stay consistent — the listener rides the lerping
+      // camera, so a positional own-shot would wander. Remote players' shots play
+      // positionally at their muzzle, so you hear them from where they are.
+      if (entity.type === Types.Entities.BULLET) {
+        if (entity.id! >= CLIENT_ID_BASE) {
+          this.sound.play('blaster', 0.4);
+        } else {
+          this.sound.playAt('blaster', entity.transform.position, 0.7);
+        }
+      }
+    };
+    this.world.onDespawn = (entity) => {
+      viewDespawn?.(entity);
+      this.clientSim.onDespawn(entity);
+    };
+
+    // Fixed-timestep accumulator (same pattern as the server): steps the sim by
+    // a constant dt as many times as real elapsed time allows — even motion, and
+    // it catches up after a hitch instead of taking one giant variable step.
+    // State is reported once per sim step (not per rendered frame).
+    this.fixedStep = 1000 / this.updatesPerSecond;
+    this.fixedUpdate = Utils.createFixedTimestep(this.fixedStep, (dt, time) => {
+      this.clientSim.update(dt, time, this.currentInput);
+      const ship = this.clientSim.ownedShip;
+      if (ship) {
+        this.networkClient.sendState(ship);
+      }
+    });
+
+    // Everything the sim/network needs is live: let frame() run the full loop and
+    // the player spawn on the next frame.
+    this.simReady = true;
+
+    // Only now kick off the non-critical streams — SFX (4.6 MB) and the music
+    // stream — so they never fight the spawn-gating models/physics for bandwidth.
+    // Weapons/engine stay silent until each clip lands (SoundService no-ops on a
+    // missing buffer); music is pure ambiance.
+    void this.initAudio();
+    this.music.start();
+
+    // ~1 Hz clock-sync probe; TimeSyncManager tracks drift from the rolling window.
+    setInterval(() => this.networkClient.sendPing(), 1000);
+  }
+
+  private hideBootOverlay(): void {
+    document.getElementById('boot-overlay')?.classList.add('hidden');
+    // Reveal the HUD (crosshair, hull/cargo, music, stats) now that the ship is
+    // in the sector; it was hidden by `body.booting` during the load.
+    document.body.classList.remove('booting');
+  }
+
+  private async initAudio(): Promise<void> {
     // The blaster pack holds many sounds separated by silence; load splits them
     // into segments. Expose a selector (F3, number keys / clicks) to audition and
     // pick the active one live.
     await this.sound.load(
       'blaster',
-      'sfx/freesound_community-blaster-multiple-14893.mp3',
+      'sfx/freesound_community-blaster-multiple-14893.ogg',
     );
     // Hitmarker cue: a single short clip played on a predicted enemy hit.
-    await this.sound.load('hit', 'sfx/hit.mp3');
+    await this.sound.load('hit', 'sfx/hit.ogg');
     // Ship-destruction cue: a single clip played positionally at the wreck.
-    await this.sound.load('explosion', 'sfx/Explosion_Small.wav');
+    await this.sound.load('explosion', 'sfx/Explosion_Small.ogg');
     // Engine loops: continuous 2D voices driven by the local ship's throttle.
     await this.sound.load(
       'engineMove',
-      'sfx/Sci-Fi Spaceship Heavy Engine Loop 1.wav',
+      'sfx/Sci-Fi Spaceship Heavy Engine Loop 1.ogg',
     );
     await this.sound.load(
       'engineBoost',
-      'sfx/Sci-Fi Spaceship Engine Loop 3.wav',
+      'sfx/Sci-Fi Spaceship Engine Loop 3.ogg',
     );
     this.sound.setupLoop('engineMove', this.engineMovePitch);
     this.sound.setupLoop('engineBoost', this.engineBoostPitch);
@@ -369,86 +518,6 @@ export default class Game {
         this.sound.setLoopPitch('engineBoost', v);
       },
     });
-
-    // The client runs its own Rapier world (all ships + the static asteroid
-    // field). Meshes come from the GLTF scenes the renderer already loaded.
-    // reconcileShips is off: the client manages ship bodies itself.
-    this.physics = new RapierPhysicsWorld(
-      new BrowserMeshProvider(this.viewRegistry.models),
-    );
-    this.physics.reconcileShips = false;
-    // The owned ship self-controls (roll etc. accumulate in its velocity fields);
-    // the client never broadcasts, so don't overwrite them from the solver.
-    this.physics.writeBackVelocity = false;
-    await this.physics.init();
-    this.world.physics = this.physics;
-
-    this.clientSim = new ClientSim(this.world, this.physics);
-    this.clientSim.onFire = (bullet) => this.networkClient.sendFire(bullet);
-    // Predicted enemy hit: project the world impact point to the screen, flash
-    // the hitmarker there and play the hit cue right away (server still owns the
-    // authoritative damage).
-    this.clientSim.onHitEnemy = (impact) => {
-      const camera = this.sceneManager.camera;
-      const ndc = impact.clone().project(camera);
-      const x = (ndc.x * 0.5 + 0.5) * window.innerWidth;
-      const y = (-ndc.y * 0.5 + 0.5) * window.innerHeight;
-      this.hitMarker.trigger(x, y);
-      this.sound.play('hit', this.hitVolume, this.hitPitch);
-    };
-    // Every shot that strikes a rock kicks up a small dust puff at the impact.
-    this.clientSim.onHitAsteroid = (impact) =>
-      this.particles.spawnDust(impact, 22);
-    this.networkClient.onLocalShip = (ship) =>
-      this.clientSim.setOwnedShip(ship);
-    // Ore field mirrors the server: render each chunk where it broke off, and
-    // drop it the moment the server confirms someone scooped it.
-    this.networkClient.onOreDrop = (id, position) =>
-      this.orePickups.spawn(id, position, performance.now());
-    this.networkClient.onCollect = (id) => this.orePickups.collect(id);
-
-    // Compose the client physics/ownership hooks on top of ViewRegistry's
-    // (attached in the constructor): every spawn/despawn drives both.
-    const viewSpawn = this.world.onSpawn;
-    const viewDespawn = this.world.onDespawn;
-    this.world.onSpawn = (entity) => {
-      viewSpawn?.(entity);
-      this.clientSim.onSpawn(entity);
-      // Blaster on every bullet spawn. The local player's own shots (client-range
-      // ids) play 2D so they stay consistent — the listener rides the lerping
-      // camera, so a positional own-shot would wander. Remote players' shots play
-      // positionally at their muzzle, so you hear them from where they are.
-      if (entity.type === Types.Entities.BULLET) {
-        if (entity.id! >= CLIENT_ID_BASE) {
-          this.sound.play('blaster', 0.4);
-        } else {
-          this.sound.playAt('blaster', entity.transform.position, 0.7);
-        }
-      }
-    };
-    this.world.onDespawn = (entity) => {
-      viewDespawn?.(entity);
-      this.clientSim.onDespawn(entity);
-    };
-
-    // Fixed-timestep accumulator (same pattern as the server): steps the sim by
-    // a constant dt as many times as real elapsed time allows — even motion, and
-    // it catches up after a hitch instead of taking one giant variable step.
-    // State is reported once per sim step (not per rendered frame).
-    this.fixedStep = 1000 / this.updatesPerSecond;
-    this.fixedUpdate = Utils.createFixedTimestep(this.fixedStep, (dt, time) => {
-      this.clientSim.update(dt, time, this.currentInput);
-      const ship = this.clientSim.ownedShip;
-      if (ship) {
-        this.networkClient.sendState(ship);
-      }
-    });
-
-    this.lastTime = performance.now();
-    requestAnimationFrame(this.frame.bind(this));
-
-    // ~1 Hz clock-sync probe; TimeSyncManager tracks drift from the rolling window.
-    setInterval(() => this.networkClient.sendPing(), 1000);
   }
 
   frame(): void {
@@ -467,6 +536,13 @@ export default class Game {
       delta = 250;
     }
     this.lastTime = time;
+
+    // Until models + physics + the client sim are ready, just paint the
+    // background + starfield. Nothing to simulate, project, or drive yet.
+    if (!this.simReady) {
+      this.sceneManager.render(0);
+      return;
+    }
 
     this.networkClient.processMessages();
 
@@ -508,6 +584,7 @@ export default class Game {
     this.particles.update(delta);
     this.orePickups.update(time);
     this.vendorHud.update();
+    this.shopHud.update();
     this.playerHud.update();
     this.range.update();
 

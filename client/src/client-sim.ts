@@ -2,7 +2,7 @@ import { Vector3 } from 'three';
 
 import Types from '../../shared/types.ts';
 import { InputCommand } from '../../shared/sim/input.ts';
-import { Ship, createDefaultWeapons } from '../../shared/sim/entities/ship.ts';
+import { Ship, weaponsForItem } from '../../shared/sim/entities/ship.ts';
 import type { Bullet } from '../../shared/sim/entities/bullet.ts';
 import type { World } from '../../shared/sim/world.ts';
 import type { Entity, EntityWorld } from '../../shared/sim/entity.ts';
@@ -70,10 +70,24 @@ export class ClientSim {
     }
     this.ownedShip = ship;
     ship.controller = { lastInput: InputCommand.empty() };
-    ship.weapons = createDefaultWeapons(ship);
+    this.rebuildLoadout();
     if (!ship.body) {
       this.physics.add(ship);
     }
+  }
+
+  // Rebuild the owned ship's weapons from its loadout: whatever item sits in each
+  // slot, built to fire on that slot's trigger (primary → LMB, secondary → RMB).
+  // Called on ownership and whenever a Loadout message changes a slot.
+  rebuildLoadout(): void {
+    const ship = this.ownedShip;
+    if (!ship) {
+      return;
+    }
+    ship.weapons = [
+      ...weaponsForItem(ship, ship.primaryItem, 'primary'),
+      ...weaponsForItem(ship, ship.secondaryItem, 'secondary'),
+    ];
   }
 
   onSpawn(entity: Entity): void {

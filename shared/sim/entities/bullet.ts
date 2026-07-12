@@ -18,6 +18,7 @@ export interface BulletInit {
   damage?: number;
   speed?: number;
   timer?: number;
+  miningFactor?: number;
 }
 
 export class Bullet extends Entity {
@@ -28,6 +29,9 @@ export class Bullet extends Entity {
   ageMs: number;
   destroyOnCollision: boolean;
   owner: Entity | null;
+  // Rock-mining multiplier applied when this bullet hits an asteroid. Undefined =
+  // use the default combat factor; a mining laser sets a higher value.
+  miningFactor: number | undefined;
 
   constructor({
     id,
@@ -35,6 +39,7 @@ export class Bullet extends Entity {
     damage,
     speed = DEFAULT_BULLET_SPEED,
     timer = DEFAULT_BULLET_TIMER,
+    miningFactor,
   }: BulletInit = {}) {
     super({ id, transform, type: Types.Entities.BULLET });
     this.velocity = new Vector3(0, 0, speed);
@@ -50,6 +55,7 @@ export class Bullet extends Entity {
     this.ageMs = 0;
     this.destroyOnCollision = true;
     this.owner = null;
+    this.miningFactor = miningFactor;
   }
 
   update(dt: number): void {

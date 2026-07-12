@@ -20,6 +20,12 @@ export const Messages = {
   // echoed send time + server clock. Feeds TimeSyncManager.
   PING: 14,
   PONG: 15,
+  // Shop. BUY/EQUIP (client->server): purchase an item / (un)mount it in a weapon
+  // slot. LOADOUT (server->owner): the owner's credits + item ownership + equipped
+  // secondary after a change.
+  BUY: 16,
+  EQUIP: 17,
+  LOADOUT: 18,
 } as const;
 
 export const Entities = {

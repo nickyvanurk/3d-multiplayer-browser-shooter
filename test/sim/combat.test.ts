@@ -2,7 +2,12 @@ import assert from 'node:assert/strict';
 import { World } from '../../shared/sim/world.ts';
 import { Ship } from '../../shared/sim/entities/ship.ts';
 import { Bullet } from '../../shared/sim/entities/bullet.ts';
+import { Asteroid } from '../../shared/sim/entities/asteroid.ts';
 import { RESPAWN_DELAY } from '../../shared/sim/entities/ship.ts';
+import {
+  MINING_DAMAGE_FACTOR,
+  MINING_LASER_FACTOR,
+} from '../../shared/sim/mining.ts';
 import { CombatSubsystem } from '../../shared/sim/subsystems/combat.ts';
 import { test } from './harness.ts';
 
@@ -111,6 +116,49 @@ test('a bullet still damages and is destroyed by a ship that is not its owner', 
   assert.equal(target.health, 70);
   assert.equal(owner.health, 100);
   assert.equal(bullet.destroyed, true);
+});
+
+test('a default bullet mines rock at the reduced global factor', () => {
+  const world = new World();
+  const rock = world.spawn(new Asteroid({ scale: 60 }));
+  const full = rock.health;
+  const bullet = world.spawn(new Bullet({ damage: 10 }));
+  world.physics = { drainCollisions: () => [{ a: bullet, b: rock }] };
+
+  new CombatSubsystem().update(world);
+
+  assert.equal(full - rock.health, 10 * MINING_DAMAGE_FACTOR);
+});
+
+test('a mining-laser bullet mines rock at its own higher factor', () => {
+  const world = new World();
+  const rock = world.spawn(new Asteroid({ scale: 60 }));
+  const full = rock.health;
+  const bullet = world.spawn(
+    new Bullet({ damage: 10, miningFactor: MINING_LASER_FACTOR }),
+  );
+  world.physics = { drainCollisions: () => [{ a: bullet, b: rock }] };
+
+  new CombatSubsystem().update(world);
+
+  const mined = full - rock.health;
+  assert.equal(mined, 10 * MINING_LASER_FACTOR);
+  // And it genuinely out-mines the default combat weapon.
+  assert.ok(mined > 10 * MINING_DAMAGE_FACTOR);
+});
+
+test('a bullet mining factor does NOT amplify ship (non-rock) damage', () => {
+  const world = new World();
+  const ship = world.spawn(new Ship());
+  const bullet = world.spawn(
+    new Bullet({ damage: 30, miningFactor: MINING_LASER_FACTOR }),
+  );
+  world.physics = { drainCollisions: () => [{ a: bullet, b: ship }] };
+
+  new CombatSubsystem().update(world);
+
+  // miningFactor only applies to rock (maxOre); a ship takes the raw damage.
+  assert.equal(ship.health, 70);
 });
 
 test('a victim only suffers damage once per tick (not stackable)', () => {

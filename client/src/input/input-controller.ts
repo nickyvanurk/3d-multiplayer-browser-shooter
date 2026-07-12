@@ -40,6 +40,7 @@ interface InputState {
   strafeDown: boolean;
   boost: boolean;
   weaponPrimary: boolean;
+  weaponSecondary: boolean;
   aim: AimState;
 }
 
@@ -79,6 +80,7 @@ export class InputController {
       strafeDown: false,
       boost: false,
       weaponPrimary: false,
+      weaponSecondary: false,
       aim: {
         origin: new Vector3(),
         direction: new Vector3(),
@@ -285,6 +287,9 @@ export class InputController {
     if (button === this.keybindings.weaponPrimary) {
       this.input.weaponPrimary = pressed;
     }
+    if (button === this.keybindings.weaponSecondary) {
+      this.input.weaponSecondary = pressed;
+    }
   }
 
   // Zero every movement/fire boolean (steering left untouched).
@@ -300,6 +305,7 @@ export class InputController {
     input.strafeDown = false;
     input.boost = false;
     input.weaponPrimary = false;
+    input.weaponSecondary = false;
   }
 
   // Zero all held movement/fire and steering so the ship coasts to a stop rather

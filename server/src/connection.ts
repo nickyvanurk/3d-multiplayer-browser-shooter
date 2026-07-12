@@ -19,6 +19,7 @@ interface HelloMessage {
 
 type StateData = ReturnType<typeof Messages.State.deserialize>;
 type FireData = ReturnType<typeof Messages.Fire.deserialize>;
+type EquipData = ReturnType<typeof Messages.Equip.deserialize>;
 
 export default class Connection {
   id: number;
@@ -36,6 +37,11 @@ export default class Connection {
   // than queue.
   sellRequested: boolean;
   repairRequested: boolean;
+  // Shop requests latch as the latest requested value (null = none). Buy is
+  // idempotent (a second buy of an owned item is a no-op); equip is last-write-wins
+  // and carries the target slot + item id.
+  pendingBuy: number | null;
+  pendingEquip: EquipData | null;
   onCloseCallback?: () => void;
 
   constructor(id: number, connection: ClientSocket, server: Server) {
@@ -49,6 +55,8 @@ export default class Connection {
     this.fireQueue = [];
     this.sellRequested = false;
     this.repairRequested = false;
+    this.pendingBuy = null;
+    this.pendingEquip = null;
 
     this.connection.on('message', (message) => {
       const data = JSON.parse(message as string) as unknown[];
@@ -85,6 +93,12 @@ export default class Connection {
           break;
         case Types.Messages.REPAIR:
           this.repairRequested = true;
+          break;
+        case Types.Messages.BUY:
+          this.pendingBuy = Messages.Buy.deserialize(data as number[]).itemId;
+          break;
+        case Types.Messages.EQUIP:
+          this.pendingEquip = Messages.Equip.deserialize(data as number[]);
           break;
       }
     });
@@ -131,6 +145,19 @@ export default class Connection {
     const requested = this.repairRequested;
     this.repairRequested = false;
     return requested;
+  }
+
+  // Consume this tick's shop requests, clearing them. null = no request.
+  drainBuy(): number | null {
+    const itemId = this.pendingBuy;
+    this.pendingBuy = null;
+    return itemId;
+  }
+
+  drainEquip(): EquipData | null {
+    const equip = this.pendingEquip;
+    this.pendingEquip = null;
+    return equip;
   }
 
   // Returns the newest reported state and clears it, so a tick with no fresh

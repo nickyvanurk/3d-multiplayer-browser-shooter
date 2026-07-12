@@ -1,5 +1,12 @@
 import type { Vector3 } from 'three';
-import { ORE_SELL_PRICE, REPAIR_COST, VENDOR_TRADE_RADIUS } from './mining.ts';
+import {
+  ORE_SELL_PRICE,
+  REPAIR_COST,
+  VENDOR_TRADE_RADIUS,
+  MINING_LASER_PRICE,
+  Items,
+  Slots,
+} from './mining.ts';
 
 // Full ship hull, matching Ship's constructor default and the respawn heal. The
 // vendor repairs back up to exactly this.
@@ -12,6 +19,9 @@ interface Trader {
   cargo: number;
   credits: number;
   health: number;
+  hasMiningLaser: boolean;
+  primaryItem: number;
+  secondaryItem: number;
 }
 interface TradePost {
   transform: { position: Vector3 };
@@ -55,4 +65,75 @@ export function repairShip(ship: Trader, vendor: TradePost): boolean {
   ship.credits -= REPAIR_COST;
   ship.health = SHIP_MAX_HEALTH;
   return true;
+}
+
+// Buy the mining laser: spend credits and mark it owned. Rejected (returns false,
+// no change) out of range, already owned, or without the funds.
+export function buyMiningLaser(ship: Trader, vendor: TradePost): boolean {
+  if (
+    ship.hasMiningLaser ||
+    ship.credits < MINING_LASER_PRICE ||
+    !inTradeRange(ship, vendor)
+  ) {
+    return false;
+  }
+  ship.credits -= MINING_LASER_PRICE;
+  ship.hasMiningLaser = true;
+  return true;
+}
+
+// Whether the ship owns a weapon it could equip. Cannons are free on every ship;
+// the mining laser must have been bought.
+export function ownsItem(ship: Trader, itemId: number): boolean {
+  if (itemId === Items.CANNONS) {
+    return true;
+  }
+  if (itemId === Items.MINING_LASER) {
+    return ship.hasMiningLaser;
+  }
+  return false;
+}
+
+// Mount `itemId` in `slot` (0 = primary, 1 = secondary), or -1 to unequip that
+// slot. Any owned weapon can go in either slot; equipping a weapon that is already
+// in the other slot MOVES it (a ship carries only one of each). Returns whether
+// the loadout changed.
+export function equipSlot(
+  ship: Trader,
+  slot: number,
+  itemId: number,
+  vendor: TradePost,
+): boolean {
+  if (
+    !inTradeRange(ship, vendor) ||
+    (slot !== Slots.PRIMARY && slot !== Slots.SECONDARY)
+  ) {
+    return false;
+  }
+  // Reject an unowned weapon; -1 (unequip) is always allowed.
+  if (itemId !== -1 && !ownsItem(ship, itemId)) {
+    return false;
+  }
+
+  const before = { primary: ship.primaryItem, secondary: ship.secondaryItem };
+
+  // Moving a weapon in from the other slot empties that slot first.
+  if (itemId !== -1) {
+    if (slot === Slots.PRIMARY && ship.secondaryItem === itemId) {
+      ship.secondaryItem = -1;
+    } else if (slot === Slots.SECONDARY && ship.primaryItem === itemId) {
+      ship.primaryItem = -1;
+    }
+  }
+
+  if (slot === Slots.PRIMARY) {
+    ship.primaryItem = itemId;
+  } else {
+    ship.secondaryItem = itemId;
+  }
+
+  return (
+    ship.primaryItem !== before.primary ||
+    ship.secondaryItem !== before.secondary
+  );
 }

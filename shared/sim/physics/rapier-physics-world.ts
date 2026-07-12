@@ -107,10 +107,11 @@ export class RapierPhysicsWorld implements PhysicsWorld {
     this.eventQueue = new RAPIER.EventQueue(true);
 
     await this.meshProvider.init();
-    // Prewarm the convex-hull caches for the two hulled shapes.
+    // Prewarm the convex-hull caches for the shapes needed to play immediately.
+    // The vendor hull is intentionally left to build lazily on its first spawn:
+    // on the client its mesh is deprioritized and may not be loaded yet.
     this.getConvexVertices(Types.Entities.SPACESHIP, 1);
     this.getConvexVertices(Types.Entities.ASTEROID, 1);
-    this.getConvexVertices(Types.Entities.VENDOR, 1);
 
     this.ready = true;
     if (this.onReady) {

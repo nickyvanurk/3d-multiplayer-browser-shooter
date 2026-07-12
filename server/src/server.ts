@@ -10,6 +10,11 @@ import type { ClientSocket } from './connection.ts';
 const app = express();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// Server-hosted assets (the 610 MB music playlist) served in both dev and prod,
+// so they never bloat the client build uploaded to CrazyGames. The client
+// fetches them from here via VITE_ASSET_BASE_URL (see music-player.ts).
+app.use(express.static(path.join(__dirname, '../public')));
+
 if (process.env.PRODUCTION) {
   app
     .use(express.static(path.join(__dirname, '../../client/dist')))

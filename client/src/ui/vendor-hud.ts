@@ -1,71 +1,92 @@
 import type { World } from '../../../shared/sim/world.ts';
 import type { Entity } from '../../../shared/sim/entity.ts';
 import Types from '../../../shared/types.ts';
-import {
-  VENDOR_TRADE_RADIUS,
-  ORE_SELL_PRICE,
-  REPAIR_COST,
-} from '../../../shared/sim/mining.ts';
+import { VENDOR_TRADE_RADIUS } from '../../../shared/sim/mining.ts';
 
-interface TradeNet {
-  sendSell(): void;
-  sendRepair(): void;
-}
-
-// The vendor's docking prompt: shown bottom-centre only when the player flies
-// within trade range, offering Sell/Repair. Sell/repair are one-shot key events
-// (F/R) routed straight to the server, which validates range and funds; the
-// player's own cargo/credits are shown by PlayerHud (bottom-centre), not here.
+// The vendor's docking prompt: a large, unmissable call-to-action shown near
+// screen centre only when the player flies within trade range — a Kenney [F] key
+// cap over "OPEN SHOP". Proximity is computed here and exposed via isInRange() so
+// the ShopHud (which owns the F key and the modal) can gate opening and auto-close
+// when the player leaves range.
 export class VendorHud {
   private readonly world: World;
   private readonly localShipId: () => number | null;
-  private readonly net: TradeNet;
 
   private readonly promptEl: HTMLDivElement;
 
-  private credits = 0;
   private vendorId: number | null = null;
   private inRange = false;
 
-  constructor(world: World, localShipId: () => number | null, net: TradeNet) {
+  constructor(world: World, localShipId: () => number | null) {
     this.world = world;
     this.localShipId = localShipId;
-    this.net = net;
+
+    this.injectStyles();
 
     this.promptEl = document.createElement('div');
-    Object.assign(this.promptEl.style, {
-      position: 'fixed',
-      left: '50%',
-      bottom: '84px', // clears the player status panel below it
-      transform: 'translateX(-50%)',
-      zIndex: '14000',
-      font: '13px monospace',
-      color: '#d1a44c', // vendor gold, matching the HUD reticle
-      textShadow: '0 1px 3px rgba(0,0,0,0.9)',
-      textAlign: 'center',
-      pointerEvents: 'none',
-      userSelect: 'none',
-      visibility: 'hidden',
-    });
+    this.promptEl.className = 'vf-dock-prompt';
+    const keyUrl = `${import.meta.env.BASE_URL}ui/keyboard_f.png`;
+    this.promptEl.innerHTML = `
+      <img class="vf-dock-key" src="${keyUrl}" alt="F" draggable="false" />
+      <div class="vf-dock-label">OPEN SHOP</div>
+    `;
     document.body.appendChild(this.promptEl);
-    this.bindKeys();
-  }
-
-  // Owner-only credits from a Stats message — kept only to gate the repair prompt.
-  setStats(_cargo: number, _cargoCapacity: number, credits: number): void {
-    this.credits = credits;
   }
 
   // Per frame: recompute docking proximity and show/hide the trade prompt.
   update(): void {
     this.inRange = this.computeInRange();
-    this.promptEl.style.visibility = this.inRange ? 'visible' : 'hidden';
-    if (this.inRange) {
-      const canRepair = this.credits >= REPAIR_COST;
-      this.promptEl.innerHTML =
-        `[F] Sell (${ORE_SELL_PRICE}/ore) &nbsp;·&nbsp; ` +
-        `[R] Repair (${REPAIR_COST} cr)${canRepair ? '' : ' — not enough'}`;
+    this.promptEl.style.display = this.inRange ? 'flex' : 'none';
+  }
+
+  isInRange(): boolean {
+    return this.inRange;
+  }
+
+  private injectStyles(): void {
+    if (document.getElementById('vf-dock-styles')) {
+      return;
     }
+    const style = document.createElement('style');
+    style.id = 'vf-dock-styles';
+    style.textContent = `
+      .vf-dock-prompt {
+        position: fixed;
+        left: 50%;
+        top: 30%;
+        transform: translateX(-50%);
+        z-index: 14000;
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        padding: 18px 26px;
+        border-radius: 12px;
+        background: rgba(8,10,18,0.42);
+        border: 1px solid rgba(209,164,76,0.35);
+        box-shadow: 0 6px 30px rgba(0,0,0,0.5);
+        pointer-events: none;
+        user-select: none;
+      }
+      .vf-dock-key {
+        width: 68px;
+        height: 68px;
+        image-rendering: auto;
+        filter: drop-shadow(0 3px 6px rgba(0,0,0,0.7));
+        animation: vf-dock-pulse 1.5s ease-in-out infinite;
+      }
+      .vf-dock-label {
+        font: 700 20px/1 monospace;
+        letter-spacing: 4px;
+        color: #e8b04b;
+        text-shadow: 0 2px 6px rgba(0,0,0,0.9);
+      }
+      @keyframes vf-dock-pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.09); }
+      }
+    `;
+    document.head.appendChild(style);
   }
 
   private computeInRange(): boolean {
@@ -97,29 +118,5 @@ export class VendorHud {
       }
     }
     return undefined;
-  }
-
-  private bindKeys(): void {
-    window.addEventListener('keydown', (e) => {
-      if (e.repeat || !this.inRange) {
-        return;
-      }
-      const t = e.target as HTMLElement | null;
-      if (
-        t &&
-        (t.tagName === 'INPUT' ||
-          t.tagName === 'TEXTAREA' ||
-          t.tagName === 'SELECT')
-      ) {
-        return;
-      }
-      if (e.code === 'KeyF') {
-        e.preventDefault();
-        this.net.sendSell();
-      } else if (e.code === 'KeyR') {
-        e.preventDefault();
-        this.net.sendRepair();
-      }
-    });
   }
 }

@@ -11,6 +11,7 @@ export interface Keybindings {
   strafeDown: string;
   boost: string;
   weaponPrimary: number;
+  weaponSecondary: number;
 }
 
 export const DEFAULT_KEYBINDINGS: Keybindings = {
@@ -24,4 +25,5 @@ export const DEFAULT_KEYBINDINGS: Keybindings = {
   strafeDown: 'KeyC',
   boost: 'ShiftLeft',
   weaponPrimary: 0,
+  weaponSecondary: 2, // right mouse button
 };
