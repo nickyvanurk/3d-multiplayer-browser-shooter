@@ -74,6 +74,13 @@ export default class Game {
   statsHud: StatsHud;
   // Smoothed frames-per-second for the stats overlay (EMA of 1000/frameDelta).
   fps = 0;
+  // Sent/received bandwidth in bytes/second, resampled once a second from the
+  // socket's running byte totals for the top-centre network readout.
+  netTxBps = 0;
+  netRxBps = 0;
+  private lastNetSentBytes = 0;
+  private lastNetReceivedBytes = 0;
+  private lastNetSampleTime = 0;
   // Hitmarker cue level/pitch, tunable live from the F3 panel.
   hitVolume = 0.05;
   hitPitch = 2;
@@ -358,7 +365,30 @@ export default class Game {
     this.music.start();
 
     // ~1 Hz clock-sync probe; TimeSyncManager tracks drift from the rolling window.
-    setInterval(() => this.networkClient.sendPing(), 1000);
+    // The same tick resamples the network byte totals into per-second rates.
+    this.lastNetSampleTime = performance.now();
+    this.lastNetSentBytes = this.connection.bytesSent;
+    this.lastNetReceivedBytes = this.connection.bytesReceived;
+    setInterval(() => {
+      this.networkClient.sendPing();
+      this.sampleNetworkRates(performance.now());
+    }, 1000);
+  }
+
+  // Convert the socket's cumulative byte totals into bytes/second over the time
+  // since the last sample. Called on the 1 Hz ping tick.
+  private sampleNetworkRates(now: number): void {
+    const dt = (now - this.lastNetSampleTime) / 1000;
+    if (dt <= 0) {
+      return;
+    }
+    const sent = this.connection.bytesSent;
+    const received = this.connection.bytesReceived;
+    this.netTxBps = (sent - this.lastNetSentBytes) / dt;
+    this.netRxBps = (received - this.lastNetReceivedBytes) / dt;
+    this.lastNetSentBytes = sent;
+    this.lastNetReceivedBytes = received;
+    this.lastNetSampleTime = now;
   }
 
   private hideBootOverlay(): void {
@@ -634,6 +664,8 @@ export default class Game {
       this.fps,
       this.networkClient.getPing(),
       this.networkClient.isSynced(),
+      this.netTxBps,
+      this.netRxBps,
     );
 
     this.viewRegistry.update(alpha, delta);

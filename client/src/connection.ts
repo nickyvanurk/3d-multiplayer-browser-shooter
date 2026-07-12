@@ -83,6 +83,11 @@ export default class Connection {
   onOpenCallback?: (event: Event) => void;
   onCloseCallback?: (event: CloseEvent) => void;
   onErrorCallback?: (event: Event) => void;
+  // Running byte totals for the top-centre network readout. The socket carries
+  // UTF-8 JSON text; string length approximates the on-wire byte count (exact for
+  // the ASCII numeric payloads, only slightly under for non-ASCII player names).
+  bytesSent: number;
+  bytesReceived: number;
 
   constructor() {
     // Points at the game server (dev, same-origin, or a build-time override for
@@ -91,6 +96,8 @@ export default class Connection {
 
     this.incomingMessageQueue = [];
     this.outgoingMessageQueue = [];
+    this.bytesSent = 0;
+    this.bytesReceived = 0;
 
     this.connection.onopen = (event) => {
       if (this.onOpenCallback) {
@@ -105,6 +112,7 @@ export default class Connection {
     };
 
     this.connection.onmessage = (event) => {
+      this.bytesReceived += (event.data as string).length;
       let data: MessageData = JSON.parse(event.data) as unknown[];
       const type = data.shift();
 
@@ -192,12 +200,19 @@ export default class Connection {
   sendOutgoingMessages(): void {
     while (this.hasOutgoingMessage()) {
       const message = this.outgoingMessageQueue.shift();
-      this.connection.send(JSON.stringify(message!.serialize()));
+      this.sendRaw(JSON.stringify(message!.serialize()));
     }
   }
 
   send(message: unknown): void {
-    this.connection.send(JSON.stringify(message));
+    this.sendRaw(JSON.stringify(message));
+  }
+
+  // Single choke point for outbound frames, so every send is tallied for the
+  // network readout.
+  private sendRaw(payload: string): void {
+    this.bytesSent += payload.length;
+    this.connection.send(payload);
   }
 
   hasIncomingMessage(): boolean {
