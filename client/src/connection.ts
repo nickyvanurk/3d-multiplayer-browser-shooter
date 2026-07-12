@@ -27,6 +27,10 @@ export type IncomingMessage =
       data: ReturnType<typeof Messages.World.deserialize>;
     }
   | {
+      type: typeof Types.Messages.SHOT;
+      data: ReturnType<typeof Messages.Shot.deserialize>;
+    }
+  | {
       type: typeof Types.Messages.OREDROP;
       data: ReturnType<typeof Messages.OreDrop.deserialize>;
     }
@@ -55,6 +59,7 @@ type MessageData =
   | ReturnType<typeof Messages.Spawn.deserialize>
   | ReturnType<typeof Messages.Despawn.deserialize>
   | ReturnType<typeof Messages.World.deserialize>
+  | ReturnType<typeof Messages.Shot.deserialize>
   | ReturnType<typeof Messages.OreDrop.deserialize>
   | ReturnType<typeof Messages.Collect.deserialize>
   | ReturnType<typeof Messages.Stats.deserialize>
@@ -112,6 +117,9 @@ export default class Connection {
           break;
         case Types.Messages.WORLD:
           data = Messages.World.deserialize(data as number[]);
+          break;
+        case Types.Messages.SHOT:
+          data = Messages.Shot.deserialize(data as number[]);
           break;
         case Types.Messages.OREDROP:
           data = Messages.OreDrop.deserialize(data as number[]);

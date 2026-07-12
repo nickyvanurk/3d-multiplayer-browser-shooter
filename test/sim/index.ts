@@ -33,6 +33,7 @@ import './asteroid.test.ts';
 import './mining-subsystem.test.ts';
 import './respawn-asteroid.test.ts';
 import './trade.test.ts';
+import './progression.test.ts';
 import './apply-extrapolation.test.ts';
 import { run } from './harness.ts';
 run();

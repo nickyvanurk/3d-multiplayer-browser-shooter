@@ -19,6 +19,7 @@ interface HelloMessage {
 
 type StateData = ReturnType<typeof Messages.State.deserialize>;
 type FireData = ReturnType<typeof Messages.Fire.deserialize>;
+type HitData = ReturnType<typeof Messages.Hit.deserialize>;
 type EquipData = ReturnType<typeof Messages.Equip.deserialize>;
 
 export default class Connection {
@@ -32,6 +33,9 @@ export default class Connection {
   latestState: StateData | null;
   // Fire requests are events; every one must be honored, so they queue.
   fireQueue: FireData[];
+  // Hit reports (client-side hit detection) are events too — each one is a shot
+  // that struck something, so they queue and all get applied.
+  hitQueue: HitData[];
   // Vendor trades are idempotent within a tick (a second sell finds an empty
   // hold; a second repair finds full health), so they latch as booleans rather
   // than queue.
@@ -53,6 +57,7 @@ export default class Connection {
     this.outgoingMessageQueue = [];
     this.latestState = null;
     this.fireQueue = [];
+    this.hitQueue = [];
     this.sellRequested = false;
     this.repairRequested = false;
     this.pendingBuy = null;
@@ -74,6 +79,9 @@ export default class Connection {
           break;
         case Types.Messages.FIRE:
           this.fireQueue.push(Messages.Fire.deserialize(data as number[]));
+          break;
+        case Types.Messages.HIT:
+          this.hitQueue.push(Messages.Hit.deserialize(data as number[]));
           break;
         case Types.Messages.PING:
           // Answer immediately (not on the tick) and stamp the reply with the
@@ -132,6 +140,12 @@ export default class Connection {
     const fires = this.fireQueue;
     this.fireQueue = [];
     return fires;
+  }
+
+  drainHits(): HitData[] {
+    const hits = this.hitQueue;
+    this.hitQueue = [];
+    return hits;
   }
 
   // Consume this tick's vendor-trade latches, clearing them.

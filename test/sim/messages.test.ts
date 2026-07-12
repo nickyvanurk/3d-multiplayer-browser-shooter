@@ -30,12 +30,11 @@ test('State round-trips pose, velocities and input', () => {
   assert.equal(out.input, 0b1010_0101);
 });
 
-test('Fire round-trips muzzle transform, damage and bullet id', () => {
+test('Fire round-trips the muzzle transform and speed', () => {
   const msg = new Messages.Fire(
     new Vector3(10, 20, 30),
     new Quaternion(0, 0, 0, 1),
-    5,
-    1_000_042,
+    1.5,
   );
 
   const wire = msg.serialize();
@@ -50,23 +49,54 @@ test('Fire round-trips muzzle transform, damage and bullet id', () => {
     [out.rotation.x, out.rotation.y, out.rotation.z, out.rotation.w],
     [0, 0, 0, 1],
   );
-  assert.equal(out.damage, 5);
-  assert.equal(out.bulletId, 1_000_042);
+  assert.equal(out.speed, 1.5);
+});
+
+test('Shot round-trips shooter id, muzzle transform and speed', () => {
+  const msg = new Messages.Shot(
+    42,
+    new Vector3(10, 20, 30),
+    new Quaternion(0, 0, 0, 1),
+    1.5,
+  );
+
+  const wire = msg.serialize();
+  assert.equal(wire[0], Types.Messages.SHOT);
+
+  const out = Messages.Shot.deserialize(wire.slice(1) as number[]);
+  assert.equal(out.shooterId, 42);
+  assert.deepEqual(
+    [out.position.x, out.position.y, out.position.z],
+    [10, 20, 30],
+  );
+  assert.deepEqual(
+    [out.rotation.x, out.rotation.y, out.rotation.z, out.rotation.w],
+    [0, 0, 0, 1],
+  );
+  assert.equal(out.speed, 1.5);
+});
+
+test('Hit round-trips target, damage and impact', () => {
+  const msg = new Messages.Hit(7, 30, new Vector3(1, 2, 3));
+
+  const wire = msg.serialize();
+  assert.equal(wire[0], Types.Messages.HIT);
+
+  const out = Messages.Hit.deserialize(wire.slice(1) as number[]);
+  assert.equal(out.targetId, 7);
+  assert.equal(out.damage, 30);
+  assert.deepEqual([out.position.x, out.position.y, out.position.z], [1, 2, 3]);
   // No mining factor supplied → absent on the wire (0) → undefined on the far end.
   assert.equal(out.miningFactor, undefined);
 });
 
-test('Fire round-trips an explicit mining factor', () => {
-  const msg = new Messages.Fire(
-    new Vector3(1, 2, 3),
-    new Quaternion(0, 0, 0, 1),
-    1,
-    1_000_007,
-    1.5,
+test('Hit round-trips an explicit mining factor', () => {
+  const out = Messages.Hit.deserialize(
+    new Messages.Hit(7, 1, new Vector3(1, 2, 3), 8)
+      .serialize()
+      .slice(1) as number[],
   );
-
-  const out = Messages.Fire.deserialize(msg.serialize().slice(1) as number[]);
-  assert.equal(out.miningFactor, 1.5);
+  assert.equal(out.miningFactor, 8);
 });
 
 test('Loadout round-trips ownership and the per-slot item ids', () => {

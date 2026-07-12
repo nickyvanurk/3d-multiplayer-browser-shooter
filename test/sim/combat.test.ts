@@ -1,14 +1,22 @@
 import assert from 'node:assert/strict';
+import { Vector3 } from 'three';
 import { World } from '../../shared/sim/world.ts';
 import { Ship } from '../../shared/sim/entities/ship.ts';
 import { Bullet } from '../../shared/sim/entities/bullet.ts';
 import { Asteroid } from '../../shared/sim/entities/asteroid.ts';
-import { RESPAWN_DELAY } from '../../shared/sim/entities/ship.ts';
+import {
+  RESPAWN_DELAY,
+  maxWeaponDamage,
+} from '../../shared/sim/entities/ship.ts';
 import {
   MINING_DAMAGE_FACTOR,
   MINING_LASER_FACTOR,
+  Items,
 } from '../../shared/sim/mining.ts';
-import { CombatSubsystem } from '../../shared/sim/subsystems/combat.ts';
+import {
+  CombatSubsystem,
+  applyDamage,
+} from '../../shared/sim/subsystems/combat.ts';
 import { test } from './harness.ts';
 
 test('bullet→ship collision damages the ship and destroys the bullet', () => {
@@ -161,6 +169,52 @@ test('a bullet mining factor does NOT amplify ship (non-rock) damage', () => {
   assert.equal(ship.health, 70);
 });
 
+test('a hit stamps the victim with its attacker (the firing ship)', () => {
+  const world = new World();
+  const shooter = world.spawn(new Ship());
+  const target = world.spawn(new Ship());
+  const bullet = world.spawn(new Bullet({ damage: 30 }));
+  bullet.owner = shooter;
+  world.physics = { drainCollisions: () => [{ a: bullet, b: target }] };
+
+  new CombatSubsystem().update(world);
+
+  assert.equal(target.lastHitBy, shooter);
+});
+
+test('a lethal hit reports a kill crediting the shooter with the victim level', () => {
+  const world = new World();
+  const shooter = world.spawn(new Ship());
+  const target = world.spawn(new Ship());
+  target.level = 4;
+  const bullet = world.spawn(new Bullet({ damage: 100 }));
+  bullet.owner = shooter;
+  world.physics = { drainCollisions: () => [{ a: bullet, b: target }] };
+
+  const combat = new CombatSubsystem();
+  combat.update(world);
+
+  const kills = combat.drainKills();
+  assert.equal(kills.length, 1);
+  assert.equal(kills[0].killerId, shooter.id);
+  assert.equal(kills[0].victimId, target.id);
+  assert.equal(kills[0].victimLevel, 4);
+  // Drained once, cleared after.
+  assert.equal(combat.drainKills().length, 0);
+});
+
+test('a destroyed asteroid does not report a kill', () => {
+  const world = new World();
+  const rock = world.spawn(new Asteroid({ scale: 10 }));
+  const bullet = world.spawn(new Bullet({ damage: 100000 }));
+  world.physics = { drainCollisions: () => [{ a: bullet, b: rock }] };
+
+  const combat = new CombatSubsystem();
+  combat.update(world);
+
+  assert.equal(combat.drainKills().length, 0);
+});
+
 test('a victim only suffers damage once per tick (not stackable)', () => {
   const world = new World();
   const ship = world.spawn(new Ship());
@@ -178,4 +232,74 @@ test('a victim only suffers damage once per tick (not stackable)', () => {
   assert.equal(ship.health, 70);
   assert.equal(b1.destroyed, true);
   assert.equal(b2.destroyed, true);
+});
+
+// applyDamage is the shared damage primitive used by both the collision path
+// (bot bullets) and the server's client-reported Hit path (players).
+
+test('applyDamage deals raw damage to a ship and credits the attacker', () => {
+  const world = new World();
+  const attacker = world.spawn(new Ship());
+  const target = world.spawn(new Ship());
+
+  applyDamage(target, 30, undefined, undefined, attacker);
+
+  assert.equal(target.health, 70);
+  assert.equal(target.lastHitBy, attacker);
+});
+
+test('applyDamage mines rock at the default factor (attacker not credited)', () => {
+  const world = new World();
+  const attacker = world.spawn(new Ship());
+  const rock = world.spawn(new Asteroid({ scale: 60 }));
+  const full = rock.health;
+
+  // Passing an attacker must not throw or credit rock (it carries no lastHitBy) —
+  // a mined-out asteroid is never a kill.
+  applyDamage(rock, 10, undefined, undefined, attacker);
+
+  assert.equal(full - rock.health, 10 * MINING_DAMAGE_FACTOR);
+});
+
+test('applyDamage honours an explicit (laser) mining factor on rock', () => {
+  const world = new World();
+  const rock = world.spawn(new Asteroid({ scale: 60 }));
+  const full = rock.health;
+
+  applyDamage(rock, 10, MINING_LASER_FACTOR);
+
+  assert.equal(full - rock.health, 10 * MINING_LASER_FACTOR);
+});
+
+test('applyDamage stamps the impact point on rock', () => {
+  const world = new World();
+  const rock = world.spawn(new Asteroid({ scale: 60 }));
+
+  applyDamage(rock, 10, undefined, new Vector3(1, 2, 3));
+
+  assert.deepEqual(
+    [rock.lastImpact.x, rock.lastImpact.y, rock.lastImpact.z],
+    [1, 2, 3],
+  );
+});
+
+test('applyDamage leaves an invulnerable victim untouched', () => {
+  const world = new World();
+  const ship = world.spawn(new Ship());
+  ship.invulnerable = true;
+
+  applyDamage(ship, 30, undefined);
+
+  assert.equal(ship.health, 100);
+});
+
+test('maxWeaponDamage clamps to the ship real equipped weapons', () => {
+  const ship = new Ship();
+  // Default loadout: cannons in primary (damage 5), secondary empty.
+  assert.equal(maxWeaponDamage(ship), 5);
+
+  // Only the mining laser equipped → its low combat damage caps the clamp.
+  ship.primaryItem = -1;
+  ship.secondaryItem = Items.MINING_LASER;
+  assert.equal(maxWeaponDamage(ship), 1);
 });

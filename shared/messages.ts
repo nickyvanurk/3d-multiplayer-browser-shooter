@@ -192,39 +192,25 @@ export class State {
   }
 }
 
-// Client -> server: "I fired a bullet." The client already spawned a predicted
-// cosmetic bullet locally (id `bulletId`, a client-range id); the server spawns
-// the authoritative one at this muzzle transform and owns the resulting damage.
+// Client -> server: "I fired." Bullets no longer exist server-side, so this is
+// purely the muzzle {transform, speed} the server relays to OTHER clients (as a
+// Shot) to reproduce the cosmetic tracer. Damage is reported separately via Hit.
 export class Fire {
   position: Vector3;
   rotation: Quaternion;
-  damage: number;
-  bulletId: number;
-  miningFactor: number | undefined;
+  speed: number;
 
-  constructor(
-    position: Vector3,
-    rotation: Quaternion,
-    damage: number,
-    bulletId: number,
-    miningFactor?: number,
-  ) {
+  constructor(position: Vector3, rotation: Quaternion, speed: number) {
     this.position = position;
     this.rotation = rotation;
-    this.damage = damage;
-    this.bulletId = bulletId;
-    this.miningFactor = miningFactor;
+    this.speed = speed;
   }
 
   static deserialize(message: number[]) {
     return {
       position: new Vector3(message[0], message[1], message[2]),
       rotation: new Quaternion(message[3], message[4], message[5], message[6]),
-      damage: message[7],
-      bulletId: message[8],
-      // Optional trailing slot: 0/absent means "no override" (ordinary cannon
-      // fire falls back to the global mining factor), so map it to undefined.
-      miningFactor: message[9] || undefined,
+      speed: message[7],
     };
   }
 
@@ -238,9 +224,100 @@ export class Fire {
       this.rotation.y,
       this.rotation.z,
       this.rotation.w,
+      this.speed,
+    ];
+  }
+}
+
+// Server -> other clients: a relayed shot the shooter's client already predicts
+// locally. `shooterId` lets the receiver own the tracer to that ship (so its own
+// raycast excludes it). The tracer is cosmetic everywhere; damage is authoritative
+// only through the shooter's Hit.
+export class Shot {
+  shooterId: number;
+  position: Vector3;
+  rotation: Quaternion;
+  speed: number;
+
+  constructor(
+    shooterId: number,
+    position: Vector3,
+    rotation: Quaternion,
+    speed: number,
+  ) {
+    this.shooterId = shooterId;
+    this.position = position;
+    this.rotation = rotation;
+    this.speed = speed;
+  }
+
+  static deserialize(message: number[]) {
+    return {
+      shooterId: message[0],
+      position: new Vector3(message[1], message[2], message[3]),
+      rotation: new Quaternion(message[4], message[5], message[6], message[7]),
+      speed: message[8],
+    };
+  }
+
+  serialize() {
+    return [
+      Types.Messages.SHOT,
+      this.shooterId,
+      this.position.x,
+      this.position.y,
+      this.position.z,
+      this.rotation.x,
+      this.rotation.y,
+      this.rotation.z,
+      this.rotation.w,
+      this.speed,
+    ];
+  }
+}
+
+// Client -> server: "my shot hit entity `targetId` at `position`, for `damage`."
+// Client-side hit detection: the shooter's raycast found the hit; the server
+// validates (clamps damage to the ship's real weapons, gates the mining factor on
+// laser ownership, range-checks the impact) and applies it. `position` is the
+// impact point, used to break ore off asteroids where the shot landed.
+export class Hit {
+  targetId: number;
+  damage: number;
+  position: Vector3;
+  miningFactor: number | undefined;
+
+  constructor(
+    targetId: number,
+    damage: number,
+    position: Vector3,
+    miningFactor?: number,
+  ) {
+    this.targetId = targetId;
+    this.damage = damage;
+    this.position = position;
+    this.miningFactor = miningFactor;
+  }
+
+  static deserialize(message: number[]) {
+    return {
+      targetId: message[0],
+      damage: message[1],
+      // 0/absent means "no override" (cannon fire → default mining factor).
+      miningFactor: message[2] || undefined,
+      position: new Vector3(message[3], message[4], message[5]),
+    };
+  }
+
+  serialize() {
+    return [
+      Types.Messages.HIT,
+      this.targetId,
       this.damage,
-      this.bulletId,
       this.miningFactor ?? 0,
+      this.position.x,
+      this.position.y,
+      this.position.z,
     ];
   }
 }
@@ -521,6 +598,8 @@ export default {
   Despawn,
   State,
   Fire,
+  Shot,
+  Hit,
   World,
   OreDrop,
   Collect,

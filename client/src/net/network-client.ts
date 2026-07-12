@@ -73,6 +73,15 @@ export class NetworkClient {
   onOreDrop: ((id: number, position: Vector3) => void) | null;
   // A chunk was collected authoritatively (Collect), so the client drops its copy.
   onCollect: ((id: number) => void) | null;
+  // A remote player fired (relayed Shot): spawn a cosmetic tracer for it.
+  onShot:
+    | ((
+        position: Vector3,
+        rotation: Quaternion,
+        speed: number,
+        shooterId: number,
+      ) => void)
+    | null;
   timeSync: TimeSyncManager;
   // Smoothed round-trip time (ms) from the last PONGs, for the stats overlay.
   pingMs = 0;
@@ -100,6 +109,7 @@ export class NetworkClient {
     this.onLoadout = null;
     this.onOreDrop = null;
     this.onCollect = null;
+    this.onShot = null;
     this.timeSync = new TimeSyncManager();
     this._cameraDummy = new Object3D();
   }
@@ -150,6 +160,11 @@ export class NetworkClient {
         case Types.Messages.WORLD:
           this.applyWorldState(message!.data);
           break;
+        case Types.Messages.SHOT: {
+          const { shooterId, position, rotation, speed } = message!.data;
+          this.onShot?.(position, rotation, speed, shooterId);
+          break;
+        }
         case Types.Messages.STATS: {
           const stats = message!.data;
           // Mirror onto the owned ship so anything reading it (and a late HUD)
@@ -404,8 +419,9 @@ export class NetworkClient {
     this.connection.sendOutgoingMessages();
   }
 
-  // A predicted bullet was fired locally; ask the server to spawn the
-  // authoritative one (which owns damage/kills) at the same muzzle transform.
+  // A predicted bullet was fired locally; report the muzzle so the server relays a
+  // cosmetic Shot to other clients. Damage is reported separately via sendHit when
+  // the bullet's raycast actually strikes something.
   sendFire(bullet: Bullet): void {
     const socket = this.connection.getConnection();
     if (!socket || socket.readyState !== 1) {
@@ -414,13 +430,25 @@ export class NetworkClient {
 
     const { position, rotation } = bullet.transform;
     this.connection.pushMessage(
-      new Messages.Fire(
-        position,
-        rotation,
-        bullet.damage ?? 0,
-        bullet.id!,
-        bullet.miningFactor,
-      ),
+      new Messages.Fire(position, rotation, bullet.velocity.z),
+    );
+    this.connection.sendOutgoingMessages();
+  }
+
+  // Client-side hit detection: our predicted bullet struck `targetId` at `impact`.
+  // The server validates and applies the (clamped) damage.
+  sendHit(
+    targetId: number,
+    damage: number,
+    miningFactor: number | undefined,
+    impact: Vector3,
+  ): void {
+    const socket = this.connection.getConnection();
+    if (!socket || socket.readyState !== 1) {
+      return;
+    }
+    this.connection.pushMessage(
+      new Messages.Hit(targetId, damage, impact, miningFactor),
     );
     this.connection.sendOutgoingMessages();
   }

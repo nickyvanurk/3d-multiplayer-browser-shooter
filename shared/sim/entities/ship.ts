@@ -78,6 +78,22 @@ export function weaponsForItem(
   return [];
 }
 
+// The highest per-shot damage the ship's currently-equipped weapons can deal. The
+// server clamps client-reported Hit damage to this so a tampered client can't
+// inflate it.
+export function maxWeaponDamage(ship: Ship): number {
+  let max = 0;
+  for (const weapon of [
+    ...weaponsForItem(ship, ship.primaryItem, 'primary'),
+    ...weaponsForItem(ship, ship.secondaryItem, 'secondary'),
+  ]) {
+    if (weapon.damage > max) {
+      max = weapon.damage;
+    }
+  }
+  return max;
+}
+
 export interface ShipInit {
   id?: number;
   transform?: TransformInit;
@@ -129,6 +145,14 @@ export class Ship extends Entity {
   hasMiningLaser: boolean;
   primaryItem: number;
   secondaryItem: number;
+  // Kill-driven progression (server-authoritative; see shared/sim/progression.ts).
+  // Current-life only: reset to level 1 / 0 xp on respawn, for players and bots
+  // alike. Replicated to the owner via Progress, never on the world snapshot.
+  // `lastHitBy` is the ship whose shot last damaged this one — the killer credited
+  // when it dies, stamped by combat and read on death.
+  level: number;
+  xp: number;
+  lastHitBy: Ship | null;
 
   constructor(opts: ShipInit = {}) {
     super({ ...opts, type: Types.Entities.SPACESHIP });
@@ -162,6 +186,9 @@ export class Ship extends Entity {
     this.hasMiningLaser = false;
     this.primaryItem = Items.CANNONS;
     this.secondaryItem = -1;
+    this.level = 1;
+    this.xp = 0;
+    this.lastHitBy = null;
   }
 
   // Fill the trailing slots the base leaves at 0: the packed input (so remote
@@ -246,15 +273,15 @@ export class Ship extends Entity {
 
     for (const weapon of this.weapons) {
       weapon.tryFire(time, (position, rotation, damage, miningFactor) => {
-        const bullet = world.spawn(
-          new Bullet({
-            transform: { position, rotation },
-            damage,
-            miningFactor,
-          }),
-        );
+        const bullet = new Bullet({
+          transform: { position, rotation },
+          damage,
+          miningFactor,
+        });
+        // Set the owner BEFORE spawning so spawn hooks (client blaster SFX, remote
+        // tracer raycast exclusion) already see it.
         bullet.owner = this;
-        return bullet;
+        return world.spawn(bullet);
       });
     }
   }

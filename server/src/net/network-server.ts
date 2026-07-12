@@ -5,8 +5,15 @@ import { sanitize } from '../utils/sanitize.ts';
 import Types from '../../../shared/types.ts';
 import Messages from '../../../shared/messages.ts';
 
-import { Ship } from '../../../shared/sim/entities/ship.ts';
-import { Bullet } from '../../../shared/sim/entities/bullet.ts';
+import { Ship, maxWeaponDamage } from '../../../shared/sim/entities/ship.ts';
+import {
+  DEFAULT_BULLET_SPEED,
+  DEFAULT_BULLET_TIMER,
+} from '../../../shared/sim/entities/bullet.ts';
+import {
+  applyDamage,
+  type CombatEntity,
+} from '../../../shared/sim/subsystems/combat.ts';
 import { InputCommand } from '../../../shared/sim/input.ts';
 import { SnapshotDiffer } from '../../../shared/sim/net/snapshot.ts';
 import { pickSpawnPosition } from '../../../shared/sim/spawn.ts';
@@ -28,6 +35,12 @@ import type Connection from '../connection.ts';
 import type { OutgoingMessage } from '../connection.ts';
 import type { World } from '../../../shared/sim/world.ts';
 import type { Entity } from '../../../shared/sim/entity.ts';
+
+// A bullet's max reach in world units is speed(units/ms) × lifetime(ms). A
+// reported Hit whose impact is farther than that from the shooter is impossible,
+// so reject it; the slack covers the shooter's own motion + the visual muzzle
+// offset.
+const MAX_HIT_RANGE = DEFAULT_BULLET_SPEED * DEFAULT_BULLET_TIMER * 1.5;
 
 export class NetworkServer {
   gameServer: GameServer;
@@ -142,14 +155,26 @@ export class NetworkServer {
         );
       }
 
-      // Each Fire request spawns the authoritative bullet the server owns for
-      // damage/kills. The client already shows a predicted one, so it doesn't
-      // receive this bullet back (see onEntitySpawned / broadcast).
+      // Client-side hit detection: bullets no longer exist server-side. Each Fire
+      // is just a muzzle — relay it to OTHER clients as a cosmetic Shot they
+      // simulate locally (the shooter already predicts its own).
       for (const fire of connection.drainFire()) {
         if (ship.alive === false) {
           break;
         }
-        this.spawnBullet(world, ship, fire);
+        this.broadcastMessage(
+          new Messages.Shot(ship.id!, fire.position, fire.rotation, fire.speed),
+          connection.id,
+        );
+      }
+
+      // Each Hit is the shooter's raycast striking a target; validate + apply the
+      // damage (health/kills stay server-authoritative).
+      for (const hit of connection.drainHits()) {
+        if (ship.alive === false) {
+          break;
+        }
+        this.applyHit(ship, hit);
       }
 
       // Vendor trades: server-authoritative sell/repair, gated on docking range
@@ -293,40 +318,35 @@ export class NetworkServer {
     return ship;
   }
 
-  spawnBullet(
-    world: World,
-    ship: Ship,
-    fire: ReturnType<typeof Messages.Fire.deserialize>,
-  ): void {
-    // A laser shot is honoured only if the ship actually owns and mounts the
-    // mining laser (in either slot). The client's miningFactor is treated as a
-    // mere "this is a laser shot" flag — the server substitutes its OWN authoritative
-    // magnitude, so a tampered client can't send a huge factor and one-shot rocks.
+  // Client-reported hit: validate the shooter's claim and apply the damage. The
+  // client already ran the raycast; the server owns health/kills and clamps the
+  // numbers so a tampered client can't inflate damage or fake an out-of-reach hit.
+  applyHit(ship: Ship, hit: ReturnType<typeof Messages.Hit.deserialize>): void {
+    const target = this.world.get(hit.targetId) as CombatEntity | undefined;
+    if (!target || target.alive === false || target.invulnerable) {
+      return;
+    }
+
+    // Reject an impact beyond any bullet's reach from the shooter.
+    if (ship.transform.position.distanceTo(hit.position) > MAX_HIT_RANGE) {
+      return;
+    }
+
+    // A laser factor is honoured only if the ship actually owns and mounts the
+    // mining laser (in either slot). The client's miningFactor is a mere "this is a
+    // laser shot" flag — the server substitutes its OWN authoritative magnitude, so
+    // a tampered client can't send a huge factor and one-shot rocks.
     const laserEquipped =
       ship.hasMiningLaser &&
       (ship.primaryItem === Items.MINING_LASER ||
         ship.secondaryItem === Items.MINING_LASER);
     const miningFactor =
-      laserEquipped && fire.miningFactor ? MINING_LASER_FACTOR : undefined;
-    const bullet = new Bullet({
-      transform: { position: fire.position, rotation: fire.rotation },
-      damage: fire.damage,
-      miningFactor,
-    });
-    bullet.owner = ship;
-    // world.spawn -> onSpawn: physics body + onEntitySpawned broadcast.
-    world.spawn(bullet);
-  }
+      laserEquipped && hit.miningFactor ? MINING_LASER_FACTOR : undefined;
 
-  // The connection id of a bullet's owner, or null for non-bullets. Used to keep
-  // a client from receiving the authoritative copy of a bullet it predicted.
-  bulletOwnerId(entity: Entity | undefined): number | null {
-    if (!entity || entity.type !== Types.Entities.BULLET) {
-      return null;
-    }
-    const owner = (entity as Bullet).owner as Ship | null;
-    const connection = owner?.controller?.connection as Connection | undefined;
-    return connection ? connection.id : null;
+    // Clamp damage to what the ship's real weapons can deal; the ship is credited
+    // for the kill (progression's lastHitBy).
+    const damage = Math.min(hit.damage, maxWeaponDamage(ship));
+    applyDamage(target, damage, miningFactor, hit.position, ship);
   }
 
   onEntitySpawned(entity: Entity): void {
@@ -346,7 +366,6 @@ export class NetworkServer {
         scale,
         name,
       ),
-      this.bulletOwnerId(entity),
     );
   }
 
@@ -423,15 +442,11 @@ export class NetworkServer {
     });
 
     if (changed.length) {
+      // Bullets no longer exist server-side (except bots'), so there's nothing to
+      // exclude per-connection: every client gets the same snapshot.
+      const snapshot = new Messages.World(changed, now);
       for (const connection of this.connections) {
-        // Exclude a client's own authoritative bullets — it already renders the
-        // predicted ones it fired. (Non-bullets have owner id null, so they pass.)
-        const relevant = changed.filter(
-          (c) => this.bulletOwnerId(world.get(c.id)) !== connection.id,
-        );
-        if (relevant.length) {
-          connection.pushMessage(new Messages.World(relevant, now));
-        }
+        connection.pushMessage(snapshot);
       }
     }
 

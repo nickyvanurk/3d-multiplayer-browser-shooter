@@ -26,6 +26,13 @@ export const Messages = {
   BUY: 16,
   EQUIP: 17,
   LOADOUT: 18,
+  // Client-side hit detection. FIRE (client->server) reports a muzzle so the
+  // server can relay it as a cosmetic SHOT (server->others) to reproduce the
+  // tracer. HIT (client->server): the shooter's raycast struck a target; the
+  // server validates and applies the damage. Bullets no longer exist server-side
+  // (except bots').
+  HIT: 19,
+  SHOT: 20,
 } as const;
 
 export const Entities = {

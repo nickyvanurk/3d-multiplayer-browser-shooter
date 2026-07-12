@@ -6,7 +6,7 @@ import { RapierPhysicsWorld } from '../../shared/sim/physics/rapier-physics-worl
 import Connection from './connection.ts';
 
 import { BrowserMeshProvider } from './physics/browser-mesh-provider.ts';
-import { ClientSim, CLIENT_ID_BASE } from './client-sim.ts';
+import { ClientSim } from './client-sim.ts';
 
 import { SceneManager } from './render/scene-manager.ts';
 import { ViewRegistry } from './render/view-registry.ts';
@@ -240,6 +240,10 @@ export default class Game {
     // Every shot that strikes a rock kicks up a small dust puff at the impact.
     this.clientSim.onHitAsteroid = (impact) =>
       this.particles.spawnDust(impact, 22);
+    // Client-side hit detection: forward our predicted hit to the server, which
+    // validates + applies the authoritative damage.
+    this.clientSim.onHit = (targetId, damage, miningFactor, impact) =>
+      this.networkClient.sendHit(targetId, damage, miningFactor, impact);
     this.networkClient.onLocalShip = (ship) => {
       this.clientSim.setOwnedShip(ship);
       // The player is in the sector — drop the boot message.
@@ -253,6 +257,10 @@ export default class Game {
     this.networkClient.onOreDrop = (id, position) =>
       this.orePickups.spawn(id, position, performance.now());
     this.networkClient.onCollect = (id) => this.orePickups.collect(id);
+    // A remote player fired: spawn a cosmetic tracer that flies + self-raycasts
+    // locally (stops on geometry, does no damage).
+    this.networkClient.onShot = (position, rotation, speed, shooterId) =>
+      this.clientSim.spawnRemoteTracer(position, rotation, speed, shooterId);
 
     // The vendor mesh is deprioritized, so a VENDOR may spawn before its model
     // (and thus its convex hull) exists. Add its physics body only once the mesh
@@ -283,12 +291,13 @@ export default class Game {
       ) {
         this.clientSim.onSpawn(entity);
       }
-      // Blaster on every bullet spawn. The local player's own shots (client-range
-      // ids) play 2D so they stay consistent — the listener rides the lerping
-      // camera, so a positional own-shot would wander. Remote players' shots play
-      // positionally at their muzzle, so you hear them from where they are.
+      // Blaster on every bullet spawn. Our own shots (owner is the local ship) play
+      // 2D so they stay consistent — the listener rides the lerping camera, so a
+      // positional own-shot would wander. Everyone else's (remote tracers + bot
+      // bullets) play positionally at their muzzle, so you hear them from there.
       if (entity.type === Types.Entities.BULLET) {
-        if (entity.id! >= CLIENT_ID_BASE) {
+        const owner = (entity as { owner?: unknown }).owner;
+        if (owner === this.clientSim.ownedShip) {
           this.sound.play('blaster', 0.4);
         } else {
           this.sound.playAt('blaster', entity.transform.position, 0.7);

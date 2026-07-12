@@ -1,9 +1,9 @@
-import { Vector3 } from 'three';
+import { Quaternion, Vector3 } from 'three';
 
 import Types from '../../shared/types.ts';
 import { InputCommand } from '../../shared/sim/input.ts';
 import { Ship, weaponsForItem } from '../../shared/sim/entities/ship.ts';
-import type { Bullet } from '../../shared/sim/entities/bullet.ts';
+import { Bullet } from '../../shared/sim/entities/bullet.ts';
 import type { World } from '../../shared/sim/world.ts';
 import type { Entity, EntityWorld } from '../../shared/sim/entity.ts';
 import type { RapierPhysicsWorld } from '../../shared/sim/physics/rapier-physics-world.ts';
@@ -39,6 +39,17 @@ export class ClientSim {
   // world-space impact point — drives an immediate dust puff at the hit. Cosmetic
   // (mining damage is server-authoritative).
   onHitAsteroid: ((impact: Vector3) => void) | null;
+  // Emitted when one of OUR predicted bullets strikes a target: the authoritative
+  // damage report (client-side hit detection). NetworkClient forwards it as a Hit;
+  // the server validates + applies it. Remote tracers never fire this.
+  onHit:
+    | ((
+        targetId: number,
+        damage: number,
+        miningFactor: number | undefined,
+        impact: Vector3,
+      ) => void)
+    | null;
 
   private readonly scratch: Vector3;
   private readonly scratch2: Vector3;
@@ -53,6 +64,7 @@ export class ClientSim {
     this.onFire = null;
     this.onHitEnemy = null;
     this.onHitAsteroid = null;
+    this.onHit = null;
     this.scratch = new Vector3();
     this.scratch2 = new Vector3();
     // Ship.update spawns bullets through this; we intercept to give them
@@ -208,19 +220,33 @@ export class ClientSim {
         .applyQuaternion(bullet.transform.rotation)
         .multiplyScalar(dt);
 
-      // Bullets carry no collider; raycast the path this frame. On a hit the
-      // predicted tracer is removed (cosmetic — the server owns damage). The
-      // bullet mesh's origin is its tip (see ViewRegistry), so `position` is the
-      // leading point and nothing is ever drawn ahead of the impact.
-      const hit = this.physics.castSegment(from, step, this.ownedShip);
+      // Bullets carry no collider; raycast the path this frame, excluding the
+      // shooter's own hull. On a hit the tracer is removed. The bullet mesh's
+      // origin is its tip (see ViewRegistry), so `position` is the leading point
+      // and nothing is ever drawn ahead of the impact. Every bullet (ours + remote
+      // tracers) is cosmetic; only OUR shots report authoritative damage.
+      const hit = this.physics.castSegment(from, step, bullet.owner);
       if (hit) {
-        // Predicted hit at the impact point (from + step·toi): a ship flashes the
-        // hitmarker/sound; an asteroid throws a dust puff where the shot landed.
+        // Impact point (from + step·toi). Own shots flash the crosshair
+        // hitmarker/sound on a ship; any shot throws a dust puff on rock.
         const impact = new Vector3().copy(from).addScaledVector(step, hit.toi);
+        const owned = bullet.owner === this.ownedShip;
         if (hit.entity.type === Types.Entities.SPACESHIP) {
-          this.onHitEnemy?.(impact);
+          if (owned) {
+            this.onHitEnemy?.(impact);
+          }
         } else if (hit.entity.type === Types.Entities.ASTEROID) {
           this.onHitAsteroid?.(impact);
+        }
+        // Client-side hit detection: report the hit the server applies (damage +
+        // mining stay server-authoritative). Remote tracers never report.
+        if (owned) {
+          this.onHit?.(
+            hit.entity.id!,
+            bullet.damage ?? 0,
+            bullet.miningFactor,
+            impact,
+          );
         }
         bullet.markDestroyed();
       } else {
@@ -257,6 +283,28 @@ export class ClientSim {
       return entity;
     }
     return this.world.spawn(entity);
+  }
+
+  // A remote player's shot (relayed Shot). Spawn a cosmetic tracer owned by the
+  // firing ship: it flies + self-raycasts locally (stopping on ships/asteroids,
+  // dealing no damage) exactly like our own predicted tracers, but never reports a
+  // Hit (its owner isn't ownedShip). Uses a client-range id like our own bullets.
+  spawnRemoteTracer(
+    position: Vector3,
+    rotation: Quaternion,
+    speed: number,
+    shooterId: number,
+  ): void {
+    const bullet = new Bullet({ transform: { position, rotation }, speed });
+    bullet.owner = this.world.get(shooterId) ?? null;
+    this.world.spawnWithId(this.nextBulletId++, bullet);
+    this.predictedBullets.push(bullet);
+    // Same muzzle offset as spawnFromSim so the beam emerges from the barrel.
+    const forward = this.scratch
+      .set(0, 0, 1)
+      .applyQuaternion(bullet.transform.rotation);
+    bullet.transform.position.addScaledVector(forward, BULLET_LENGTH);
+    bullet.transform.prevPosition.copy(bullet.transform.position);
   }
 }
 
