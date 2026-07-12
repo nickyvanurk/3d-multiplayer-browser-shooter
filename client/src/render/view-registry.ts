@@ -60,6 +60,10 @@ function approach(current: number, target: number, step: number): number {
 export class ViewRegistry {
   sceneManager: SceneManager;
   scene: Scene;
+  // All entity views are parented here (not directly to the scene) so the whole
+  // world can be shown/hidden in one flip while the boot screen paints only the
+  // background. See SceneManager.worldGroup.
+  container: Group;
   world: World | null;
   views: Map<number, Object3D>;
   models: Map<number, Group>;
@@ -90,6 +94,7 @@ export class ViewRegistry {
   constructor(sceneManager: SceneManager) {
     this.sceneManager = sceneManager;
     this.scene = sceneManager.scene;
+    this.container = sceneManager.worldGroup;
     this.world = null;
     this.views = new Map(); // entity.id -> three.js Object3D
     this.models = new Map(); // entity.type -> gltf.scene
@@ -215,7 +220,7 @@ export class ViewRegistry {
       ? source.material[0]
       : source.material;
 
-    this.asteroids = new InstancedAsteroids(this.scene, geometry, material);
+    this.asteroids = new InstancedAsteroids(this.container, geometry, material);
     this.asteroids.mesh.castShadow = false;
     this.asteroids.mesh.receiveShadow = true;
   }
@@ -269,7 +274,7 @@ export class ViewRegistry {
     view.scale.setScalar(scale);
     view.visible = true;
 
-    this.scene.add(view);
+    this.container.add(view);
     this.views.set(entity.id!, view);
 
     if (
@@ -365,7 +370,7 @@ export class ViewRegistry {
     const mesh = this.views.get(entity.id!);
 
     if (mesh) {
-      this.scene.remove(mesh);
+      this.container.remove(mesh);
       this.views.delete(entity.id!);
       this.exhaustMaterials.delete(entity.id!);
     } else {

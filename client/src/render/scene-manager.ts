@@ -9,6 +9,7 @@ import {
   BufferAttribute,
   PointsMaterial,
   Points,
+  Group,
   Vector2,
   WebGLMultisampleRenderTarget,
 } from 'three';
@@ -32,6 +33,12 @@ export class SceneManager {
   composer: EffectComposer;
   needsResize: boolean;
   horizontalFov: number;
+  stars!: Points;
+  // Holds every server-driven entity view (asteroids, ships, vendor, bullets).
+  // Hidden until the local ship spawns so the boot screen shows only the
+  // client-generated background (starfield + fog) and never the pre-spawn scene
+  // framed from the camera's origin pose, which would lurch on spawn.
+  worldGroup: Group;
 
   constructor(horizontalFov = 90) {
     this.horizontalFov = horizontalFov;
@@ -60,6 +67,11 @@ export class SceneManager {
     );
 
     scene.add(camera);
+
+    const worldGroup = new Group();
+    worldGroup.visible = false;
+    scene.add(worldGroup);
+    this.worldGroup = worldGroup;
 
     scene.add(new AmbientLight(0x222222));
 
@@ -119,15 +131,18 @@ export class SceneManager {
   addStars(scene: Scene, count: number, radius: number): void {
     const positions: number[] = [];
 
+    // Stars sit on a spherical shell whose outer radius stays inside the
+    // camera's far plane (4100). A star directly ahead has view-space depth
+    // equal to its radius, so any star past the far plane would be clipped and
+    // pop in/out as the camera rotates. Keeping the whole shell within the far
+    // plane makes the field cull-free from every angle.
     for (let i = 0; i < count; i++) {
-      const r = radius;
+      const r = radius * (0.8 + 0.2 * Math.random());
       const theta = 2 * Math.PI * Math.random();
       const phi = Math.acos(2 * Math.random() - 1);
-      const x =
-        r * Math.cos(theta) * Math.sin(phi) + (-2000 + Math.random() * 4000);
-      const y =
-        r * Math.sin(theta) * Math.sin(phi) + (-2000 + Math.random() * 4000);
-      const z = r * Math.cos(phi) + (-1000 + Math.random() * 2000);
+      const x = r * Math.cos(theta) * Math.sin(phi);
+      const y = r * Math.sin(theta) * Math.sin(phi);
+      const z = r * Math.cos(phi);
       positions.push(x);
       positions.push(y);
       positions.push(z);
@@ -146,6 +161,14 @@ export class SceneManager {
     const mesh = new Points(geometry, material);
 
     scene.add(mesh);
+    this.stars = mesh;
+  }
+
+  // Reveal (or re-hide) the server-driven world. Called the moment the local
+  // ship spawns, so entities appear already framed on the ship rather than from
+  // the camera's origin pose.
+  setWorldVisible(visible: boolean): void {
+    this.worldGroup.visible = visible;
   }
 
   // Apply a new horizontal FOV live; the vertical FOV three.js uses is derived
@@ -157,6 +180,12 @@ export class SceneManager {
   }
 
   render(_alpha: number): void {
+    // Keep the starfield centred on the camera so it translates with the player
+    // but stays world-aligned. Removing translation parallax makes the stars
+    // read as infinitely distant — you can pan across them by turning, but you
+    // can never fly up to or through them.
+    this.stars.position.copy(this.camera.position);
+
     if (this.needsResize) {
       const renderer = this.renderer;
 

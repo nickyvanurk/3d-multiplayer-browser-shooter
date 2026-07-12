@@ -1,5 +1,5 @@
 import { InstancedMesh, Object3D, Matrix4, DynamicDrawUsage } from 'three';
-import type { BufferGeometry, Material, Scene } from 'three';
+import type { BufferGeometry, Material } from 'three';
 import type { Transform } from '../../../shared/sim/transform.ts';
 
 // Asteroids are static world geometry: once spawned they never move, so the
@@ -12,7 +12,7 @@ import type { Transform } from '../../../shared/sim/transform.ts';
 // (doubling) if the field ever exceeds the initial capacity.
 export class InstancedAsteroids {
   mesh: InstancedMesh;
-  private scene: Scene;
+  private scene: Object3D;
   private geometry: BufferGeometry;
   private material: Material;
   private idToIndex = new Map<number, number>();
@@ -23,7 +23,7 @@ export class InstancedAsteroids {
   private count = 0;
 
   constructor(
-    scene: Scene,
+    scene: Object3D,
     geometry: BufferGeometry,
     material: Material,
     capacity = 1024,

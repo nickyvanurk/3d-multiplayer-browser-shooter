@@ -353,6 +353,9 @@ export default class Game {
   }
 
   private hideBootOverlay(): void {
+    // Reveal the world now that the camera is framed on the just-spawned ship;
+    // it was held hidden so the boot screen showed only the starfield.
+    this.sceneManager.setWorldVisible(true);
     document.getElementById('boot-overlay')?.classList.add('hidden');
     // Reveal the HUD (crosshair, hull/cargo, music, stats) now that the ship is
     // in the sector; it was hidden by `body.booting` during the load.
@@ -625,7 +628,13 @@ export default class Game {
 
     this.viewRegistry.update(alpha, delta);
     this.sceneManager.render(alpha);
-    this.projection.render();
-    this.hud.render(this.aimAssist.aimedShipId);
+    // The HUD overlay (enemy indicators, lead reticles, aim reticle) is drawn
+    // straight onto the canvas, so unlike the DOM HUD it isn't hidden by
+    // `body.booting`. Hold it — and its projection pass — until the world is
+    // revealed on spawn, so the boot screen stays a clean starfield.
+    if (this.sceneManager.worldGroup.visible) {
+      this.projection.render();
+      this.hud.render(this.aimAssist.aimedShipId);
+    }
   }
 }
