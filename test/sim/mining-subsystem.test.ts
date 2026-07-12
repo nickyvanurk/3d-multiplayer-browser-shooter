@@ -13,6 +13,7 @@ import {
   CHUNK_OUT_MARGIN,
   chunksForRange,
 } from '../../shared/sim/mining.ts';
+import { XP_PER_ORE, xpForNextLevel } from '../../shared/sim/progression.ts';
 import { test } from './harness.ts';
 
 // Stamp the impact point (as combat would), drop the asteroid's ore, and run one
@@ -106,6 +107,53 @@ test('a chunk is armed: not collected until CHUNK_ARM_MS has elapsed', () => {
   const collected = mining.drainCollected();
   assert.equal(collected.length, 1);
   assert.equal(collected[0].id, pickup.id);
+});
+
+test('collecting a chunk awards XP for the ore', () => {
+  const world = new World();
+  const a = world.spawn(new Asteroid({ scale: 60 }));
+  const ship = world.spawn(new Ship());
+  const mining = new MiningSubsystem();
+  mining.update(world, 16);
+  mineOnce(world, mining, a, ORE_STEP); // one chunk
+  ship.transform.position.copy(mining.pickups[0].position);
+
+  mining.update(world, CHUNK_ARM_MS); // arm elapses → collected
+
+  assert.equal(ship.cargo, ORE_PER_CHUNK);
+  assert.equal(ship.xp, XP_PER_ORE);
+});
+
+test('ore XP can level the collector up', () => {
+  const world = new World();
+  const a = world.spawn(new Asteroid({ scale: 60 }));
+  const ship = world.spawn(new Ship());
+  // One ore short of level 2, so the next chunk tips it over.
+  ship.xp = xpForNextLevel(1) - XP_PER_ORE;
+  const mining = new MiningSubsystem();
+  mining.update(world, 16);
+  mineOnce(world, mining, a, ORE_STEP);
+  ship.transform.position.copy(mining.pickups[0].position);
+
+  mining.update(world, CHUNK_ARM_MS);
+
+  assert.equal(ship.level, 2);
+  assert.equal(ship.xp, 0);
+});
+
+test('a dead ship earns no ore XP (cannot collect)', () => {
+  const world = new World();
+  const a = world.spawn(new Asteroid({ scale: 60 }));
+  const ship = world.spawn(new Ship());
+  ship.alive = false;
+  const mining = new MiningSubsystem();
+  mining.update(world, 16);
+  mineOnce(world, mining, a, ORE_STEP);
+  ship.transform.position.copy(mining.pickups[0].position);
+
+  mining.update(world, CHUNK_ARM_MS);
+
+  assert.equal(ship.xp, 0);
 });
 
 test('a full hold does not collect (chunk stays for later)', () => {

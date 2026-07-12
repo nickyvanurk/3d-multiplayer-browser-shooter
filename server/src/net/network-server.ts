@@ -24,6 +24,7 @@ import {
   equipSlot,
 } from '../../../shared/sim/trade.ts';
 import { Items, MINING_LASER_FACTOR } from '../../../shared/sim/mining.ts';
+import { xpForNextLevel } from '../../../shared/sim/progression.ts';
 import { generateName } from '../../../shared/names/generate-name.ts';
 import type {
   SpawnEvent,
@@ -41,6 +42,11 @@ import type { Entity } from '../../../shared/sim/entity.ts';
 // so reject it; the slack covers the shooter's own motion + the visual muzzle
 // offset.
 const MAX_HIT_RANGE = DEFAULT_BULLET_SPEED * DEFAULT_BULLET_TIMER * 1.5;
+
+// How many top pilots the leaderboard carries, and how many 60 Hz ticks between
+// leaderboard pushes (~3 Hz).
+const LEADERBOARD_SIZE = 10;
+const LEADERBOARD_INTERVAL = 20;
 
 export class NetworkServer {
   gameServer: GameServer;
@@ -60,6 +66,11 @@ export class NetworkServer {
       secondaryItem: number;
     }
   >;
+  // Last level/xp sent to each owner, so Progress only goes out on a change.
+  lastProgress: Map<number, { level: number; xp: number }>;
+  // Ticks since the last leaderboard broadcast — it goes out every
+  // LEADERBOARD_INTERVAL ticks (~3 Hz) rather than every 60 Hz tick.
+  private leaderboardTick: number;
 
   constructor(gameServer: GameServer) {
     this.gameServer = gameServer;
@@ -70,6 +81,8 @@ export class NetworkServer {
     this.lastAlive = new Map(); // ship id -> boolean
     this.lastStats = new Map(); // connection.id -> { cargo, credits }
     this.lastLoadout = new Map(); // connection.id -> { hasMiningLaser, primaryItem, secondaryItem }
+    this.lastProgress = new Map(); // connection.id -> { level, xp }
+    this.leaderboardTick = 0;
   }
 
   addConnection(connection: Connection): void {
@@ -110,6 +123,7 @@ export class NetworkServer {
 
     this.lastStats.delete(connection.id);
     this.lastLoadout.delete(connection.id);
+    this.lastProgress.delete(connection.id);
     this.connections.delete(connection);
     this.gameServer.connectedClients--;
   }
@@ -290,6 +304,61 @@ export class NetworkServer {
     }
   }
 
+  // Server -> owner only: push the owner's level/xp when either changed (a kill
+  // banked XP, or a respawn reset it), so the HUD badge + XP bar track it. Sends
+  // xpForNext so the client fills the bar without duplicating the curve.
+  private sendProgressChanges(): void {
+    for (const connection of this.connections) {
+      const ship = this.ships.get(connection.id);
+      if (!ship) {
+        continue;
+      }
+      const last = this.lastProgress.get(connection.id);
+      if (last && last.level === ship.level && last.xp === ship.xp) {
+        continue;
+      }
+      connection.pushMessage(
+        new Messages.Progress(ship.level, ship.xp, xpForNextLevel(ship.level)),
+      );
+      this.lastProgress.set(connection.id, { level: ship.level, xp: ship.xp });
+    }
+  }
+
+  // Server -> each client (throttled): the top LEADERBOARD_SIZE pilots plus the
+  // recipient's own rank. Ranks every alive ship (players + bots) by level desc,
+  // then xp desc. Tailored per recipient (selfRank differs), so it's pushed
+  // per-connection rather than broadcast.
+  private sendLeaderboard(): void {
+    if (this.connections.size === 0) {
+      return;
+    }
+
+    const ranked: Ship[] = [];
+    for (const entity of this.world.entities.values()) {
+      if (entity.type === Types.Entities.SPACESHIP && entity.alive !== false) {
+        ranked.push(entity as Ship);
+      }
+    }
+    ranked.sort((a, b) => b.level - a.level || b.xp - a.xp);
+
+    const top = ranked.slice(0, LEADERBOARD_SIZE).map((s) => ({
+      name: s.name,
+      level: s.level,
+    }));
+
+    for (const connection of this.connections) {
+      const ship = this.ships.get(connection.id);
+      if (!ship) {
+        continue;
+      }
+      // +1 for a 1-based rank; 0 (unranked) only if the ship somehow isn't listed.
+      const selfRank = ranked.indexOf(ship) + 1;
+      connection.pushMessage(
+        new Messages.Leaderboard(top, selfRank, ship.level),
+      );
+    }
+  }
+
   spawnShip(world: World, connection: Connection, name = ''): Ship {
     logger.debug('Spawning spaceship');
 
@@ -379,6 +448,14 @@ export class NetworkServer {
   broadcast(world: World, _time: number): void {
     this.sendStatChanges();
     this.sendLoadoutChanges();
+    this.sendProgressChanges();
+
+    // Leaderboard is throttled: standings change slowly relative to the 60 Hz
+    // tick, so pushing it a few times a second is plenty and keeps the wire lean.
+    if (++this.leaderboardTick >= LEADERBOARD_INTERVAL) {
+      this.leaderboardTick = 0;
+      this.sendLeaderboard();
+    }
 
     // Stamp this snapshot with the server wall clock — the SAME clock the PING
     // handler echoes in its PONG — so the client's synced clock and the snapshot

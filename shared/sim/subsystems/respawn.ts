@@ -15,6 +15,9 @@ interface RespawnEntity extends Entity {
   // Asteroids come back in place (fresh ore, same spot) rather than teleporting.
   respawnInPlace?: boolean;
   maxOre?: number;
+  // Kill-driven progression, reset to a fresh life on respawn (ships only).
+  level?: number;
+  xp?: number;
 }
 
 // Clearance kept between a respawning asteroid's surface and the nearest ship, so
@@ -81,6 +84,10 @@ export class RespawnSubsystem {
     entity.health = 100;
     entity.velocity.set(0, 0, 0);
     entity.angularVelocity.set(0, 0, 0);
+    // XP is current-life only: a fresh life starts back at level 1 (players and
+    // bots alike). The killer already banked the reward for this death.
+    entity.level = 1;
+    entity.xp = 0;
 
     // Come back somewhere fresh (clear of asteroids, away from other ships)
     // instead of at the death spot. A self-simulated bot's body must be

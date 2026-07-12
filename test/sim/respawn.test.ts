@@ -55,6 +55,22 @@ test('a dead ship revives at a fresh spot with full health once the timer elapse
   assert.ok(ship.transform.position.length() <= SPAWN_RADIUS + 1e-6);
 });
 
+test('respawn resets progression to level 1 / 0 xp (current-life only)', () => {
+  const world = new World();
+  const ship = world.spawn(new Ship());
+  ship.alive = false;
+  ship.health = 0;
+  ship.respawnTimer = 0;
+  ship.level = 7;
+  ship.xp = 55;
+
+  new RespawnSubsystem().update(world, 16, 0);
+
+  assert.equal(ship.alive, true);
+  assert.equal(ship.level, 1);
+  assert.equal(ship.xp, 0);
+});
+
 test('a revived ship is repositioned clear of the asteroid it died in', () => {
   const world = new World();
   // A big asteroid sitting on the death spot: respawn must move the ship out.

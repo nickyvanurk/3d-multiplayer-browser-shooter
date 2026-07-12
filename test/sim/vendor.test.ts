@@ -66,7 +66,7 @@ test('Vendor takes no damage despite carrying a health value', () => {
 test('Vendor packs its thrust bits into network slot [13] for remote exhaust', () => {
   const vendor = new Vendor();
   const state = vendor.serializeNetworkState();
-  assert.equal(state.length, 15);
+  assert.equal(state.length, 16);
   assert.equal(state[13], InputBits.forward);
   // It inherits Ship's health slot; the value is inert since it never takes hits.
   assert.equal(state[14], vendor.health);

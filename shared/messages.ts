@@ -380,11 +380,12 @@ class World {
       angularVelocity: Vector3;
       input: number;
       health: number;
+      level: number;
     }[] = [];
 
-    // After the serverTime prefix: 16 numbers per entity (id + 15 network-state
-    // values; the last two are the packed input bitmask and health).
-    for (let i = 1; i < message.length; i += 16) {
+    // After the serverTime prefix: 17 numbers per entity (id + 16 network-state
+    // values; the last three are the packed input bitmask, health and level).
+    for (let i = 1; i < message.length; i += 17) {
       entities.push({
         id: message[i],
         position: new Vector3(message[i + 1], message[i + 2], message[i + 3]),
@@ -402,6 +403,7 @@ class World {
         ),
         input: message[i + 14],
         health: message[i + 15],
+        level: message[i + 16],
       });
     }
 
@@ -590,6 +592,86 @@ export class Loadout {
   }
 }
 
+// Server -> owner only: the owner's progression after a kill or a respawn reset.
+// Change-tracked like Stats — kept off the shared snapshot, only the owner's HUD
+// needs it. `xpForNext` is the XP cost of the current level so the bar can show
+// xp/xpForNext without duplicating the curve on the client.
+export class Progress {
+  level: number;
+  xp: number;
+  xpForNext: number;
+
+  constructor(level: number, xp: number, xpForNext: number) {
+    this.level = level;
+    this.xp = xp;
+    this.xpForNext = xpForNext;
+  }
+
+  static deserialize(message: number[]) {
+    return {
+      level: message[0],
+      xp: message[1],
+      xpForNext: message[2],
+    };
+  }
+
+  serialize() {
+    return [Types.Messages.PROGRESS, this.level, this.xp, this.xpForNext];
+  }
+}
+
+// One ranked pilot on the leaderboard: display name + current level.
+export interface LeaderboardEntry {
+  name: string;
+  level: number;
+}
+
+// Server -> each client (throttled): the top-ranked pilots plus the recipient's
+// own standing, so a client outside the top N still knows its number. Tailored per
+// recipient (selfRank/selfLevel differ), hence not a shared broadcast. Wire layout:
+// [selfRank, selfLevel, name0, level0, name1, level1, ...] — mixed string/number,
+// which the JSON transport carries fine (see Spawn).
+export class Leaderboard {
+  entries: LeaderboardEntry[];
+  selfRank: number;
+  selfLevel: number;
+
+  constructor(
+    entries: LeaderboardEntry[],
+    selfRank: number,
+    selfLevel: number,
+  ) {
+    this.entries = entries;
+    this.selfRank = selfRank;
+    this.selfLevel = selfLevel;
+  }
+
+  static deserialize(message: (number | string)[]) {
+    const selfRank = message[0] as number;
+    const selfLevel = message[1] as number;
+    const entries: LeaderboardEntry[] = [];
+    for (let i = 2; i + 1 < message.length; i += 2) {
+      entries.push({
+        name: message[i] as string,
+        level: message[i + 1] as number,
+      });
+    }
+    return { entries, selfRank, selfLevel };
+  }
+
+  serialize() {
+    const data: (number | string)[] = [
+      Types.Messages.LEADERBOARD,
+      this.selfRank,
+      this.selfLevel,
+    ];
+    for (const { name, level } of this.entries) {
+      data.push(name, level);
+    }
+    return data;
+  }
+}
+
 export default {
   Go,
   Hello,
@@ -609,6 +691,8 @@ export default {
   Buy,
   Equip,
   Loadout,
+  Progress,
+  Leaderboard,
   Ping,
   Pong,
 };

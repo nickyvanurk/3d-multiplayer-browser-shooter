@@ -9,6 +9,8 @@ import {
   chunksForRange,
   chunkSpawnPosition,
 } from '../mining.ts';
+import { awardXp, XP_PER_ORE } from '../progression.ts';
+import type { Progressable } from '../progression.ts';
 
 // The mining-relevant view of an entity: base Entity plus the fields the
 // subsystem duck-types on (present on Asteroid / Ship).
@@ -18,6 +20,9 @@ interface MiningEntity extends Entity {
   lastImpact?: Vector3;
   cargo?: number;
   cargoCapacity?: number;
+  // Progression (ships only): collecting ore awards XP to the picker-upper.
+  level?: number;
+  xp?: number;
 }
 
 interface MiningWorld {
@@ -128,6 +133,9 @@ export class MiningSubsystem {
         const ship = this.nearestCollector(world, pickup.position);
         if (ship) {
           ship.cargo! += ORE_PER_CHUNK;
+          // Picking ore up also grants XP (the collector is always a ship, so
+          // level/xp are present). Server-only path, like the rest of mining.
+          awardXp(ship as Progressable, XP_PER_ORE);
           this.collected.push({ id: pickup.id });
           continue; // consumed
         }

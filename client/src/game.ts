@@ -29,6 +29,7 @@ import { MusicPlayerHud } from './ui/music-player-hud.ts';
 import { VendorHud } from './ui/vendor-hud.ts';
 import { ShopHud } from './ui/shop-hud.ts';
 import { PlayerHud } from './ui/player-hud.ts';
+import { LeaderboardHud } from './ui/leaderboard-hud.ts';
 import { HitMarker } from './ui/hit-marker.ts';
 import { StatsHud } from './ui/stats-hud.ts';
 
@@ -66,6 +67,7 @@ export default class Game {
   vendorHud: VendorHud;
   shopHud: ShopHud;
   playerHud: PlayerHud;
+  leaderboardHud: LeaderboardHud;
   hitMarker: HitMarker;
   statsHud: StatsHud;
   // Smoothed frames-per-second for the stats overlay (EMA of 1000/frameDelta).
@@ -189,6 +191,17 @@ export default class Game {
       this.world,
       () => this.networkClient.localPlayerId,
     );
+
+    // Top-right standings, fed by the throttled Leaderboard message.
+    this.leaderboardHud = new LeaderboardHud();
+
+    // Progression: the owner's level/xp drive the HUD badge + XP bar. xpForNext is
+    // the cost of the current level, so the bar fraction is xp / xpForNext.
+    this.networkClient.onProgress = (p) => {
+      this.playerHud.setLevel(p.level);
+      this.playerHud.setXp(p.xpForNext > 0 ? p.xp / p.xpForNext : 0);
+    };
+    this.networkClient.onLeaderboard = (lb) => this.leaderboardHud.update(lb);
 
     this.connection.onConnection(() => {
       console.log('Connected to server');

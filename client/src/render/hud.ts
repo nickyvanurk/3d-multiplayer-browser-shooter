@@ -85,17 +85,32 @@ interface HpBar {
 // does NOT fade with the reticle.
 const LABEL_SCALE = 0.5; // canvas px -> screen px
 const LABEL_GAP = 26; // px between the reticle's right edge and the label
+const LABEL_LEVEL_FONT = "700 20px ui-monospace, 'SF Mono', Menlo, monospace";
 const LABEL_NAME_FONT = "600 34px system-ui, 'Segoe UI', sans-serif";
 const LABEL_DIST_FONT = "500 24px system-ui, 'Segoe UI', sans-serif";
+const LABEL_LEVEL_COLOR = '#ffcf5e'; // gold, matching the pilot level badge
 
-// Render a two-line label (name above, distance below), left-aligned, white with
-// a dark outline for legibility. Returns the texture and its canvas pixel size.
+// Render the aimed-at target's label, left-aligned, dark-outlined for legibility:
+// an optional gold "LVL n" tag on top (enemies only), the callsign, then the
+// distance. Returns the texture, its canvas pixel size, and the vertical centre of
+// the name line — the caller anchors THAT on the target so the callsign sits on the
+// square with the level tag just above it, rather than centring the whole block.
 function makeLabelTexture(
+  level: number | undefined,
   name: string,
   distance: string,
-): { texture: CanvasTexture; width: number; height: number } {
+): {
+  texture: CanvasTexture;
+  width: number;
+  height: number;
+  nameCenterY: number;
+} {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d')!;
+
+  const levelText = level !== undefined ? `LVL ${level}` : '';
+  ctx.font = LABEL_LEVEL_FONT;
+  const levelW = levelText ? ctx.measureText(levelText).width : 0;
   ctx.font = LABEL_NAME_FONT;
   const nameW = ctx.measureText(name).width;
   ctx.font = LABEL_DIST_FONT;
@@ -104,10 +119,12 @@ function makeLabelTexture(
   const padX = 6;
   const padY = 6;
   const lineGap = 4;
+  const levelH = levelText ? 22 : 0;
+  const levelGap = levelText ? 3 : 0;
   const nameH = 40;
   const distH = 30;
-  const width = Math.ceil(Math.max(nameW, distW)) + padX * 2;
-  const height = nameH + lineGap + distH + padY * 2;
+  const width = Math.ceil(Math.max(levelW, nameW, distW)) + padX * 2;
+  const height = levelH + levelGap + nameH + lineGap + distH + padY * 2;
   canvas.width = width;
   canvas.height = height;
 
@@ -116,18 +133,33 @@ function makeLabelTexture(
   ctx.lineWidth = 4;
   ctx.strokeStyle = 'rgba(0,0,0,0.85)';
 
+  let y = padY;
+  if (levelText) {
+    ctx.font = LABEL_LEVEL_FONT;
+    ctx.strokeText(levelText, padX, y);
+    ctx.fillStyle = LABEL_LEVEL_COLOR;
+    ctx.fillText(levelText, padX, y);
+    y += levelH + levelGap;
+  }
+
+  const nameY = y;
   ctx.font = LABEL_NAME_FONT;
-  ctx.strokeText(name, padX, padY);
+  ctx.strokeText(name, padX, y);
   ctx.fillStyle = '#ffffff';
-  ctx.fillText(name, padX, padY);
+  ctx.fillText(name, padX, y);
+  y += nameH + lineGap;
 
-  const distY = padY + nameH + lineGap;
   ctx.font = LABEL_DIST_FONT;
-  ctx.strokeText(distance, padX, distY);
+  ctx.strokeText(distance, padX, y);
   ctx.fillStyle = '#c9d2e3'; // slightly dimmer than the name
-  ctx.fillText(distance, padX, distY);
+  ctx.fillText(distance, padX, y);
 
-  return { texture: new CanvasTexture(canvas), width, height };
+  return {
+    texture: new CanvasTexture(canvas),
+    width,
+    height,
+    nameCenterY: nameY + nameH / 2,
+  };
 }
 
 // Draw the hollow "shoot here" ring once into a canvas-backed texture, so the
@@ -341,7 +373,11 @@ export class HudService {
           );
           const distanceLabel = `${(meters / 1000).toFixed(1)}km`;
           const rightX = transform2d.position.x + diameter / 2 + LABEL_GAP;
+          // Enemies (hostile) show their level above the name; the neutral vendor
+          // does not.
+          const level = faction === 'hostile' ? ship.level : undefined;
           this.updateNamePlate(
+            level,
             shipName,
             distanceLabel,
             rightX,
@@ -586,10 +622,13 @@ export class HudService {
     this.hpBars.delete(id);
   }
 
-  // Show the target label (creating on first use) left-anchored at `leftX`,
-  // vertically centered on `centerY`. The texture is regenerated only when the
-  // displayed text (name + distance) changes.
+  // Show the target label (creating on first use) left-anchored at `leftX`, with
+  // the NAME line centered on `centerY` (the target square). The vertical anchor is
+  // set from the name line's position so the level tag overhangs above and the
+  // distance below without shifting the callsign off the square. The texture is
+  // regenerated only when the displayed text (level + name + distance) changes.
   updateNamePlate(
+    level: number | undefined,
     name: string,
     distance: string,
     leftX: number,
@@ -599,19 +638,25 @@ export class HudService {
       this.namePlate = new Sprite(
         new SpriteMaterial({ transparent: true, depthTest: false }),
       );
-      this.namePlate.center.set(0, 0.5); // anchor at left-middle → grows right
       this.sceneOrtho.add(this.namePlate);
     }
 
-    const text = `${name}|${distance}`;
+    const text = `${level ?? ''}|${name}|${distance}`;
     if (text !== this.namePlateText) {
       this.namePlateText = text;
-      const { texture, width, height } = makeLabelTexture(name, distance);
+      const { texture, width, height, nameCenterY } = makeLabelTexture(
+        level,
+        name,
+        distance,
+      );
       const material = this.namePlate.material as SpriteMaterial;
       material.map?.dispose();
       material.map = texture;
       material.needsUpdate = true;
       this.namePlate.scale.set(width * LABEL_SCALE, height * LABEL_SCALE, 1);
+      // Anchor left edge (x=0), name-line center vertically. Sprite center y is
+      // bottom-up while the canvas is top-down, hence 1 - fraction.
+      this.namePlate.center.set(0, 1 - nameCenterY / height);
     }
 
     this.namePlate.visible = true;

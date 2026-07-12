@@ -146,3 +146,41 @@ test('World carries a serverTime prefix before the entity run', () => {
   assert.equal(decoded.entities.length, 1);
   assert.equal(decoded.entities[0].id, 42);
 });
+
+test('Progress round-trips level, xp and xpForNext', () => {
+  const wire = new Messages.Progress(3, 25, 90).serialize();
+  assert.equal(wire[0], Types.Messages.PROGRESS);
+
+  const out = Messages.Progress.deserialize(wire.slice(1) as number[]);
+  assert.equal(out.level, 3);
+  assert.equal(out.xp, 25);
+  assert.equal(out.xpForNext, 90);
+});
+
+test('Leaderboard round-trips entries plus the recipient own standing', () => {
+  const entries = [
+    { name: 'Ace', level: 9 },
+    { name: 'Red Baron', level: 5 },
+  ];
+  const wire = new Messages.Leaderboard(entries, 14, 2).serialize();
+  assert.equal(wire[0], Types.Messages.LEADERBOARD);
+
+  const out = Messages.Leaderboard.deserialize(
+    wire.slice(1) as (number | string)[],
+  );
+  assert.equal(out.selfRank, 14);
+  assert.equal(out.selfLevel, 2);
+  assert.deepEqual(out.entries, entries);
+});
+
+test('Leaderboard with no entries still carries the self standing', () => {
+  const out = Messages.Leaderboard.deserialize(
+    new Messages.Leaderboard([], 1, 4).serialize().slice(1) as (
+      | number
+      | string
+    )[],
+  );
+  assert.equal(out.selfRank, 1);
+  assert.equal(out.selfLevel, 4);
+  assert.deepEqual(out.entries, []);
+});

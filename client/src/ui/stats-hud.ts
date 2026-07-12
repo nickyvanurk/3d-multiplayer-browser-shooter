@@ -1,7 +1,8 @@
-// A small always-on readout in the top-right corner: frames per second and the
-// network round-trip time. Pure DOM overlay (no WebGL), updated each frame from
-// the game loop. Single muted colour, slightly transparent so it stays
-// unobtrusive over the scene.
+// A small always-on readout at the top centre: frames per second and the network
+// round-trip time. Pure DOM overlay (no WebGL), updated each frame from the game
+// loop. Single muted colour, slightly transparent so it stays unobtrusive over the
+// scene. Top-centre keeps it clear of the pilot HUD (top-left) and leaderboard
+// (top-right).
 export class StatsHud {
   private readonly el: HTMLDivElement;
   private readonly fpsEl: HTMLSpanElement;
@@ -10,8 +11,8 @@ export class StatsHud {
   constructor() {
     this.el = document.createElement('div');
     this.el.style.cssText =
-      'position:fixed;top:8px;right:8px;z-index:30;pointer-events:none;' +
-      'text-align:right;opacity:.55;' +
+      'position:fixed;top:8px;left:50%;transform:translateX(-50%);' +
+      'z-index:30;pointer-events:none;text-align:center;opacity:.55;' +
       'font:12px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;' +
       'color:#cfe8ff;text-shadow:0 1px 2px #000;letter-spacing:.3px';
 

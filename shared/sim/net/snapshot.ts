@@ -1,7 +1,8 @@
 import type { World } from '../world.ts';
 
-// One changed entity emitted by the differ: its id plus its 7-number network
-// state. Mirrors the Messages.World wire layout.
+// One changed entity emitted by the differ: its id plus its network state (16
+// numbers: transform + velocities, then the packed input, health and level).
+// Mirrors the Messages.World wire layout. The differ itself is length-agnostic.
 interface SnapshotEntry {
   id: number;
   state: number[];

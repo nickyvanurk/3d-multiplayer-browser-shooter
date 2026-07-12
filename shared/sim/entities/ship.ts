@@ -147,7 +147,8 @@ export class Ship extends Entity {
   secondaryItem: number;
   // Kill-driven progression (server-authoritative; see shared/sim/progression.ts).
   // Current-life only: reset to level 1 / 0 xp on respawn, for players and bots
-  // alike. Replicated to the owner via Progress, never on the world snapshot.
+  // alike. `level` rides the world snapshot (slot [15]) so any client can show an
+  // enemy's level on its nameplate; `xp` stays owner-only via the Progress message.
   // `lastHitBy` is the ship whose shot last damaged this one — the killer credited
   // when it dies, stamped by combat and read on death.
   level: number;
@@ -192,11 +193,13 @@ export class Ship extends Entity {
   }
 
   // Fill the trailing slots the base leaves at 0: the packed input (so remote
-  // clients can light this ship's engine) and current health (for enemy HP bars).
+  // clients can light this ship's engine), current health (for enemy HP bars) and
+  // current level (for the aimed-at enemy's nameplate).
   serializeNetworkState(): number[] {
     const state = super.serializeNetworkState();
     state[13] = this.inputBits;
     state[14] = this.health;
+    state[15] = this.level;
     return state;
   }
 

@@ -47,6 +47,14 @@ export type IncomingMessage =
       data: ReturnType<typeof Messages.Loadout.deserialize>;
     }
   | {
+      type: typeof Types.Messages.PROGRESS;
+      data: ReturnType<typeof Messages.Progress.deserialize>;
+    }
+  | {
+      type: typeof Types.Messages.LEADERBOARD;
+      data: ReturnType<typeof Messages.Leaderboard.deserialize>;
+    }
+  | {
       type: typeof Types.Messages.PONG;
       data: ReturnType<typeof Messages.Pong.deserialize> & {
         receiveTime: number;
@@ -64,6 +72,8 @@ type MessageData =
   | ReturnType<typeof Messages.Collect.deserialize>
   | ReturnType<typeof Messages.Stats.deserialize>
   | ReturnType<typeof Messages.Loadout.deserialize>
+  | ReturnType<typeof Messages.Progress.deserialize>
+  | ReturnType<typeof Messages.Leaderboard.deserialize>
   | (ReturnType<typeof Messages.Pong.deserialize> & { receiveTime: number });
 
 export default class Connection {
@@ -132,6 +142,12 @@ export default class Connection {
           break;
         case Types.Messages.LOADOUT:
           data = Messages.Loadout.deserialize(data as number[]);
+          break;
+        case Types.Messages.PROGRESS:
+          data = Messages.Progress.deserialize(data as number[]);
+          break;
+        case Types.Messages.LEADERBOARD:
+          data = Messages.Leaderboard.deserialize(data as (number | string)[]);
           break;
         case Types.Messages.PONG: {
           const pong = Messages.Pong.deserialize(data as number[]);

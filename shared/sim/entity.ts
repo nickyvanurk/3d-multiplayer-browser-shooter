@@ -61,9 +61,9 @@ export class Entity {
 
   // Network state = the fields that replicate to clients: position + rotation
   // plus linear + angular velocity, so clients can coast remote entities in
-  // their own physics sim between snapshots. The last two slots are a packed
-  // input bitmask and current health, both meaningful only for ships (Ship
-  // overrides); 0 for everything else. 15 numbers after the id.
+  // their own physics sim between snapshots. The last three slots are a packed
+  // input bitmask, current health and current level, all meaningful only for
+  // ships (Ship overrides); 0 for everything else. 16 numbers after the id.
   serializeNetworkState(): number[] {
     const { position: p, rotation: r } = this.transform;
     const v = this.velocity;
@@ -82,6 +82,7 @@ export class Entity {
       a.x,
       a.y,
       a.z,
+      0,
       0,
       0,
     ];

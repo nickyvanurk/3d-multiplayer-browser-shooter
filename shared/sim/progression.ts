@@ -24,12 +24,21 @@ export function killXp(victimLevel: number): number {
   return 10 * victimLevel;
 }
 
-// Award a kill's XP to the killer and consume it into as many levels as it buys,
-// carrying the remainder. A single large reward can grant several levels at once.
-export function awardKill(killer: Progressable, victimLevel: number): void {
-  killer.xp += killXp(victimLevel);
-  while (killer.xp >= xpForNextLevel(killer.level)) {
-    killer.xp -= xpForNextLevel(killer.level);
-    killer.level += 1;
+// XP granted per ore chunk picked up (ORE_PER_CHUNK = 1 cargo). A flat reward, so
+// mining is a steady early-game XP path that naturally fades once levels cost L².
+export const XP_PER_ORE = 1;
+
+// Add XP to a pilot and consume it into as many levels as it buys, carrying the
+// remainder. A single large reward can grant several levels at once.
+export function awardXp(target: Progressable, amount: number): void {
+  target.xp += amount;
+  while (target.xp >= xpForNextLevel(target.level)) {
+    target.xp -= xpForNextLevel(target.level);
+    target.level += 1;
   }
+}
+
+// Award a kill's XP to the killer (scaled by the victim's level).
+export function awardKill(killer: Progressable, victimLevel: number): void {
+  awardXp(killer, killXp(victimLevel));
 }

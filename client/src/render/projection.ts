@@ -156,11 +156,16 @@ export class ProjectionService {
     let base = this.modelRadii.get(entity.type);
     if (base === undefined) {
       const model = this.viewRegistry.models.get(entity.type);
-      base = model
-        ? this.scratchBox
-            .setFromObject(model)
-            .getBoundingSphere(this.scratchSphere).radius
-        : 0;
+      // The vendor model is deprioritized and streams in late. Do NOT cache a 0
+      // for a not-yet-loaded model — that would stick permanently and leave the
+      // reticle on its fixed fallback size forever. Return 0 (fallback) for now
+      // and retry next frame; only cache the real radius once the mesh exists.
+      if (!model) {
+        return 0;
+      }
+      base = this.scratchBox
+        .setFromObject(model)
+        .getBoundingSphere(this.scratchSphere).radius;
       this.modelRadii.set(entity.type, base);
     }
     return base * entity.transform.scale;

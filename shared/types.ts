@@ -33,6 +33,10 @@ export const Messages = {
   // (except bots').
   HIT: 19,
   SHOT: 20,
+  // Progression. PROGRESS (server->owner): the owner's level/xp changed. LEADERBOARD
+  // (server->each client): the top ranks + the recipient's own rank, throttled.
+  PROGRESS: 21,
+  LEADERBOARD: 22,
 } as const;
 
 export const Entities = {

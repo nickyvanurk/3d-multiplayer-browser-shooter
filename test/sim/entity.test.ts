@@ -11,12 +11,14 @@ test('Entity serialize round-trips transform', () => {
   assert.deepEqual(clone.transform.position.toArray(), [1, 2, 3]);
 });
 
-test('Ship replicates current health in network slot [14]', () => {
+test('Ship replicates health and level in network slots [14] and [15]', () => {
   const ship = new Ship({ id: 7 });
   ship.health = 63;
+  ship.level = 4;
   const state = ship.serializeNetworkState();
-  assert.equal(state.length, 15);
+  assert.equal(state.length, 16);
   assert.equal(state[14], 63);
+  assert.equal(state[15], 4);
 });
 
 test('Entity.markDestroyed sets flag', () => {

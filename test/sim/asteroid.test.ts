@@ -24,7 +24,7 @@ test('asteroid replicates its ore-remaining in health network slot [14]', () => 
   const asteroid = new Asteroid({ scale: 60 });
   asteroid.health = 123;
   const state = asteroid.serializeNetworkState();
-  assert.equal(state.length, 15);
+  assert.equal(state.length, 16);
   assert.equal(state[14], 123);
 });
 

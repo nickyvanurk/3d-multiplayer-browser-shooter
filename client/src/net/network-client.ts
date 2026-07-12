@@ -35,6 +35,14 @@ export type StatsData = ReturnType<typeof Messages.Stats.deserialize>;
 // Owner-only item ownership + equipped weapons, as carried by the Loadout message.
 export type LoadoutData = ReturnType<typeof Messages.Loadout.deserialize>;
 
+// Owner-only level/xp, as carried by the Progress message.
+export type ProgressData = ReturnType<typeof Messages.Progress.deserialize>;
+
+// The top ranks + the recipient's own standing, as carried by the Leaderboard.
+export type LeaderboardData = ReturnType<
+  typeof Messages.Leaderboard.deserialize
+>;
+
 // The subset of the Rapier RigidBody used to correct/read a simulated remote
 // entity (entity.body is stored as the opaque PhysicsBody).
 type Vec = { x: number; y: number; z: number };
@@ -82,6 +90,10 @@ export class NetworkClient {
         shooterId: number,
       ) => void)
     | null;
+  // Owner-only progression update (Progress), for the HUD badge + XP bar.
+  onProgress: ((progress: ProgressData) => void) | null;
+  // Leaderboard update (Leaderboard), throttled, for the top-right panel.
+  onLeaderboard: ((leaderboard: LeaderboardData) => void) | null;
   timeSync: TimeSyncManager;
   // Smoothed round-trip time (ms) from the last PONGs, for the stats overlay.
   pingMs = 0;
@@ -110,6 +122,8 @@ export class NetworkClient {
     this.onOreDrop = null;
     this.onCollect = null;
     this.onShot = null;
+    this.onProgress = null;
+    this.onLeaderboard = null;
     this.timeSync = new TimeSyncManager();
     this._cameraDummy = new Object3D();
   }
@@ -195,6 +209,23 @@ export class NetworkClient {
           this.onLoadout?.(loadout);
           break;
         }
+        case Types.Messages.PROGRESS: {
+          const progress = message!.data;
+          // Mirror onto the owned ship so anything reading it stays in sync, then
+          // notify the HUD (badge + XP bar).
+          const ship = this.world.get(this.localPlayerId ?? -1) as
+            | Ship
+            | undefined;
+          if (ship) {
+            ship.level = progress.level;
+            ship.xp = progress.xp;
+          }
+          this.onProgress?.(progress);
+          break;
+        }
+        case Types.Messages.LEADERBOARD:
+          this.onLeaderboard?.(message!.data);
+          break;
         case Types.Messages.OREDROP:
           this.onOreDrop?.(message!.data.id, message!.data.position);
           break;
@@ -286,6 +317,7 @@ export class NetworkClient {
       angularVelocity,
       input,
       health,
+      level,
     } of entities) {
       // The local ship is client-authoritative for MOVEMENT, so the server's
       // echo of its transform/velocity is ignored below. Health is the
@@ -311,6 +343,13 @@ export class NetworkClient {
       const healthCarrier = entity as { health?: number };
       if (typeof healthCarrier.health === 'number') {
         healthCarrier.health = health;
+      }
+
+      // Level is likewise server-owned; mirror it so the aimed-at enemy's
+      // nameplate can show it. (The local ship gets its own level via Progress
+      // and is handled above.)
+      if (entity.type === Types.Entities.SPACESHIP) {
+        (entity as Ship).level = level;
       }
 
       // Decode the replicated thrust input for remote ships and the vendor NPC

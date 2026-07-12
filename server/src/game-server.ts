@@ -12,6 +12,8 @@ import { BotManager } from './ai/bot-manager.ts';
 import { RespawnSubsystem } from '../../shared/sim/subsystems/respawn.ts';
 import { CombatSubsystem } from '../../shared/sim/subsystems/combat.ts';
 import { MiningSubsystem } from '../../shared/sim/subsystems/mining.ts';
+import { awardKill } from '../../shared/sim/progression.ts';
+import type { Ship } from '../../shared/sim/entities/ship.ts';
 import { Asteroid } from '../../shared/sim/entities/asteroid.ts';
 import { Vendor } from '../../shared/sim/entities/vendor.ts';
 
@@ -33,6 +35,7 @@ export class GameServer {
   network: NetworkServer;
   bots: BotManager;
   mining: MiningSubsystem;
+  combat: CombatSubsystem;
   fixedUpdate!: (delta: number) => number;
 
   constructor(
@@ -75,9 +78,10 @@ export class GameServer {
     // begins its countdown next tick; mining runs after combat so it sees the
     // asteroid ore (health) that combat depleted this tick.
     this.mining = new MiningSubsystem();
+    this.combat = new CombatSubsystem();
     this.world
       .addSubsystem(new RespawnSubsystem())
-      .addSubsystem(new CombatSubsystem())
+      .addSubsystem(this.combat)
       .addSubsystem(this.mining);
 
     logger.info(`${this.id} running`);
@@ -146,11 +150,16 @@ export class GameServer {
       s.update(this.world, dt, time);
     }
 
-    // 3a. Shrink mined asteroids' colliders to match their ore level, so the
+    // 3a. Award XP for ships killed this tick, before reap/respawn resets the
+    //     victims. The killer's Progress + everyone's Leaderboard ride the
+    //     broadcast below (change-tracked / throttled).
+    this.awardKills();
+
+    // 3b. Shrink mined asteroids' colliders to match their ore level, so the
     //     next tick's shots and ship bumps meet the rock at the size clients see.
     this.physics.syncAsteroidScales?.(this.world);
 
-    // 3b. Broadcast chunks the mining subsystem spawned (at their impact points)
+    // 3c. Broadcast chunks the mining subsystem spawned (at their impact points)
     //     and collected this tick, so every client mirrors the ore field.
     this.network.broadcastSpawned(this.mining.drainSpawned());
     this.network.broadcastCollected(this.mining.drainCollected());
@@ -160,6 +169,22 @@ export class GameServer {
 
     // 5. Broadcast alive-transitions + snapshot diff to every connection.
     this.network.broadcast(this.world, time);
+  }
+
+  // Drain the ships killed this tick and bank each kill's XP on the killer. The
+  // victim's level was captured at death (it resets to 1 next tick on respawn).
+  // Unattributed deaths (no killer) and any stale self-kills award nobody.
+  awardKills(): void {
+    for (const kill of this.combat.drainKills()) {
+      if (kill.killerId === null || kill.killerId === kill.victimId) {
+        continue;
+      }
+      const killer = this.world.get(kill.killerId) as Ship | undefined;
+      if (!killer || killer.alive === false) {
+        continue;
+      }
+      awardKill(killer, kill.victimLevel);
+    }
   }
 
   handlePlayerConnect(connection: Connection): void {
