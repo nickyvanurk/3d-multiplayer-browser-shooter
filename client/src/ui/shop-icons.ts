@@ -4,6 +4,7 @@
 // the mining laser its signature red beam.
 const GOLD = '#e8b04b';
 const RED = '#ff3b3b';
+const CYAN = '#5ad1ff';
 
 const PATHS: Record<string, (s: number) => string> = {
   // Twin cannon barrels on a mount.
@@ -61,6 +62,22 @@ const PATHS: Record<string, (s: number) => string> = {
          stroke="currentColor" stroke-width="2" stroke-linecap="round">
       <line x1="6" y1="6" x2="18" y2="18"/>
       <line x1="18" y1="6" x2="6" y2="18"/>
+    </svg>`,
+
+  // Mouse with the left button lit (LMB — primary slot). Adapted from Kenney's
+  // CC0 input-prompts pack; the body inherits currentColor, the active button
+  // takes the self-cyan so it reads as "your bind".
+  'mouse-left': (s) => `
+    <svg viewBox="0 0 64 64" width="${s}" height="${s}">
+      <path stroke="none" fill="currentColor" d="M34 10 L44 10 Q45.75 10 46.9 10.6 49 11.75 49 15 L49 25 38 25 38 19 Q38 16.5 36.25 14.75 35.25 13.75 34 13.35 L34 10 M29.9 16.9 Q30.75 16 32 16 33.25 16 34.15 16.9 35 17.75 35 19 L35 27 34.85 28 34.15 29.15 Q33.25 30 32 30 30.75 30 29.9 29.15 29.4 28.65 29.2 28 L29 27 29 19 Q29 17.75 29.9 16.9 M15 28 L26.1 28 Q26.35 29.85 27.75 31.25 29.5 33 32 33 34.5 33 36.25 31.25 37.65 29.85 37.95 28 L49 28 49 37.5 Q48.8 44.25 44 49 39.25 53.8 32.5 54 L31.5 54 Q24.75 53.8 19.95 49 15.2 44.25 15 37.5 L15 28"/>
+      <path stroke="none" fill="${CYAN}" d="M20 10 L30 10 30 13.35 Q28.75 13.75 27.75 14.75 26 16.5 26 19 L26 25 15 25 15 15 Q15 11.75 17.15 10.6 18.25 10 20 10"/>
+    </svg>`,
+
+  // Mouse with the right button lit (RMB — secondary slot).
+  'mouse-right': (s) => `
+    <svg viewBox="0 0 64 64" width="${s}" height="${s}">
+      <path stroke="none" fill="${CYAN}" d="M34 10 L44 10 Q45.75 10 46.9 10.6 49 11.75 49 15 L49 25 38 25 38 19 Q38 16.5 36.25 14.75 35.25 13.75 34 13.35 L34 10"/>
+      <path stroke="none" fill="currentColor" d="M29.9 16.9 Q30.75 16 32 16 33.25 16 34.15 16.9 35 17.75 35 19 L35 27 34.85 28 34.15 29.15 Q33.25 30 32 30 30.75 30 29.9 29.15 29.4 28.65 29.2 28 L29 27 29 19 Q29 17.75 29.9 16.9 M15 28 L26.1 28 Q26.35 29.85 27.75 31.25 29.5 33 32 33 34.5 33 36.25 31.25 37.65 29.85 37.95 28 L49 28 49 37.5 Q48.8 44.25 44 49 39.25 53.8 32.5 54 L31.5 54 Q24.75 53.8 19.95 49 15.2 44.25 15 37.5 L15 28 M20 10 L30 10 30 13.35 Q28.75 13.75 27.75 14.75 26 16.5 26 19 L26 25 15 25 15 15 Q15 11.75 17.15 10.6 18.25 10 20 10"/>
     </svg>`,
 };
 

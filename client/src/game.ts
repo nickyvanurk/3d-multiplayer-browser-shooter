@@ -29,6 +29,7 @@ import { MusicPlayerHud } from './ui/music-player-hud.ts';
 import { VendorHud } from './ui/vendor-hud.ts';
 import { ShopHud } from './ui/shop-hud.ts';
 import { PlayerHud } from './ui/player-hud.ts';
+import { WeaponSlotsHud } from './ui/weapon-slots-hud.ts';
 import { LeaderboardHud } from './ui/leaderboard-hud.ts';
 import { HitMarker } from './ui/hit-marker.ts';
 import { StatsHud } from './ui/stats-hud.ts';
@@ -67,6 +68,7 @@ export default class Game {
   vendorHud: VendorHud;
   shopHud: ShopHud;
   playerHud: PlayerHud;
+  weaponSlotsHud: WeaponSlotsHud;
   leaderboardHud: LeaderboardHud;
   hitMarker: HitMarker;
   statsHud: StatsHud;
@@ -190,6 +192,13 @@ export default class Game {
     // Bottom-centre pilot status (hull hero + cargo/credits). Reads the owned
     // ship directly each frame, so it needs no dedicated feed.
     this.playerHud = new PlayerHud(
+      this.world,
+      () => this.networkClient.localPlayerId,
+    );
+
+    // Bottom-left weapon rack: the primary/secondary slots and their live firing
+    // state, read off the owned ship's loadout each frame.
+    this.weaponSlotsHud = new WeaponSlotsHud(
       this.world,
       () => this.networkClient.localPlayerId,
     );
@@ -613,6 +622,7 @@ export default class Game {
     this.vendorHud.update();
     this.shopHud.update();
     this.playerHud.update();
+    this.weaponSlotsHud.update();
     this.range.update();
 
     // Smooth FPS off the frame delta and refresh the corner readout.
