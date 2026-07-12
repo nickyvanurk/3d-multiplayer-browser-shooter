@@ -108,7 +108,7 @@ export class NetworkClient {
     world: ClientWorld,
     camera: Camera,
     settings: SettingsStore,
-    name = 'Nicky',
+    name: string,
   ) {
     this.connection = connection;
     this.world = world;

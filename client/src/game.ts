@@ -23,6 +23,7 @@ import { SoundService } from './audio/sound-service.ts';
 import { DebugPanel } from './debug/debug-panel.ts';
 import { SettingsStore } from './settings.ts';
 import { consumeFirstVisit } from './first-visit.ts';
+import { getPlayerName } from './player-name.ts';
 import { SettingsMenu } from './ui/settings-menu.ts';
 import { MusicPlayer, defaultPlaylist } from './audio/music-player.ts';
 import { MusicPlayerHud } from './ui/music-player-hud.ts';
@@ -165,6 +166,7 @@ export default class Game {
       this.world,
       this.sceneManager.camera,
       this.settings,
+      getPlayerName(),
     );
 
     // Vendor docking prompt (proximity only). The owner-only Stats/Loadout streams

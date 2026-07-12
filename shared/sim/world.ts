@@ -58,7 +58,13 @@ export class World {
 
   // Place an entity at a caller-supplied id (the client mirrors server-owned
   // ids). The server uses dense-id spawn(); the client owns no id allocation.
+  // The server recycles a departed ship's id onto the next spawn (a bot), so an
+  // id can arrive already occupied by the old entity; despawn it first for a
+  // clean replace, otherwise the stale entity (its name) and its view would leak.
   spawnWithId<T extends Entity>(id: number, entity: T): T {
+    if (this.entities.has(id)) {
+      this.despawn(id);
+    }
     entity.id = id;
     this._slots[id] = entity;
     this.entities.set(id, entity);
