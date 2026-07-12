@@ -175,7 +175,7 @@ function shuffle(arr: number[]): number[] {
   return arr;
 }
 
-const DEFAULT_VOLUME = 0.2;
+const DEFAULT_VOLUME = 0.1;
 
 function loadVolume(): number {
   const raw = localStorage.getItem(VOLUME_KEY);

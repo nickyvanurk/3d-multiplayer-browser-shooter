@@ -75,7 +75,7 @@ export default class Game {
   // Smoothed frames-per-second for the stats overlay (EMA of 1000/frameDelta).
   fps = 0;
   // Hitmarker cue level/pitch, tunable live from the F3 panel.
-  hitVolume = 0.45;
+  hitVolume = 0.05;
   hitPitch = 2;
   // Ship-destruction explosion cue level/pitch, tunable live from the F3 panel.
   explosionVolume = 1.8;
