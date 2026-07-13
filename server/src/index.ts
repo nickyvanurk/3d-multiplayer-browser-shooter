@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 
 import logger from './utils/logger.ts';
-import Server from './server.ts';
+import Server, { provideWorlds } from './server.ts';
 import { GameServer } from './game-server.ts';
 
 dotenv.config();
@@ -37,6 +37,9 @@ function main() {
     world.init();
     worlds.push(world);
   }
+
+  // Expose the lobby/player census at GET /api/players.
+  provideWorlds(() => worlds);
 }
 
 main();

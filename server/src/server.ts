@@ -6,9 +6,27 @@ import type { IncomingMessage } from 'node:http';
 
 import Connection from './connection.ts';
 import type { ClientSocket } from './connection.ts';
+import { computePlayers, type WorldLike } from './players-api.ts';
 
 const app = express();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// The live worlds, wired up by index.ts once they exist. Held behind a getter so
+// this module can register /api/players at load time (before the production
+// catch-all below) without importing the game server.
+let getWorlds: () => WorldLike[] = () => [];
+
+export function provideWorlds(worlds: () => WorldLike[]): void {
+  getWorlds = worlds;
+}
+
+// A public census of open lobbies and the real players in each. Registered before
+// the production catch-all so it isn't swallowed by the SPA fallback. CORS-open so
+// the dev client (served from Vite on another origin) can poll it too.
+app.get('/api/players', (_req, res) => {
+  res.set('access-control-allow-origin', '*');
+  res.json(computePlayers(getWorlds()));
+});
 
 // Server-hosted assets (the 610 MB music playlist) served in both dev and prod,
 // so they never bloat the client build uploaded to CrazyGames. The client

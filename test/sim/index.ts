@@ -38,5 +38,6 @@ import './apply-extrapolation.test.ts';
 import './rebind.test.ts';
 import './quantize.test.ts';
 import './bitpack.test.ts';
+import './players-api.test.ts';
 import { run } from './harness.ts';
 run();
