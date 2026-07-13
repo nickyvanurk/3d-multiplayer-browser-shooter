@@ -388,11 +388,6 @@ export class NetworkServer {
     // name), so it must be assigned first.
     ship.name = name;
 
-    // TESTING: hand every player the mining laser, owned and mounted in the
-    // secondary (RMB) slot, so the beam is available without a vendor visit.
-    ship.hasMiningLaser = true;
-    ship.secondaryItem = Items.MINING_LASER;
-
     // The server ship is a DYNAMIC body: its pose is snapped to the owning
     // client's State (client-authoritative movement), but between States it
     // coasts and physically collides with other ships so ship-vs-ship bumps
