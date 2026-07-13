@@ -19,7 +19,7 @@ const NOMINAL_STEP_S = 1 / 60;
 // coefficient means very different things (at d=0.99 Ammo keeps 93%/step, Rapier
 // 98%), which makes rotation feel far too strong. Convert Ammo's coefficient to
 // the Rapier one that yields the same per-step retention.
-function ammoDampingToRapier(d: number): number {
+export function ammoDampingToRapier(d: number): number {
   return ((1 - d) ** -NOMINAL_STEP_S - 1) / NOMINAL_STEP_S;
 }
 
@@ -457,6 +457,41 @@ export class RapierPhysicsWorld implements PhysicsWorld {
     entity.transform.rotation.copy(rotation);
     entity.velocity.copy(velocity);
     entity.angularVelocity.copy(angularVelocity);
+  }
+
+  // Configure a dead-reckoned REMOTE ship's body damping so it coasts between the
+  // (now ~20 Hz, interest-managed) snapshots without its velocity diverging from
+  // the authoritative value — divergence sawtooths the aim-lead, which reads
+  // body.linvel() directly, even though the smoothed ship position barely moves.
+  //
+  // - Linear: a thrusting owner sustains its speed with a drive force this client
+  //   does NOT reproduce (remote ships apply empty input), so keeping damping here
+  //   would bleed off speed the owner is holding — disable it while thrusting. An
+  //   idle owner genuinely coasts under damping, so keep it then and the coast
+  //   matches the owner's own deceleration.
+  // - Angular: yaw/pitch are set straight from the mouse each tick on the owner
+  //   (never decayed, and not even replicated in the input bits), so any
+  //   client-side angular damping is spurious — always disable it.
+  setRemoteShipCoast(entity: Entity, thrusting: boolean): void {
+    const body = entity.body as unknown as RAPIER.RigidBody | null;
+    if (!body || typeof body.setLinearDamping !== 'function') {
+      return;
+    }
+    body.setLinearDamping(thrusting ? 0 : ammoDampingToRapier(entity.damping));
+    body.setAngularDamping(0);
+  }
+
+  // Restore a body's full flight-model damping (linear + angular). The owned ship
+  // is force-driven and its handling depends on this; call it when a client claims
+  // ownership, in case the ship was briefly corrected as a remote body (which zeros
+  // its damping) before the WELCOME that identifies it as ours.
+  setFlightDamping(entity: Entity): void {
+    const body = entity.body as unknown as RAPIER.RigidBody | null;
+    if (!body || typeof body.setLinearDamping !== 'function') {
+      return;
+    }
+    body.setLinearDamping(ammoDampingToRapier(entity.damping));
+    body.setAngularDamping(ammoDampingToRapier(entity.angularDamping));
   }
 
   createBodyDesc(entity: Entity): RAPIER.RigidBodyDesc {

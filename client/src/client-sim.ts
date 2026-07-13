@@ -133,6 +133,10 @@ export class ClientSim {
     if (!ship.body) {
       this.physics.add(ship);
     }
+    // The owned ship is force-driven; its handling needs the full flight-model
+    // damping. Re-assert it in case a WORLD snapshot corrected this ship as a
+    // remote body (which disables damping) before WELCOME identified it as ours.
+    this.physics.setFlightDamping?.(ship);
   }
 
   // Rebuild the owned ship's weapons from its loadout: whatever item sits in each

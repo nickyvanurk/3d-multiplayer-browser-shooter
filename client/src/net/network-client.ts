@@ -446,6 +446,15 @@ export class NetworkClient {
         body.setRotation(pose.rotation, true);
         body.setLinvel(velocity, true);
         body.setAngvel(angularVelocity, true);
+        // Match the body's between-snapshot coast to how its owner is actually
+        // moving it (undamped while thrusting, damped while idle) so linvel() —
+        // and thus the aim-lead — tracks the authoritative velocity instead of
+        // sawtoothing as the body damps and each snapshot snaps it back.
+        if (entity.type === Types.Entities.SPACESHIP) {
+          const thrusting =
+            (entity as Ship).renderInput?.hasLinearThrust() ?? false;
+          this.world.physics.setRemoteShipCoast?.(entity, thrusting);
+        }
         entity.transform.position.copy(pose.position);
         entity.transform.rotation.copy(pose.rotation);
       } else {

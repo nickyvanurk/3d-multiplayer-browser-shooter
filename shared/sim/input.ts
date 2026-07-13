@@ -78,6 +78,21 @@ export class InputCommand {
     return new InputCommand();
   }
 
+  // True when any translational thrust direction is held. Boost alone is NOT
+  // thrust — it only scales an existing direction — so it is excluded. Drives
+  // remote dead-reckoning: a thrusting ship is held against damping by a drive
+  // force the mirror doesn't reproduce, so its body must coast undamped.
+  hasLinearThrust(): boolean {
+    return (
+      this.forward ||
+      this.backward ||
+      this.strafeLeft ||
+      this.strafeRight ||
+      this.strafeUp ||
+      this.strafeDown
+    );
+  }
+
   // Pack the movement command into one integer for replication.
   toBits(): number {
     return (

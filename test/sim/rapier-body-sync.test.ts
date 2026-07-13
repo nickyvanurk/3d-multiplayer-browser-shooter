@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import { Vector3, Quaternion } from 'three';
 import { Ship } from '../../shared/sim/entities/ship.ts';
-import { RapierPhysicsWorld } from '../../shared/sim/physics/rapier-physics-world.ts';
+import {
+  RapierPhysicsWorld,
+  ammoDampingToRapier,
+} from '../../shared/sim/physics/rapier-physics-world.ts';
 import type { MeshProvider } from '../../shared/sim/physics/mesh-provider.ts';
 import { test } from './harness.ts';
 
@@ -13,7 +16,14 @@ function fakeBody(
   lv = { x: 0, y: 0, z: 0 },
   av = { x: 0, y: 0, z: 0 },
 ) {
-  const s = { t: { ...t }, r: { ...r }, lv: { ...lv }, av: { ...av } };
+  const s = {
+    t: { ...t },
+    r: { ...r },
+    lv: { ...lv },
+    av: { ...av },
+    linDamp: 0,
+    angDamp: 0,
+  };
   return {
     s,
     translation: () => s.t,
@@ -25,6 +35,8 @@ function fakeBody(
       (s.r = { x: q.x, y: q.y, z: q.z, w: q.w }),
     setLinvel: (v: Vector3) => (s.lv = { x: v.x, y: v.y, z: v.z }),
     setAngvel: (v: Vector3) => (s.av = { x: v.x, y: v.y, z: v.z }),
+    setLinearDamping: (d: number) => (s.linDamp = d),
+    setAngularDamping: (d: number) => (s.angDamp = d),
   };
 }
 
@@ -81,6 +93,48 @@ test('writeBack leaves entity velocity untouched when velocity write-back is dis
   // Control accumulators preserved; only the transform was written back.
   assert.equal(ship.angularVelocity.z, 5);
   assert.equal(ship.velocity.z, 1);
+});
+
+test('setRemoteShipCoast on a THRUSTING remote ship disables both dampings (constant-velocity coast)', () => {
+  const physics = newPhysics();
+  const ship = new Ship(); // damping 0.5, angularDamping 0.99
+  const body = fakeBody();
+  ship.body = body as never;
+
+  physics.setRemoteShipCoast(ship, true);
+
+  // A thrusting owner holds its speed against damping with a drive force we don't
+  // reproduce, so damping here would bleed off the speed the aim-lead reads.
+  assert.equal(body.s.linDamp, 0);
+  assert.equal(body.s.angDamp, 0);
+});
+
+test('setRemoteShipCoast on an IDLE remote ship keeps linear (flight) damping, angular off', () => {
+  const physics = newPhysics();
+  const ship = new Ship();
+  const body = fakeBody();
+  ship.body = body as never;
+
+  physics.setRemoteShipCoast(ship, false);
+
+  // An idle owner truly coasts under linear damping, so match it (the lead then
+  // tracks the true decelerating velocity). Yaw/pitch are set fresh each tick on
+  // the owner (never decayed) so client angular damping stays spurious → off.
+  assert.equal(body.s.linDamp, ammoDampingToRapier(ship.damping));
+  assert.equal(body.s.angDamp, 0);
+});
+
+test('setFlightDamping restores the owned ship’s full flight-model damping', () => {
+  const physics = newPhysics();
+  const ship = new Ship();
+  const body = fakeBody();
+  ship.body = body as never;
+
+  physics.setRemoteShipCoast(ship, true); // as if briefly seen as remote pre-WELCOME
+  physics.setFlightDamping(ship);
+
+  assert.equal(body.s.linDamp, ammoDampingToRapier(ship.damping));
+  assert.equal(body.s.angDamp, ammoDampingToRapier(ship.angularDamping));
 });
 
 test('correctBody snaps the body and entity to the authoritative pose + velocity', () => {

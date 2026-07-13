@@ -737,7 +737,7 @@ export default class Game {
     // `body.booting`. Hold it — and its projection pass — until the world is
     // revealed on spawn, so the boot screen stays a clean starfield.
     if (this.sceneManager.worldGroup.visible) {
-      this.projection.render();
+      this.projection.render(delta);
       this.hud.render(this.aimAssist.aimedShipId);
     }
   }

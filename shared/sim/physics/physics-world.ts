@@ -46,6 +46,13 @@ export interface PhysicsWorld {
     velocity: Vector3,
     angularVelocity: Vector3,
   ): void;
+  // Sets a dead-reckoned remote ship's body damping so it coasts to match its
+  // owner's motion (constant velocity while thrusting, damped while idle),
+  // keeping the aim-lead — which reads linvel() — from jittering. Rapier only.
+  setRemoteShipCoast?(entity: Entity, thrusting: boolean): void;
+  // Restores a body's full flight-model damping (for a claimed owned ship that may
+  // have been briefly corrected as a remote body). Rapier only.
+  setFlightDamping?(entity: Entity): void;
 }
 
 export class NullPhysicsWorld implements PhysicsWorld {

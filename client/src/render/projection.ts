@@ -24,6 +24,16 @@ const BULLET_SPEED = DEFAULT_BULLET_SPEED * 1000;
 // target is out of range and we hide the lead.
 const BULLET_LIFETIME = DEFAULT_BULLET_TIMER / 1000;
 
+// The lead is `renderPos + velocity·t`, so the velocity term is multiplied by the
+// intercept time and dominates the ring's screen motion. The rendered POSITION is
+// already Fiedler-smoothed (renderPos below), but a remote ship's velocity still
+// steps at each ~20 Hz snapshot; feeding it raw makes the ring hop while the ship
+// glides. So ease a per-ship smoothed velocity toward the authoritative one, the
+// same treatment the rendered pose gets. This is the per-60fps-frame fraction of
+// the old (un-caught-up) velocity retained; lower = snappier, higher = smoother.
+const LEAD_VELOCITY_RETAIN = 0.8;
+const FRAME_MS = 1000 / 60;
+
 // A per-entity 2D screen-space indicator, keyed by entity id.
 export interface Indicator {
   position: Vector2;
@@ -117,11 +127,16 @@ export class ProjectionService {
   // Distance (camera -> lead world point) per enemy, in world units. Aim-assist
   // snaps the weapon convergence to this so bullets meet the target at the lead.
   leadDistances: Map<number, number>;
+  // Per-ship smoothed firing velocity (world units/s), eased toward the raw body
+  // linvel each frame so the lead ring glides across the ~20 Hz snapshot steps
+  // instead of hopping. Keyed by entity id; pruned with the other per-ship maps.
+  private readonly smoothedVels: Map<number, Vector3>;
   viewRegistry: ViewRegistry;
   // World-space bounding radius of each ship model at scale 1, computed once per
   // kind from its loaded model and multiplied by the entity's scale on use.
   modelRadii: Map<EntityKind, number>;
   private readonly scratchAim: Vector3;
+  private readonly scratchVel: Vector3;
   private readonly scratchBox: Box3;
   private readonly scratchSphere: Sphere;
   // Smoothed render position (authoritative pose + Fiedler error offset) and a
@@ -142,8 +157,10 @@ export class ProjectionService {
     this.indicators = new Map(); // entity.id -> Indicator
     this.leads = new Map();
     this.leadDistances = new Map();
+    this.smoothedVels = new Map();
     this.modelRadii = new Map();
     this.scratchAim = new Vector3();
+    this.scratchVel = new Vector3();
     this.scratchBox = new Box3();
     this.scratchSphere = new Sphere();
     this.scratchRender = new Vector3();
@@ -171,8 +188,10 @@ export class ProjectionService {
     return base * entity.transform.scale;
   }
 
-  render(): void {
+  render(delta = FRAME_MS): void {
     const camera = this.sceneManager.camera;
+    // Framerate-independent retained fraction for the lead-velocity easing below.
+    const velRetain = LEAD_VELOCITY_RETAIN ** (delta / FRAME_MS);
 
     const halfWidth = window.innerWidth / 2;
     const halfHeight = window.innerHeight / 2;
@@ -253,7 +272,18 @@ export class ProjectionService {
       let lead: Vector2 | null = null;
       const body = entity.body as unknown as LinvelBody | null;
       if (muzzle && entity.type === Types.Entities.SPACESHIP && body?.linvel) {
-        const vel = body.linvel();
+        const raw = body.linvel();
+        // Ease the smoothed firing velocity toward the raw body velocity, so the
+        // lead glides across snapshot steps like the rendered pose (seeded to the
+        // raw value on first sight to avoid a spurious ramp-up from zero).
+        let vel = this.smoothedVels.get(entity.id!);
+        if (!vel) {
+          vel = new Vector3(raw.x, raw.y, raw.z);
+          this.smoothedVels.set(entity.id!, vel);
+        } else {
+          this.scratchVel.set(raw.x, raw.y, raw.z);
+          vel.sub(this.scratchVel).multiplyScalar(velRetain).add(this.scratchVel);
+        }
         const t = interceptTime(muzzle, renderPos, vel, BULLET_SPEED);
         // t within the bullet's lifetime means a shot can actually reach the
         // intercept before it despawns; past that the target is out of range.
@@ -291,6 +321,11 @@ export class ProjectionService {
     for (const id of this.indicators.keys()) {
       if (!live.has(id)) {
         this.indicators.delete(id);
+      }
+    }
+    for (const id of this.smoothedVels.keys()) {
+      if (!live.has(id)) {
+        this.smoothedVels.delete(id);
       }
     }
     for (const id of this.leads.keys()) {
