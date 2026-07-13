@@ -10,6 +10,7 @@ import type { WeaponSlot } from '../weapon.ts';
 import {
   DEFAULT_CARGO_CAPACITY,
   MINING_LASER_FACTOR,
+  MINING_LASER_RANGE,
   Items,
 } from '../mining.ts';
 
@@ -44,9 +45,12 @@ export function createDefaultWeapons(
   return [left, right];
 }
 
-// The mining laser: a single centre-muzzle weapon. Fires fast with negligible
-// combat damage but a high mining factor, so it chips ore far quicker than the
-// cannons while being a poor weapon against ships. Mountable in either slot.
+// The mining laser: a single centre-muzzle weapon. A short-range red beam (not a
+// projectile) with negligible combat damage but a high mining factor, so it chips
+// ore far quicker than the cannons while being a poor weapon against ships. The
+// fire interval still governs the mining rate (one Hit per shot); each shot draws
+// a beam from the muzzle to whatever it strikes within MINING_LASER_RANGE.
+// Mountable in either slot.
 export function createMiningLaser(
   ship: Ship,
   slot: WeaponSlot = 'secondary',
@@ -57,6 +61,7 @@ export function createMiningLaser(
     slot,
     damage: 1,
     miningFactor: MINING_LASER_FACTOR,
+    beamRange: MINING_LASER_RANGE,
   });
   laser.parent = ship;
   return laser;
@@ -275,6 +280,12 @@ export class Ship extends Entity {
     this.applyInput(input, dt);
 
     for (const weapon of this.weapons) {
+      // A beam weapon (mining laser) emits no projectiles: the owning client draws
+      // and applies it as a single muzzle-anchored beam (see ClientSim), so skip
+      // it here on both the client sim and the server's dynamic mirror.
+      if (weapon.beamRange != null) {
+        continue;
+      }
       weapon.tryFire(time, (position, rotation, damage, miningFactor) => {
         const bullet = new Bullet({
           transform: { position, rotation },

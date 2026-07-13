@@ -1,8 +1,15 @@
-import { MeshBasicMaterial, Group, Box3, Color } from 'three';
+import {
+  MeshBasicMaterial,
+  Group,
+  Box3,
+  Color,
+  Mesh,
+  CylinderGeometry,
+  AdditiveBlending,
+} from 'three';
 import type {
   Object3D,
   Scene,
-  Mesh,
   MeshStandardMaterial,
   BufferGeometry,
   Material,
@@ -81,6 +88,14 @@ export class ViewRegistry {
   // Shared red material for mining-laser tracers, so the beam reads as a distinct
   // red weapon (built lazily the first time a laser bullet is drawn).
   laserMaterial: MeshBasicMaterial | null;
+  // Shared geometry/materials for the mining beam: a unit-length red cylinder
+  // (spanning 0→1 along +Z) plus a translucent additive glow sleeve. Each beam
+  // view clones these and scales z to its length, so nothing is allocated per
+  // shot. Built lazily the first time a beam is drawn.
+  private beamCoreGeo: CylinderGeometry | null;
+  private beamGlowGeo: CylinderGeometry | null;
+  private beamCoreMat: MeshBasicMaterial | null;
+  private beamGlowMat: MeshBasicMaterial | null;
   // Per-ship clone of the "Exhaust" material, keyed by entity id, whose emissive
   // intensity `update()` drives from that ship's thrust input.
   exhaustMaterials: Map<number, MeshStandardMaterial>;
@@ -104,6 +119,10 @@ export class ViewRegistry {
     this.onModelReady = null;
     this.bulletTipOffset = null;
     this.laserMaterial = null;
+    this.beamCoreGeo = null;
+    this.beamGlowGeo = null;
+    this.beamCoreMat = null;
+    this.beamGlowMat = null;
     this.exhaustMaterials = new Map();
     this.asteroids = null;
     this.asteroidScales = new Map();
@@ -333,6 +352,12 @@ export class ViewRegistry {
       return mesh;
     }
 
+    // A beam (mining laser) isn't a travelling projectile: draw it as a red line
+    // from the muzzle to its resolved hit length instead of cloning the tracer.
+    if ((entity as { beamRange?: number }).beamRange != null) {
+      return this.buildBeam(entity);
+    }
+
     // Mining-laser tracers carry a miningFactor; paint their (shared-material)
     // clone red so the mining beam is visually distinct from the orange cannons.
     if ((entity as { miningFactor?: number }).miningFactor) {
@@ -353,6 +378,45 @@ export class ViewRegistry {
     const group = new Group();
     mesh.position.z = -this.bulletTipOffset;
     group.add(mesh);
+    return group;
+  }
+
+  // Build a mining-beam view: a bright red core cylinder plus a translucent
+  // additive glow sleeve, both spanning the muzzle (origin) to the beam's hit
+  // length along +Z. The shared unit geometry/materials are cloned and z-scaled,
+  // so a beam costs two Meshes and no new geometry. The outer group's transform is
+  // driven per frame (its scale is reset to 1 by update()); the length lives on
+  // the inner meshes' z-scale, which update() never touches.
+  private buildBeam(entity: Entity): Object3D {
+    if (!this.beamCoreGeo) {
+      // Unit cylinder along +Z, spanning 0→1 (rotate the default Y axis onto Z,
+      // then shift so its base sits at the origin/muzzle).
+      const unit = (radius: number): CylinderGeometry => {
+        const geo = new CylinderGeometry(radius, radius, 1, 10, 1, true);
+        geo.rotateX(Math.PI / 2);
+        geo.translate(0, 0, 0.5);
+        return geo;
+      };
+      this.beamCoreGeo = unit(0.15);
+      this.beamGlowGeo = unit(0.55);
+      this.beamCoreMat = new MeshBasicMaterial({ color: 0xff5a3c });
+      this.beamGlowMat = new MeshBasicMaterial({
+        color: 0xff2b2b,
+        transparent: true,
+        opacity: 0.5,
+        blending: AdditiveBlending,
+        depthWrite: false,
+      });
+    }
+
+    const length = (entity as { beamLength?: number }).beamLength ?? 0;
+    const group = new Group();
+    const glow = new Mesh(this.beamGlowGeo!, this.beamGlowMat!);
+    const core = new Mesh(this.beamCoreGeo, this.beamCoreMat!);
+    glow.scale.z = length;
+    core.scale.z = length;
+    group.add(glow);
+    group.add(core);
     return group;
   }
 
@@ -412,6 +476,24 @@ export class ViewRegistry {
         .slerp(transform.rotation, alpha)
         .multiply(transform.errorRotation);
       mesh.scale.setScalar(transform.scale);
+
+      // A beam is drawn live: stretch its core/glow to the current hit length and
+      // fatten the glow on each damage pulse. The length + pulse ride the entity
+      // (ClientSim), and sit on the inner meshes' scale — untouched by the group
+      // scale above. Children are [glow, core] (see buildBeam).
+      const beam = entity as {
+        beamRange?: number;
+        beamLength?: number;
+        beamPulse?: number;
+      };
+      if (beam.beamRange != null) {
+        const length = beam.beamLength ?? 0;
+        const pulse = beam.beamPulse ?? 0;
+        const glow = mesh.children[0];
+        const core = mesh.children[1];
+        glow?.scale.set(1 + pulse * 1.1, 1 + pulse * 1.1, length);
+        core?.scale.set(1 + pulse * 0.5, 1 + pulse * 0.5, length);
+      }
 
       // Decay the render error toward zero so the last correction glides out.
       decayError(transform.errorPosition, transform.errorRotation, delta);

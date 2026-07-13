@@ -19,6 +19,10 @@ export interface BulletInit {
   speed?: number;
   timer?: number;
   miningFactor?: number;
+  // Present ⇒ this is a stationary beam, not a projectile. Its value is the max
+  // reach in world units; `beamLength` is the actual drawn length (muzzle → hit),
+  // resolved by a raycast at spawn.
+  beamRange?: number;
 }
 
 export class Bullet extends Entity {
@@ -32,6 +36,14 @@ export class Bullet extends Entity {
   // Rock-mining multiplier applied when this bullet hits an asteroid. Undefined =
   // use the default combat factor; a mining laser sets a higher value.
   miningFactor: number | undefined;
+  // Beam weapons (mining laser) set these: `beamRange` is the max reach, and
+  // `beamLength` the live drawn muzzle→hit length (re-cast each frame while the
+  // beam is held). A beam has zero velocity (it doesn't travel) and is rendered as
+  // a solid line. `beamPulse` (0..1, client-only) briefly rises on each mining
+  // tick and decays, so the renderer can flash the beam when it deals damage.
+  beamRange: number | undefined;
+  beamLength: number | undefined;
+  beamPulse: number;
 
   constructor({
     id,
@@ -40,9 +52,11 @@ export class Bullet extends Entity {
     speed = DEFAULT_BULLET_SPEED,
     timer = DEFAULT_BULLET_TIMER,
     miningFactor,
+    beamRange,
   }: BulletInit = {}) {
     super({ id, transform, type: Types.Entities.BULLET });
-    this.velocity = new Vector3(0, 0, speed);
+    // A beam is stationary; only a projectile carries muzzle velocity.
+    this.velocity = new Vector3(0, 0, beamRange != null ? 0 : speed);
     this.angularVelocity = new Vector3();
     this.acceleration = 0;
     this.angularAcceleration = new Euler(0, 0, 0);
@@ -56,6 +70,9 @@ export class Bullet extends Entity {
     this.destroyOnCollision = true;
     this.owner = null;
     this.miningFactor = miningFactor;
+    this.beamRange = beamRange;
+    this.beamLength = undefined;
+    this.beamPulse = 0;
   }
 
   update(dt: number): void {

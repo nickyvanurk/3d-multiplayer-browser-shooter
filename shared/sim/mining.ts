@@ -38,6 +38,11 @@ export const MINING_DAMAGE_FACTOR = 0.3;
 // For the laser to mine 1.5× the cannons: FACTOR = 1.5 × 9.375 / 8.333 = 1.6875.
 export const MINING_LASER_FACTOR = 1.6875;
 
+// The mining laser is a short-range beam, not a projectile: it only reaches ore
+// within this many world units of the muzzle (~200m). The beam is drawn from the
+// muzzle to the first thing it strikes, capped here.
+export const MINING_LASER_RANGE = 200;
+
 // Shop wares / equippable weapons. Item ids are the wire currency for Buy/Equip
 // messages; kept small and stable. The cannons are the default primary weapon
 // (owned by every ship); the mining laser is a purchasable secondary.

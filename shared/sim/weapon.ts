@@ -19,6 +19,7 @@ export interface WeaponInit {
   slot?: WeaponSlot;
   damage?: number;
   miningFactor?: number;
+  beamRange?: number;
 }
 
 type SpawnBullet = (
@@ -26,6 +27,7 @@ type SpawnBullet = (
   rotation: Quaternion,
   damage: number,
   miningFactor?: number,
+  beamRange?: number,
 ) => void;
 
 export class Weapon {
@@ -37,6 +39,9 @@ export class Weapon {
   slot: WeaponSlot;
   damage: number;
   miningFactor: number | undefined;
+  // Set for a beam weapon (mining laser): its shots spawn as stationary beams of
+  // this max reach rather than travelling projectiles.
+  beamRange: number | undefined;
   _held: boolean;
 
   constructor(
@@ -48,6 +53,7 @@ export class Weapon {
       slot = 'primary',
       damage = 5,
       miningFactor,
+      beamRange,
     }: WeaponInit = {} as WeaponInit,
   ) {
     this.offset = offset ? offset.clone() : new Vector3();
@@ -58,6 +64,7 @@ export class Weapon {
     this.slot = slot;
     this.damage = damage;
     this.miningFactor = miningFactor;
+    this.beamRange = beamRange;
     this._held = false;
   }
 
@@ -85,7 +92,13 @@ export class Weapon {
     // never drifts into firing on the same tick.
     this.nextFireTime += this.fireInterval;
     const { position, rotation } = getWeaponTransform(this);
-    spawnBullet(position, rotation, this.damage, this.miningFactor);
+    spawnBullet(
+      position,
+      rotation,
+      this.damage,
+      this.miningFactor,
+      this.beamRange,
+    );
   }
 }
 

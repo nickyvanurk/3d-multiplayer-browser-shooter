@@ -93,6 +93,10 @@ export default class Game {
   engineMovePitch = 0.75;
   engineBoostVolume = 0.32;
   engineBoostPitch = 1.2;
+  // Mining-beam loop: a continuous voice while the mining laser is firing.
+  // Volume/pitch tunable live from the F3 panel.
+  miningVolume = 0.4;
+  miningPitch = 1;
   fixedStep = 1000 / 60;
   fixedUpdate!: (delta: number) => number;
   // Flips true once models + physics + the client sim are ready. Until then the
@@ -422,8 +426,11 @@ export default class Game {
       'engineBoost',
       'sfx/Sci-Fi Spaceship Engine Loop 3.ogg',
     );
+    // Mining-beam loop: a continuous 2D voice driven by the mining laser trigger.
+    await this.sound.load('mining', 'sfx/benvibrant-thruster-loop-562715.ogg');
     this.sound.setupLoop('engineMove', this.engineMovePitch);
     this.sound.setupLoop('engineBoost', this.engineBoostPitch);
+    this.sound.setupLoop('mining', this.miningPitch);
     const blasterCount = this.sound.getSegments('blaster').length;
     // Chosen defaults (tunable live via the F3 panel): sound 1, pitch 2, vol 0.7.
     this.sound.setActive('blaster', 0);
@@ -584,6 +591,32 @@ export default class Game {
         this.sound.setLoopPitch('engineBoost', v);
       },
     });
+    // Mining-beam loop: its own volume + pitch, retuning the running loop live.
+    this.debug.addSlider('Mining volume', {
+      min: 0,
+      max: 1.5,
+      step: 0.02,
+      decKey: 'KeyT',
+      incKey: 'KeyY',
+      keyHint: 'T Y',
+      get: () => this.miningVolume,
+      set: (v) => {
+        this.miningVolume = v;
+      },
+    });
+    this.debug.addSlider('Mining pitch', {
+      min: 0.5,
+      max: 5,
+      step: 0.05,
+      decKey: 'KeyU',
+      incKey: 'KeyI',
+      keyHint: 'U I',
+      get: () => this.miningPitch,
+      set: (v) => {
+        this.miningPitch = v;
+        this.sound.setLoopPitch('mining', v);
+      },
+    });
   }
 
   frame(): void {
@@ -644,6 +677,17 @@ export default class Game {
     this.sound.setLoopTarget(
       'engineMove',
       !eng.boost && translating ? this.engineMoveVolume : 0,
+    );
+    // Mining loop rides the live beam: audible only while the laser is firing, and
+    // it throbs in lockstep with the beam's damage pulse (loud on each mining tick,
+    // dipping between) so the sound pulses at the same rate as the visual.
+    this.sound.setLoopTarget(
+      'mining',
+      this.clientSim?.miningActive ? this.miningVolume : 0,
+    );
+    this.sound.setLoopGain(
+      'mining',
+      0.55 + 0.45 * (this.clientSim?.miningPulse ?? 0),
     );
     this.sound.updateLoops(delta);
 

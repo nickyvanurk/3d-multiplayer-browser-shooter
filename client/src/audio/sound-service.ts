@@ -19,6 +19,9 @@ interface LoopVoice {
   sound: Audio;
   target: number;
   current: number;
+  // Instantaneous gain multiplier applied on top of the smoothed `current`, NOT
+  // smoothed — for fast tremolo (e.g. the mining beam's damage pulse).
+  gain: number;
 }
 
 // Spatial SFX via three.js. An AudioListener rides the camera; positional
@@ -139,7 +142,7 @@ export class SoundService {
     sound.setLoop(true);
     sound.setPlaybackRate(pitch);
     sound.setVolume(0);
-    this.loops.set(name, { sound, target: 0, current: 0 });
+    this.loops.set(name, { sound, target: 0, current: 0, gain: 1 });
   }
 
   // Set a loop's desired gain; updateLoops smooths the actual volume toward it.
@@ -147,6 +150,15 @@ export class SoundService {
     const voice = this.loops.get(name);
     if (voice) {
       voice.target = target;
+    }
+  }
+
+  // Set a loop's instantaneous gain multiplier (applied un-smoothed on top of the
+  // eased base volume) — for a fast tremolo like the mining beam's damage pulse.
+  setLoopGain(name: string, gain: number): void {
+    const voice = this.loops.get(name);
+    if (voice) {
+      voice.gain = gain;
     }
   }
 
@@ -168,7 +180,7 @@ export class SoundService {
       if (voice.current > 0.0005 && !voice.sound.isPlaying) {
         voice.sound.play();
       }
-      voice.sound.setVolume(voice.current);
+      voice.sound.setVolume(voice.current * voice.gain);
     }
   }
 

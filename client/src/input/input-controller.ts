@@ -343,11 +343,17 @@ export class InputController {
   // payload fed to the owned ship each tick: all movement booleans plus
   // aim = { mouse:{x,y}, origin, direction, distance }.
   sample() {
-    this.raycaster.setFromCamera(this.input.aim.ndc, this.camera);
-    const { origin, direction } = this.raycaster.ray;
+    // Free-look (Alt) must not re-aim your weapons: while orbiting, the camera
+    // swings but the aim ray is held where it was, so holding Alt looks around
+    // without steering the mining beam / cannons. The steering mouse value is
+    // already frozen in the orbit branch of the mousemove handler.
+    if (!this.orbit.active) {
+      this.raycaster.setFromCamera(this.input.aim.ndc, this.camera);
+      const { origin, direction } = this.raycaster.ray;
 
-    this.input.aim.origin = origin;
-    this.input.aim.direction = direction;
+      this.input.aim.origin = origin;
+      this.input.aim.direction = direction;
+    }
 
     return this.input;
   }
