@@ -39,11 +39,11 @@ feels good at 300ms of latency.
 
 ## :rocket: Technologies Used
 
+- TypeScript
 - Three.js
-- JavaScript
+- Rapier (physics)
 - ws (WebSockets)
-- ECSY (entity-component-system)
-- ammo.js (physics)
+- Express
 - Vite
 - Node.js
 
