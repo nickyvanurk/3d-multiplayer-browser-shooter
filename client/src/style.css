@@ -344,6 +344,9 @@ canvas {
 
 /* Launch — the one warm, deliberate accent against the all-cyan console. */
 .launch-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   margin-top: 4px;
   padding: 15px 56px;
   font: inherit;
