@@ -5,7 +5,7 @@ into an arena, chase down other pilots, and blast them out of the void. The
 project doubles as a study in real-time netcode for fast-paced multiplayer
 shooters.
 
-![Screenshot](docs/screenshot-v3.png)
+![Screenshot](docs/screenshot-v4.png)
 
 > 🌟 If you find this project interesting, please consider giving it a star — it
 > helps others discover it too!
