@@ -20,6 +20,7 @@ import {
   SMOOTHING,
 } from '../../../shared/sim/net/visual-smoothing.ts';
 import type { World } from '../../../shared/sim/world.ts';
+import type { PhysicsWorld } from '../../../shared/sim/physics/physics-world.ts';
 import type { Entity } from '../../../shared/sim/entity.ts';
 import type { Transform } from '../../../shared/sim/transform.ts';
 import type Connection from '../connection.ts';
@@ -453,7 +454,12 @@ export class NetworkClient {
         if (entity.type === Types.Entities.SPACESHIP) {
           const thrusting =
             (entity as Ship).renderInput?.hasLinearThrust() ?? false;
-          this.world.physics.setRemoteShipCoast?.(entity, thrusting);
+          // world.physics is typed as the minimal collision surface; the injected
+          // client stepper is the full Rapier contract that carries this hook.
+          (this.world.physics as PhysicsWorld).setRemoteShipCoast?.(
+            entity,
+            thrusting,
+          );
         }
         entity.transform.position.copy(pose.position);
         entity.transform.rotation.copy(pose.rotation);
