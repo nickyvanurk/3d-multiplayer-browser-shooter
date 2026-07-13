@@ -2,7 +2,7 @@ import Utils from '../../shared/utils.ts';
 import Types from '../../shared/types.ts';
 import { World } from '../../shared/sim/world.ts';
 import { InputCommand } from '../../shared/sim/input.ts';
-import { RapierPhysicsWorld } from '../../shared/sim/physics/rapier-physics-world.ts';
+import type { RapierPhysicsWorld } from '../../shared/sim/physics/rapier-physics-world.ts';
 import Connection from './connection.ts';
 
 import { BrowserMeshProvider } from './physics/browser-mesh-provider.ts';
@@ -125,6 +125,9 @@ export default class Game {
       this.sceneManager.camera,
       this.settings.keybindings,
     );
+    // Stay inert behind the landing console: keystrokes (including typing the
+    // callsign) must not drive the ship or trip engine SFX until launch().
+    this.inputController.setEnabled(false);
 
     this.projection = new ProjectionService(
       this.world,
@@ -249,6 +252,11 @@ export default class Game {
     setPlayerName(name);
     this.networkClient.join(name);
     document.getElementById('boot-overlay')?.classList.remove('hidden');
+    // Now that the player has committed, wake input and start the music — both
+    // stayed dormant while the landing console was up so the pre-flight screen
+    // is silent and unresponsive to flight keys.
+    this.inputController.setEnabled(true);
+    this.music.start();
   }
 
   async init(): Promise<void> {
@@ -379,12 +387,11 @@ export default class Game {
     // the player spawn on the next frame.
     this.simReady = true;
 
-    // Only now kick off the non-critical streams — SFX (4.6 MB) and the music
-    // stream — so they never fight the spawn-gating models/physics for bandwidth.
-    // Weapons/engine stay silent until each clip lands (SoundService no-ops on a
-    // missing buffer); music is pure ambiance.
+    // Only now kick off the SFX stream (4.6 MB) so it never fights the
+    // spawn-gating models/physics for bandwidth. Weapons/engine stay silent
+    // until each clip lands (SoundService no-ops on a missing buffer) and until
+    // input is enabled at launch(); music starts from launch() too.
     void this.initAudio();
-    this.music.start();
 
     // ~1 Hz clock-sync probe; TimeSyncManager tracks drift from the rolling window.
     // The same tick resamples the network byte totals into per-second rates.
