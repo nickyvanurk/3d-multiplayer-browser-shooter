@@ -1,0 +1,95 @@
+import type { World } from '../world.ts';
+import type { Entity } from '../entity.ts';
+import { quantizeState } from './quantize.ts';
+
+export interface PriorityEntry {
+  id: number;
+  state: number[];
+}
+
+export interface SnapshotBudget {
+  budgetBits: number;
+  headerBits: number;
+  entityBits: number;
+}
+
+// Fiedler's priority accumulator. Each snapshot, every changed object's priority
+// is added to a per-object accumulator; objects are then sorted by accumulator
+// (largest first) and packed into the packet up to the bandwidth budget. Objects
+// that fit reset their accumulator to zero; objects that don't keep theirs, so
+// they are first in line next time — giving eventual delivery and fairness under
+// a fixed bandwidth cap. Change detection keys on the quantized state, so an
+// unchanged object never competes for bandwidth.
+export class PriorityAccumulator {
+  // id -> last SENT quantized-state key. An object is a candidate whenever its
+  // current key differs from this. Updated only when the object is actually
+  // included in a packet, so a deferred change stays pending until it goes out.
+  private baseline: Map<number, string>;
+  private accumulator: Map<number, number>;
+
+  constructor() {
+    this.baseline = new Map();
+    this.accumulator = new Map();
+  }
+
+  select(world: World, budget: SnapshotBudget): PriorityEntry[] {
+    const candidates: { id: number; state: number[]; key: string }[] = [];
+    const seen = new Set<number>();
+
+    for (const entity of world.entities.values()) {
+      seen.add(entity.id!);
+      if (entity.alive === false) {
+        continue; // dead entities are handled by Despawn, not snapshots
+      }
+      const state = quantizeState(entity.serializeNetworkState());
+      const key = state.join(',');
+      if (this.baseline.get(entity.id!) === key) {
+        continue; // unchanged since last send — nothing to transmit
+      }
+      this.accumulator.set(
+        entity.id!,
+        (this.accumulator.get(entity.id!) ?? 0) + this.priorityFor(entity),
+      );
+      candidates.push({ id: entity.id!, state, key });
+    }
+
+    this.prune(seen);
+
+    candidates.sort(
+      (a, b) =>
+        (this.accumulator.get(b.id) ?? 0) - (this.accumulator.get(a.id) ?? 0),
+    );
+
+    const out: PriorityEntry[] = [];
+    let bits = budget.headerBits;
+    for (const candidate of candidates) {
+      if (bits + budget.entityBits > budget.budgetBits) {
+        continue; // won't fit this packet; leave its accumulator to grow
+      }
+      bits += budget.entityBits;
+      out.push({ id: candidate.id, state: candidate.state });
+      this.baseline.set(candidate.id, candidate.key);
+      this.accumulator.set(candidate.id, 0);
+    }
+    return out;
+  }
+
+  // Per-object, per-snapshot priority. Constant for now (fair round-robin among
+  // changed objects); a distance/importance weighting hooks in here later.
+  private priorityFor(_entity: Entity): number {
+    return 1;
+  }
+
+  private prune(seen: Set<number>): void {
+    for (const id of this.baseline.keys()) {
+      if (!seen.has(id)) {
+        this.baseline.delete(id);
+      }
+    }
+    for (const id of this.accumulator.keys()) {
+      if (!seen.has(id)) {
+        this.accumulator.delete(id);
+      }
+    }
+  }
+}

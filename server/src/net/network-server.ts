@@ -3,7 +3,10 @@ import { performance } from 'perf_hooks';
 import logger from '../utils/logger.ts';
 import { sanitize } from '../utils/sanitize.ts';
 import Types from '../../../shared/types.ts';
-import Messages from '../../../shared/messages.ts';
+import Messages, {
+  WORLD_ENTITY_BITS,
+  WORLD_HEADER_BITS,
+} from '../../../shared/messages.ts';
 
 import { Ship, maxWeaponDamage } from '../../../shared/sim/entities/ship.ts';
 import {
@@ -15,7 +18,7 @@ import {
   type CombatEntity,
 } from '../../../shared/sim/subsystems/combat.ts';
 import { InputCommand } from '../../../shared/sim/input.ts';
-import { SnapshotDiffer } from '../../../shared/sim/net/snapshot.ts';
+import { PriorityAccumulator } from '../../../shared/sim/net/priority.ts';
 import { pickSpawnPosition } from '../../../shared/sim/spawn.ts';
 import {
   sellCargo,
@@ -50,16 +53,24 @@ const LEADERBOARD_INTERVAL = 20;
 
 // World snapshots go out every 3rd 60 Hz tick (~20 Hz). Quantized snapshots plus
 // client-side extrapolation make a per-tick rate redundant, and this thirds the
-// downstream bandwidth. The differ runs only on these ticks, so each snapshot
-// still captures every change since the last one.
+// downstream bandwidth. The accumulator runs only on these ticks, so each
+// snapshot still captures every change since the last one.
 const SNAPSHOT_INTERVAL = 3;
+const SNAPSHOT_HZ = 60 / SNAPSHOT_INTERVAL;
+
+// Target downstream snapshot bandwidth per client. The priority accumulator packs
+// each ~20 Hz packet up to this budget with the highest-priority changed entities
+// and defers the rest, so bandwidth stays bounded no matter how many entities
+// move at once. Adjustable on the fly for congestion control.
+const SNAPSHOT_BANDWIDTH_BPS = 256 * 1024; // 256 kbit/s
+const SNAPSHOT_BUDGET_BITS = SNAPSHOT_BANDWIDTH_BPS / SNAPSHOT_HZ;
 
 export class NetworkServer {
   gameServer: GameServer;
   world: World;
   connections: Set<Connection>;
   ships: Map<number, Ship>;
-  differ: SnapshotDiffer;
+  priority: PriorityAccumulator;
   lastAlive: Map<number, boolean>;
   // Last cargo/credits sent to each owner, so Stats only goes out on a change.
   lastStats: Map<number, { cargo: number; credits: number }>;
@@ -86,7 +97,7 @@ export class NetworkServer {
     this.world = gameServer.world;
     this.connections = new Set();
     this.ships = new Map(); // connection.id -> Ship
-    this.differ = new SnapshotDiffer();
+    this.priority = new PriorityAccumulator();
     this.lastAlive = new Map(); // ship id -> boolean
     this.lastStats = new Map(); // connection.id -> { cargo, credits }
     this.lastLoadout = new Map(); // connection.id -> { hasMiningLaser, primaryItem, secondaryItem }
@@ -528,15 +539,18 @@ export class NetworkServer {
       }
     }
 
-    // Throttle the world snapshot to ~20 Hz. The differ runs only on these ticks,
-    // so it diffs against the last snapshot and still reports every change over
-    // the interval.
+    // Throttle the world snapshot to ~20 Hz. The accumulator runs only on these
+    // ticks, so it diffs against the last snapshot and still reports every change
+    // over the interval.
     if (++this.snapshotTick >= SNAPSHOT_INTERVAL) {
       this.snapshotTick = 0;
 
-      const changed = this.differ.changed(world).filter((c) => {
-        const entity = world.get(c.id);
-        return entity && entity.alive !== false;
+      // Pack the highest-priority changed entities into the packet up to the
+      // bandwidth budget; the rest defer to the next snapshot.
+      const changed = this.priority.select(world, {
+        budgetBits: SNAPSHOT_BUDGET_BITS,
+        headerBits: WORLD_HEADER_BITS,
+        entityBits: WORLD_ENTITY_BITS,
       });
 
       if (changed.length) {

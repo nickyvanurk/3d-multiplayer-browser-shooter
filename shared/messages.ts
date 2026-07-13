@@ -30,6 +30,20 @@ const INPUT_BITS = 16;
 const HEALTH_BITS = 16;
 const LEVEL_BITS = 8;
 
+// Bit footprint of a World snapshot, exported so the server can budget how many
+// entity updates fit under its bandwidth target (priority accumulator). Header =
+// tag + serverTime (byte-aligned f64) + entity count.
+export const WORLD_HEADER_BITS = TAG_BITS + 64 + ID_BITS;
+export const WORLD_ENTITY_BITS =
+  ID_BITS +
+  POSITION_BITS * 3 +
+  QUAT_INDEX_BITS +
+  QUAT_COMPONENT_BITS * 3 +
+  VELOCITY_BITS * 6 +
+  INPUT_BITS +
+  HEALTH_BITS +
+  LEVEL_BITS;
+
 // Write the 14 physics slots of a quantized state (pos, quaternion, velocity,
 // angular velocity, input) MSB-first. Shared by World (per entity) and State.
 function writePhysics(w: BitWriter, s: number[]): void {
