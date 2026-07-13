@@ -1,8 +1,10 @@
 import type { World } from '../world.ts';
+import { quantizeState } from './quantize.ts';
 
-// One changed entity emitted by the differ: its id plus its network state (16
-// numbers: transform + velocities, then the packed input, health and level).
-// Mirrors the Messages.World wire layout. The differ itself is length-agnostic.
+// One changed entity emitted by the differ: its id plus its QUANTIZED network
+// state (16 integer buckets produced by quantizeState). Change detection keys on
+// the quantized values, so a nudge smaller than one grid cell no longer counts as
+// a change and drops off the wire. Mirrors the Messages.World wire layout.
 interface SnapshotEntry {
   id: number;
   state: number[];
@@ -20,7 +22,7 @@ export class SnapshotDiffer {
     const seen = new Set<number>();
     for (const e of world.entities.values()) {
       seen.add(e.id!);
-      const state = e.serializeNetworkState();
+      const state = quantizeState(e.serializeNetworkState());
       const key = state.join(',');
       if (this.last.get(e.id!) !== key) {
         out.push({ id: e.id!, state });

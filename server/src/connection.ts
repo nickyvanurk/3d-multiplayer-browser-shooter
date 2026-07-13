@@ -9,7 +9,7 @@ import type Server from './server.ts';
 export type ClientSocket = WebSocket & { remoteAddress?: string };
 
 export interface OutgoingMessage {
-  serialize(): unknown[];
+  serialize(): unknown[] | Uint8Array;
 }
 
 interface HelloMessage {
@@ -64,6 +64,21 @@ export default class Connection {
     this.pendingEquip = null;
 
     this.connection.on('message', (message) => {
+      // High-frequency pose messages (State) arrive as bit-packed binary frames.
+      // ws delivers every frame as a Buffer; JSON messages are arrays, so their
+      // first byte is '[' (0x5B), while a bit-packed frame leads with a small tag
+      // byte — that difference discriminates binary from text.
+      if (typeof message !== 'string') {
+        const buf = message as Buffer;
+        if (buf.length > 0 && buf[0] !== 0x5b) {
+          const bytes = Uint8Array.from(buf);
+          if (bytes[0] === Types.Messages.STATE) {
+            this.latestState = Messages.State.deserialize(bytes);
+          }
+          return;
+        }
+      }
+
       const data = JSON.parse(message as string) as unknown[];
       const type = data.shift();
 
@@ -73,9 +88,6 @@ export default class Connection {
             type,
             data: Messages.Hello.deserialize(data as string[]),
           });
-          break;
-        case Types.Messages.STATE:
-          this.latestState = Messages.State.deserialize(data as number[]);
           break;
         case Types.Messages.FIRE:
           this.fireQueue.push(Messages.Fire.deserialize(data as number[]));
@@ -185,7 +197,12 @@ export default class Connection {
   sendOutgoingMessages(): void {
     while (this.hasOutgoingMessage()) {
       const message = this.outgoingMessageQueue.shift();
-      this.connection.send(JSON.stringify(message!.serialize()));
+      const payload = message!.serialize();
+      if (payload instanceof Uint8Array) {
+        this.connection.send(payload);
+      } else {
+        this.connection.send(JSON.stringify(payload));
+      }
     }
   }
 

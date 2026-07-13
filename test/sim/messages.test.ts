@@ -2,30 +2,53 @@ import assert from 'node:assert/strict';
 import { Vector3, Quaternion } from 'three';
 import Messages from '../../shared/messages.ts';
 import Types from '../../shared/types.ts';
+import { quantizeState } from '../../shared/sim/net/quantize.ts';
 import { test } from './harness.ts';
 
-test('State round-trips pose, velocities and input', () => {
+function assertClose(actual: number[], expected: number[], tol: number): void {
+  for (let i = 0; i < expected.length; i++) {
+    assert.ok(
+      Math.abs(actual[i] - expected[i]) <= tol,
+      `index ${i}: ${actual[i]} vs ${expected[i]} (tol ${tol})`,
+    );
+  }
+}
+
+function quatAngle(a: Quaternion, b: Quaternion): number {
+  const dot = Math.abs(a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w);
+  return 2 * Math.acos(Math.min(1, dot));
+}
+
+test('State round-trips pose, velocities and input (binary, quantized)', () => {
+  const rotation = new Quaternion(0.1, 0.2, 0.3, 0.4).normalize();
   const msg = new Messages.State(
     new Vector3(1, 2, 3),
-    new Quaternion(0.1, 0.2, 0.3, 0.4),
+    rotation,
     new Vector3(4, 5, 6),
     new Vector3(7, 8, 9),
     0b1010_0101,
   );
 
   const wire = msg.serialize();
+  assert.ok(wire instanceof Uint8Array);
   assert.equal(wire[0], Types.Messages.STATE);
 
-  const out = Messages.State.deserialize(wire.slice(1) as number[]);
-  assert.deepEqual([out.position.x, out.position.y, out.position.z], [1, 2, 3]);
-  assert.deepEqual(
-    [out.rotation.x, out.rotation.y, out.rotation.z, out.rotation.w],
-    [0.1, 0.2, 0.3, 0.4],
+  const out = Messages.State.deserialize(wire);
+  assertClose(
+    [out.position.x, out.position.y, out.position.z],
+    [1, 2, 3],
+    0.05,
   );
-  assert.deepEqual([out.velocity.x, out.velocity.y, out.velocity.z], [4, 5, 6]);
-  assert.deepEqual(
+  assert.ok(quatAngle(rotation, out.rotation) < 0.03);
+  assertClose(
+    [out.velocity.x, out.velocity.y, out.velocity.z],
+    [4, 5, 6],
+    0.02,
+  );
+  assertClose(
     [out.angularVelocity.x, out.angularVelocity.y, out.angularVelocity.z],
     [7, 8, 9],
+    0.01,
   );
   assert.equal(out.input, 0b1010_0101);
 });
@@ -132,19 +155,30 @@ test('Pong echoes sentTime and carries serverTime', () => {
   assert.equal(data.serverTime, 9000);
 });
 
-test('World carries a serverTime prefix before the entity run', () => {
-  const entities = [
-    { id: 42, state: [1, 2, 3, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0] },
-  ];
+test('World round-trips serverTime and quantized entities (binary)', () => {
+  // Float network-state layout: pos, quat xyzw, vel, angVel, input, health, level.
+  const state = quantizeState([
+    1, 2, 3, 0, 0, 0, 1, 0.5, -0.5, 0.25, 0, 0, 0, 5, 87, 3,
+  ]);
+  const entities = [{ id: 42, state }];
   const wire = new Messages.World(entities, 7777).serialize();
+  assert.ok(wire instanceof Uint8Array);
   assert.equal(wire[0], Types.Messages.WORLD);
-  assert.equal(wire[1], 7777); // serverTime
-  assert.equal(wire[2], 42); // first entity id
 
-  const decoded = Messages.World.deserialize(wire.slice(1) as number[]);
+  const decoded = Messages.World.deserialize(wire);
   assert.equal(decoded.serverTime, 7777);
   assert.equal(decoded.entities.length, 1);
-  assert.equal(decoded.entities[0].id, 42);
+  const e = decoded.entities[0];
+  assert.equal(e.id, 42);
+  assertClose([e.position.x, e.position.y, e.position.z], [1, 2, 3], 0.05);
+  assertClose(
+    [e.velocity.x, e.velocity.y, e.velocity.z],
+    [0.5, -0.5, 0.25],
+    0.02,
+  );
+  assert.equal(e.input, 5);
+  assert.equal(e.health, 87);
+  assert.equal(e.level, 3);
 });
 
 test('Progress round-trips level, xp and xpForNext', () => {

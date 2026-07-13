@@ -2,12 +2,66 @@ import { Vector3, Quaternion } from 'three';
 
 import Types from './types.ts';
 import type { EntityKind } from './types.ts';
+import { BitWriter, BitReader } from './sim/net/bitpack.ts';
+import {
+  POSITION_BITS,
+  QUAT_COMPONENT_BITS,
+  VELOCITY_BITS,
+  VELOCITY_RANGE,
+  ANGULAR_VELOCITY_RANGE,
+  quantizeState,
+  dequantizeState,
+} from './sim/net/quantize.ts';
 
-// One replicated entity in a World snapshot: its id plus the 7-number network
-// state (position xyz + rotation xyzw) produced by Entity.serializeNetworkState.
+// One replicated entity in a World snapshot: its id plus the 16 quantized integer
+// buckets produced by quantizeState (position, smallest-three quaternion,
+// velocity, angular velocity, then input/health/level).
 interface WorldStateEntry {
   id: number;
   state: number[];
+}
+
+// Binary snapshot field widths (bits). Pose messages (World, State) bit-pack the
+// quantized buckets; every other message stays JSON.
+const TAG_BITS = 8;
+const ID_BITS = 16;
+const QUAT_INDEX_BITS = 2;
+const INPUT_BITS = 16;
+const HEALTH_BITS = 16;
+const LEVEL_BITS = 8;
+
+// Write the 14 physics slots of a quantized state (pos, quaternion, velocity,
+// angular velocity, input) MSB-first. Shared by World (per entity) and State.
+function writePhysics(w: BitWriter, s: number[]): void {
+  w.writeBits(s[0], POSITION_BITS);
+  w.writeBits(s[1], POSITION_BITS);
+  w.writeBits(s[2], POSITION_BITS);
+  w.writeBits(s[3], QUAT_INDEX_BITS);
+  w.writeBits(s[4], QUAT_COMPONENT_BITS);
+  w.writeBits(s[5], QUAT_COMPONENT_BITS);
+  w.writeBits(s[6], QUAT_COMPONENT_BITS);
+  for (let i = 7; i <= 12; i++) {
+    w.writeBits(s[i], VELOCITY_BITS);
+  }
+  w.writeBits(s[13], INPUT_BITS);
+}
+
+// Read the 14 physics slots back as quantized integer buckets.
+function readPhysics(r: BitReader): number[] {
+  const s = [
+    r.readBits(POSITION_BITS),
+    r.readBits(POSITION_BITS),
+    r.readBits(POSITION_BITS),
+    r.readBits(QUAT_INDEX_BITS),
+    r.readBits(QUAT_COMPONENT_BITS),
+    r.readBits(QUAT_COMPONENT_BITS),
+    r.readBits(QUAT_COMPONENT_BITS),
+  ];
+  for (let i = 7; i <= 12; i++) {
+    s.push(r.readBits(VELOCITY_BITS));
+  }
+  s.push(r.readBits(INPUT_BITS));
+  return s;
 }
 
 class Go {
@@ -161,34 +215,44 @@ export class State {
     this.input = input;
   }
 
-  static deserialize(message: number[]) {
+  static deserialize(bytes: Uint8Array) {
+    const r = new BitReader(bytes);
+    r.readBits(TAG_BITS);
+    const d = dequantizeState([...readPhysics(r), 0, 0]);
     return {
-      position: new Vector3(message[0], message[1], message[2]),
-      rotation: new Quaternion(message[3], message[4], message[5], message[6]),
-      velocity: new Vector3(message[7], message[8], message[9]),
-      angularVelocity: new Vector3(message[10], message[11], message[12]),
-      input: message[13] ?? 0,
+      position: d.position,
+      rotation: d.rotation,
+      velocity: d.velocity,
+      angularVelocity: d.angularVelocity,
+      input: d.input,
     };
   }
 
-  serialize() {
-    return [
-      Types.Messages.STATE,
-      this.position.x,
-      this.position.y,
-      this.position.z,
-      this.rotation.x,
-      this.rotation.y,
-      this.rotation.z,
-      this.rotation.w,
-      this.velocity.x,
-      this.velocity.y,
-      this.velocity.z,
-      this.angularVelocity.x,
-      this.angularVelocity.y,
-      this.angularVelocity.z,
-      this.input,
-    ];
+  serialize(): Uint8Array {
+    const w = new BitWriter();
+    w.writeBits(Types.Messages.STATE, TAG_BITS);
+    writePhysics(
+      w,
+      quantizeState([
+        this.position.x,
+        this.position.y,
+        this.position.z,
+        this.rotation.x,
+        this.rotation.y,
+        this.rotation.z,
+        this.rotation.w,
+        this.velocity.x,
+        this.velocity.y,
+        this.velocity.z,
+        this.angularVelocity.x,
+        this.angularVelocity.y,
+        this.angularVelocity.z,
+        this.input,
+        0,
+        0,
+      ]),
+    );
+    return w.bytes();
   }
 }
 
@@ -364,14 +428,22 @@ export class Pong {
 class World {
   entities: WorldStateEntry[];
   serverTime: number;
+  // The same World object is pushed to every connection; cache the bit-packed
+  // frame so it is encoded once per tick, not once per client.
+  private encoded: Uint8Array | null;
 
   constructor(entities: WorldStateEntry[], serverTime: number) {
     this.entities = entities;
     this.serverTime = serverTime;
+    this.encoded = null;
   }
 
-  static deserialize(message: number[]) {
-    const serverTime = message[0];
+  static deserialize(bytes: Uint8Array) {
+    const r = new BitReader(bytes);
+    r.readBits(TAG_BITS);
+    const serverTime = r.readFloat64();
+    const count = r.readBits(ID_BITS);
+
     const entities: {
       id: number;
       position: Vector3;
@@ -383,41 +455,43 @@ class World {
       level: number;
     }[] = [];
 
-    // After the serverTime prefix: 17 numbers per entity (id + 16 network-state
-    // values; the last three are the packed input bitmask, health and level).
-    for (let i = 1; i < message.length; i += 17) {
+    for (let i = 0; i < count; i++) {
+      const id = r.readBits(ID_BITS);
+      const physics = readPhysics(r);
+      const health = r.readBits(HEALTH_BITS);
+      const level = r.readBits(LEVEL_BITS);
+      const d = dequantizeState([...physics, health, level]);
       entities.push({
-        id: message[i],
-        position: new Vector3(message[i + 1], message[i + 2], message[i + 3]),
-        rotation: new Quaternion(
-          message[i + 4],
-          message[i + 5],
-          message[i + 6],
-          message[i + 7],
-        ),
-        velocity: new Vector3(message[i + 8], message[i + 9], message[i + 10]),
-        angularVelocity: new Vector3(
-          message[i + 11],
-          message[i + 12],
-          message[i + 13],
-        ),
-        input: message[i + 14],
-        health: message[i + 15],
-        level: message[i + 16],
+        id,
+        position: d.position,
+        rotation: d.rotation,
+        velocity: d.velocity,
+        angularVelocity: d.angularVelocity,
+        input: d.input,
+        health,
+        level,
       });
     }
 
     return { serverTime, entities };
   }
 
-  serialize() {
-    const data: number[] = [Types.Messages.WORLD, this.serverTime];
-
-    for (const { id, state } of this.entities) {
-      data.push(id, ...state);
+  serialize(): Uint8Array {
+    if (this.encoded) {
+      return this.encoded;
     }
-
-    return data;
+    const w = new BitWriter();
+    w.writeBits(Types.Messages.WORLD, TAG_BITS);
+    w.writeFloat64(this.serverTime);
+    w.writeBits(this.entities.length, ID_BITS);
+    for (const { id, state } of this.entities) {
+      w.writeBits(id, ID_BITS);
+      writePhysics(w, state);
+      w.writeBits(state[14], HEALTH_BITS);
+      w.writeBits(state[15], LEVEL_BITS);
+    }
+    this.encoded = w.bytes();
+    return this.encoded;
   }
 }
 

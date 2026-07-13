@@ -36,5 +36,7 @@ import './trade.test.ts';
 import './progression.test.ts';
 import './apply-extrapolation.test.ts';
 import './rebind.test.ts';
+import './quantize.test.ts';
+import './bitpack.test.ts';
 import { run } from './harness.ts';
 run();

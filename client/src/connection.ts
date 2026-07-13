@@ -3,7 +3,7 @@ import Messages from '../../shared/messages';
 import { serverWebSocketUrl } from './config';
 
 export interface OutgoingMessage {
-  serialize(): unknown[];
+  serialize(): unknown[] | Uint8Array;
 }
 
 // A message drained from the socket: the wire tag plus its deserialized payload.
@@ -93,6 +93,8 @@ export default class Connection {
     // Points at the game server (dev, same-origin, or a build-time override for
     // off-server hosting like CrazyGames) — see config.serverWebSocketUrl.
     this.connection = new WebSocket(serverWebSocketUrl());
+    // Pose snapshots (World) arrive as bit-packed binary frames.
+    this.connection.binaryType = 'arraybuffer';
 
     this.incomingMessageQueue = [];
     this.outgoingMessageQueue = [];
@@ -112,7 +114,21 @@ export default class Connection {
     };
 
     this.connection.onmessage = (event) => {
-      this.bytesReceived += (event.data as string).length;
+      // Binary frames carry bit-packed pose snapshots (World); the tag is the
+      // first byte. Everything else is JSON text.
+      if (typeof event.data !== 'string') {
+        const bytes = new Uint8Array(event.data as ArrayBuffer);
+        this.bytesReceived += bytes.byteLength;
+        if (bytes[0] === Types.Messages.WORLD) {
+          this.incomingMessageQueue.push({
+            type: Types.Messages.WORLD,
+            data: Messages.World.deserialize(bytes),
+          } as unknown as IncomingMessage);
+        }
+        return;
+      }
+
+      this.bytesReceived += event.data.length;
       let data: MessageData = JSON.parse(event.data) as unknown[];
       const type = data.shift();
 
@@ -132,9 +148,6 @@ export default class Connection {
           break;
         case Types.Messages.DESPAWN:
           data = Messages.Despawn.deserialize(data as number[]);
-          break;
-        case Types.Messages.WORLD:
-          data = Messages.World.deserialize(data as number[]);
           break;
         case Types.Messages.SHOT:
           data = Messages.Shot.deserialize(data as number[]);
@@ -200,7 +213,13 @@ export default class Connection {
   sendOutgoingMessages(): void {
     while (this.hasOutgoingMessage()) {
       const message = this.outgoingMessageQueue.shift();
-      this.sendRaw(JSON.stringify(message!.serialize()));
+      const payload = message!.serialize();
+      if (payload instanceof Uint8Array) {
+        this.bytesSent += payload.byteLength;
+        this.connection.send(payload as Uint8Array<ArrayBuffer>);
+      } else {
+        this.sendRaw(JSON.stringify(payload));
+      }
     }
   }
 
@@ -208,7 +227,7 @@ export default class Connection {
     this.sendRaw(JSON.stringify(message));
   }
 
-  // Single choke point for outbound frames, so every send is tallied for the
+  // Single choke point for outbound JSON frames, so every send is tallied for the
   // network readout.
   private sendRaw(payload: string): void {
     this.bytesSent += payload.length;
