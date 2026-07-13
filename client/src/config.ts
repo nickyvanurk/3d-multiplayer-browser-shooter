@@ -12,7 +12,11 @@ export function serverBaseUrl(): string {
   if (import.meta.env.DEV) {
     return 'http://localhost:1337';
   }
-  return `${location.origin}${import.meta.env.BASE_URL}`.replace(/\/$/, '');
+  // Last-resort same-origin fallback for a combined Express deploy. base is
+  // './', so import.meta.env.BASE_URL is useless here — derive the mount path
+  // from the page location instead (the socket lives beside index.html).
+  const dir = location.pathname.replace(/[^/]*$/, '');
+  return `${location.origin}${dir}`.replace(/\/$/, '');
 }
 
 // The same server's WebSocket URL (http(s) -> ws(s)). The trailing slash keeps
