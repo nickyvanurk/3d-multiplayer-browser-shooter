@@ -233,22 +233,14 @@ export class HudService {
     this.sceneOrtho = new Scene();
 
     const loader = new TextureLoader();
-    // The 2nd arg to Promise.all is dead code in the original JS (Promise.all takes one
-    // arg); the cast keeps the exact call — including the ignored callback — unchanged.
-    const texture = (
-      Promise.all as (
-        values: Texture[],
-        executor: (resolve: (value: unknown) => void, reject: unknown) => void,
-      ) => Promise<Texture[]>
-    )(
-      [
-        loader.load('textures/spaceship.png'),
-        loader.load('textures/vendor.png'),
-      ],
-      (resolve, _) => {
-        resolve(texture);
-      },
-    ).then((result) => {
+    // loadAsync resolves only once the PNG has decoded, so `this.textures` (and
+    // the `!this.textures` render guard) is never populated with a Texture whose
+    // .image is still undefined — plain `load()` returns the Texture synchronously
+    // and would let createHudSprite read .image.width before the bytes arrive.
+    Promise.all([
+      loader.loadAsync('textures/spaceship.png'),
+      loader.loadAsync('textures/vendor.png'),
+    ]).then((result) => {
       this.textures = {
         spaceship: result[0],
         vendor: result[1],

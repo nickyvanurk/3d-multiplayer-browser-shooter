@@ -266,6 +266,15 @@ export default class Game {
     this.lastTime = performance.now();
     requestAnimationFrame(this.frame.bind(this));
 
+    // Rapier (its ~2 MB inlined wasm) is a lazy chunk — a dynamic import keeps it
+    // out of the entry bundle so the landing console + starfield paint on the
+    // first frame instead of waiting on physics. Kick the fetch off now, in
+    // parallel with the models, so it streams in the background while the player
+    // types their callsign; by the time they Launch it's already warm.
+    const rapierModule = import(
+      '../../shared/sim/physics/rapier-physics-world.ts'
+    );
+
     // Essential meshes only (ship + asteroid field); projectile and the far-away
     // vendor stream in afterwards and fill in their view/body on arrival (see
     // ViewRegistry). Audio + music are started AFTER simReady below so they never
@@ -275,6 +284,7 @@ export default class Game {
     // The client runs its own Rapier world (all ships + the static asteroid
     // field). Meshes come from the GLTF scenes the renderer already loaded.
     // reconcileShips is off: the client manages ship bodies itself.
+    const { RapierPhysicsWorld } = await rapierModule;
     this.physics = new RapierPhysicsWorld(
       new BrowserMeshProvider(this.viewRegistry.models),
     );
