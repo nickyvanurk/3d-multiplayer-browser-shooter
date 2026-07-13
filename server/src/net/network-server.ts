@@ -48,6 +48,12 @@ const MAX_HIT_RANGE = DEFAULT_BULLET_SPEED * DEFAULT_BULLET_TIMER * 1.5;
 const LEADERBOARD_SIZE = 10;
 const LEADERBOARD_INTERVAL = 20;
 
+// World snapshots go out every 3rd 60 Hz tick (~20 Hz). Quantized snapshots plus
+// client-side extrapolation make a per-tick rate redundant, and this thirds the
+// downstream bandwidth. The differ runs only on these ticks, so each snapshot
+// still captures every change since the last one.
+const SNAPSHOT_INTERVAL = 3;
+
 export class NetworkServer {
   gameServer: GameServer;
   world: World;
@@ -71,6 +77,9 @@ export class NetworkServer {
   // Ticks since the last leaderboard broadcast — it goes out every
   // LEADERBOARD_INTERVAL ticks (~3 Hz) rather than every 60 Hz tick.
   private leaderboardTick: number;
+  // Ticks since the last world snapshot — it goes out every SNAPSHOT_INTERVAL
+  // ticks (~20 Hz) rather than every 60 Hz tick.
+  private snapshotTick: number;
 
   constructor(gameServer: GameServer) {
     this.gameServer = gameServer;
@@ -83,6 +92,7 @@ export class NetworkServer {
     this.lastLoadout = new Map(); // connection.id -> { hasMiningLaser, primaryItem, secondaryItem }
     this.lastProgress = new Map(); // connection.id -> { level, xp }
     this.leaderboardTick = 0;
+    this.snapshotTick = 0;
   }
 
   addConnection(connection: Connection): void {
@@ -518,17 +528,24 @@ export class NetworkServer {
       }
     }
 
-    const changed = this.differ.changed(world).filter((c) => {
-      const entity = world.get(c.id);
-      return entity && entity.alive !== false;
-    });
+    // Throttle the world snapshot to ~20 Hz. The differ runs only on these ticks,
+    // so it diffs against the last snapshot and still reports every change over
+    // the interval.
+    if (++this.snapshotTick >= SNAPSHOT_INTERVAL) {
+      this.snapshotTick = 0;
 
-    if (changed.length) {
-      // Bullets no longer exist server-side (except bots'), so there's nothing to
-      // exclude per-connection: every client gets the same snapshot.
-      const snapshot = new Messages.World(changed, now);
-      for (const connection of this.connections) {
-        connection.pushMessage(snapshot);
+      const changed = this.differ.changed(world).filter((c) => {
+        const entity = world.get(c.id);
+        return entity && entity.alive !== false;
+      });
+
+      if (changed.length) {
+        // Bullets no longer exist server-side (except bots'), so there's nothing
+        // to exclude per-connection: every client gets the same snapshot.
+        const snapshot = new Messages.World(changed, now);
+        for (const connection of this.connections) {
+          connection.pushMessage(snapshot);
+        }
       }
     }
 
