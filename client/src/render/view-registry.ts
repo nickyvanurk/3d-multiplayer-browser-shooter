@@ -135,7 +135,13 @@ export class ViewRegistry {
   // projectile then the heavy vendor mesh are deprioritized and streamed in
   // after, each filling in its view/body on arrival.
   load(): Promise<void> {
-    const loader = new GLTFLoader().setPath('models/');
+    // Anchor model URLs to the client bundle's base (Vite's BASE_URL: '/' in dev,
+    // './' in the relative-base build) rather than a bare relative segment, so the
+    // GLBs always resolve to wherever the client is served — never against the
+    // game-server/socket origin, which only serves them under PRODUCTION.
+    const loader = new GLTFLoader().setPath(
+      `${import.meta.env.BASE_URL}models/`,
+    );
 
     const loadOne = (kind: EntityKind, path: string): Promise<void> =>
       new Promise<void>((resolve, reject) => {
