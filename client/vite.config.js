@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   root: __dirname,
-  base: '/voidfall/',
+  base: './',
   publicDir: 'public',
   resolve: { extensions: ['.ts', '.js', '.mjs', '.json'] },
   build: {
