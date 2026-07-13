@@ -21,3 +21,14 @@ export function getPlayerName(): string {
     return generateName();
   }
 }
+
+// Persist the player's chosen callsign so the next load prefills it. Silently
+// no-ops if localStorage is unavailable (private mode / quota / blocked) — the
+// name still applies this session; it just won't survive a reload.
+export function setPlayerName(name: string): void {
+  try {
+    localStorage.setItem(NAME_KEY, name);
+  } catch {
+    // Non-fatal: the name is used this session regardless.
+  }
+}

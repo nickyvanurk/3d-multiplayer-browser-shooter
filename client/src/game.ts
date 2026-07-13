@@ -22,7 +22,8 @@ import { SoundService } from './audio/sound-service.ts';
 import { DebugPanel } from './debug/debug-panel.ts';
 import { SettingsStore } from './settings.ts';
 import { consumeFirstVisit } from './first-visit.ts';
-import { getPlayerName } from './player-name.ts';
+import { getPlayerName, setPlayerName } from './player-name.ts';
+import { Landing } from './ui/landing.ts';
 import { SettingsMenu } from './ui/settings-menu.ts';
 import { MusicPlayer, defaultPlaylist } from './audio/music-player.ts';
 import { MusicPlayerHud } from './ui/music-player-hud.ts';
@@ -72,6 +73,7 @@ export default class Game {
   leaderboardHud: LeaderboardHud;
   hitMarker: HitMarker;
   statsHud: StatsHud;
+  landing: Landing;
   // Smoothed frames-per-second for the stats overlay (EMA of 1000/frameDelta).
   fps = 0;
   // Sent/received bandwidth in bytes/second, resampled once a second from the
@@ -231,6 +233,22 @@ export default class Game {
     });
     this.connection.onDisconnect(() => console.log('Disconnected from server'));
     this.connection.onError((error) => console.log(error));
+
+    // Pre-flight landing console. The socket opens now (so Launch is instant),
+    // but NetworkClient withholds the join handshake until launch() fires below,
+    // so no ship spawns until the player picks a callsign.
+    this.landing = new Landing({
+      initialName: getPlayerName(),
+      onLaunch: (name) => this.launch(name),
+    });
+  }
+
+  // The player committed to a callsign on the landing screen. Persist it, kick
+  // off the join handshake, and swap the landing console for the boot overlay.
+  private launch(name: string): void {
+    setPlayerName(name);
+    this.networkClient.join(name);
+    document.getElementById('boot-overlay')?.classList.remove('hidden');
   }
 
   async init(): Promise<void> {

@@ -65,3 +65,339 @@ canvas {
   transform: translate(-50%, -50%);
   pointer-events: none;
 }
+
+/* ── Landing console ───────────────────────────────────────────────────────
+   The pre-flight screen (client/src/ui/landing.ts). Full-screen, transparent so
+   the live starfield shows through, sitting above the boot overlay. Uses the
+   game's native HUD palette: cyan #8fd0ff, amber #e2b04a, hairline #3a4a6a. */
+#landing {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow-y: auto;
+  /* The rest of the app runs cursor:none; the console needs a real pointer. */
+  cursor: default;
+  color: #cfd8e6;
+  font-family: system-ui, -apple-system, sans-serif;
+  /* A faint dark bloom behind the console lifts the text off busy starfield. */
+  background: radial-gradient(
+    ellipse 60% 70% at 50% 45%,
+    rgba(2, 4, 10, 0.72),
+    rgba(2, 4, 10, 0) 75%
+  );
+  opacity: 1;
+  transition: opacity 0.5s ease;
+}
+
+#landing.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.landing-console {
+  width: min(560px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 26px;
+  animation: landing-rise 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes landing-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
+.landing-head {
+  text-align: center;
+}
+
+.landing-eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: #8fd0ff;
+  opacity: 0.85;
+}
+
+.landing-title {
+  margin: 10px 0 6px;
+  font-size: clamp(52px, 12vw, 92px);
+  font-weight: 800;
+  line-height: 0.9;
+  letter-spacing: 0.16em;
+  text-indent: 0.16em;
+  color: #eaf4ff;
+  text-shadow: 0 0 26px rgba(90, 209, 255, 0.45);
+}
+
+.landing-tag {
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  color: #6b7a94;
+}
+
+/* Callsign field */
+.landing-field {
+  width: 100%;
+}
+
+.landing-field > label {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: #8fd0ff;
+  margin-bottom: 8px;
+}
+
+.callsign-row {
+  display: flex;
+  gap: 10px;
+}
+
+#vf-callsign {
+  flex: 1;
+  min-width: 0;
+  padding: 13px 16px;
+  font: inherit;
+  font-size: 19px;
+  letter-spacing: 0.06em;
+  color: #eaf4ff;
+  background: rgba(8, 12, 22, 0.72);
+  border: 1px solid #3a4a6a;
+  border-radius: 8px;
+  outline: none;
+  cursor: text;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+#vf-callsign:focus {
+  border-color: #8fd0ff;
+  box-shadow: 0 0 0 3px rgba(90, 209, 255, 0.16);
+}
+
+.reroll {
+  flex: 0 0 auto;
+  width: 50px;
+  display: grid;
+  place-items: center;
+  color: #8fd0ff;
+  background: rgba(8, 12, 22, 0.72);
+  border: 1px solid #3a4a6a;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, transform 0.3s ease;
+}
+
+.reroll:hover {
+  border-color: #8fd0ff;
+  color: #eaf4ff;
+}
+
+.reroll:active {
+  transform: rotate(-180deg);
+}
+
+.callsign-hint {
+  min-height: 16px;
+  margin-top: 7px;
+  font-size: 12px;
+  letter-spacing: 0.03em;
+  color: #6b7a94;
+}
+
+.callsign-hint.error {
+  color: #e2894a;
+}
+
+/* Flight-controls briefing */
+.landing-controls {
+  width: 100%;
+}
+
+.controls-label {
+  font-size: 11px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: #8fd0ff;
+  text-align: center;
+  margin-bottom: 14px;
+}
+
+/* Movement keys arranged spatially around the ship: a thrust-direction map. */
+.control-map {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-areas:
+    '.    up    .'
+    'left ship right'
+    '.    down  .';
+  align-items: center;
+  justify-items: center;
+  gap: 4px 10px;
+  max-width: 360px;
+  margin: 0 auto;
+}
+
+.dcell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #6b7a94;
+}
+
+.dcell.up {
+  grid-area: up;
+}
+.dcell.left {
+  grid-area: left;
+}
+.dcell.ship {
+  grid-area: ship;
+}
+.dcell.right {
+  grid-area: right;
+}
+.dcell.down {
+  grid-area: down;
+}
+
+.dcell .dir {
+  color: #8fd0ff;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.control-map .key {
+  height: 40px;
+  width: auto;
+}
+
+.dcell.ship .ship {
+  width: 128px;
+  height: 128px;
+  filter: drop-shadow(0 0 10px rgba(90, 209, 255, 0.35));
+}
+
+.dcell.ship .thrust {
+  animation: thrust-flicker 0.5s ease-in-out infinite alternate;
+  transform-origin: center;
+}
+
+@keyframes thrust-flicker {
+  from {
+    opacity: 0.55;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Fixed height, auto width: wide keys (Space, Shift) keep their true aspect
+   ratio instead of being squished into a square. */
+.key {
+  height: 34px;
+  width: auto;
+  object-fit: contain;
+  user-select: none;
+}
+
+/* Secondary legend: roll / vertical / boost / primary + secondary weapons. */
+.control-chips {
+  list-style: none;
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 20px;
+  padding: 0;
+}
+
+.control-chips li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px 6px 8px;
+  background: rgba(8, 12, 22, 0.55);
+  border: 1px solid #263450;
+  border-radius: 20px;
+  font-size: 12px;
+  letter-spacing: 0.03em;
+  color: #9fb0c8;
+}
+
+.control-chips .key {
+  height: 26px;
+  width: auto;
+}
+
+/* Launch — the one warm, deliberate accent against the all-cyan console. */
+.launch-btn {
+  margin-top: 4px;
+  padding: 15px 56px;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #1a1206;
+  background: linear-gradient(180deg, #f3c766, #e2b04a);
+  border: none;
+  border-radius: 9px;
+  cursor: pointer;
+  box-shadow: 0 0 0 1px rgba(226, 176, 74, 0.5), 0 10px 30px rgba(226, 176, 74, 0.28);
+  transition: transform 0.12s ease, box-shadow 0.2s ease, filter 0.15s ease;
+}
+
+.launch-btn:hover {
+  filter: brightness(1.08);
+  box-shadow: 0 0 0 1px rgba(226, 176, 74, 0.6), 0 12px 40px rgba(226, 176, 74, 0.42);
+}
+
+.launch-btn:active {
+  transform: translateY(1px);
+}
+
+.launch-btn:disabled {
+  color: #5a5342;
+  background: #2a2c34;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.launch-glyph {
+  font-size: 12px;
+  margin-left: 4px;
+}
+
+@media (max-width: 460px) {
+  .landing-console {
+    gap: 20px;
+  }
+  .control-chips {
+    margin-top: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-console,
+  .dcell.ship .thrust {
+    animation: none;
+  }
+  #landing,
+  .reroll,
+  .launch-btn {
+    transition: none;
+  }
+}

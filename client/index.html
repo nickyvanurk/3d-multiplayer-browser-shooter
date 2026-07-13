@@ -9,10 +9,11 @@
        browser's default white while the module bundle downloads. -->
   <style>
     html, body { margin: 0; background: #020207; }
-    /* During boot, show only the starfield (canvas) and the "Entering sector"
-       overlay — every HUD element (crosshair, hull/cargo bars, music, stats) is
-       a direct child of <body> and stays hidden until the ship spawns. */
-    body.booting > *:not(#boot-overlay):not(canvas) { display: none !important; }
+    /* During boot, show only the starfield (canvas), the "Entering sector"
+       overlay, and the landing console — every HUD element (crosshair,
+       hull/cargo bars, music, stats) is a direct child of <body> and stays
+       hidden until the ship spawns. */
+    body.booting > *:not(#boot-overlay):not(#landing):not(canvas) { display: none !important; }
   </style>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%230b0f1a'/%3E%3Ccircle cx='50' cy='50' r='14' fill='none' stroke='%235ad1ff' stroke-width='6'/%3E%3C/svg%3E">
 </head>
@@ -27,7 +28,9 @@
     <path d="M355.139,320.645c-9.527-9.527-24.963-9.527-34.49,0c-9.527,9.527-9.527,24.963,0,34.49    l32.937,44.431c9.527,9.519,30.71,3.78,40.236-5.747s15.274-30.71,5.747-40.236L355.139,320.645z"/>
     <path d="M49.318,320.645L4.887,353.582c-9.527,9.527-3.78,30.71,5.747,40.236s30.71,15.274,40.236,5.747    l32.937-44.431c9.527-9.519,9.527-24.963,0-34.49C74.28,311.127,58.844,311.127,49.318,320.645z"/>
   </svg>
-  <div id="boot-overlay"><span class="label">Entering sector&hellip;</span></div>
+  <!-- Starts hidden: the landing console owns the screen first. Revealed on
+       Launch (Game.launch) and faded out again when the ship spawns. -->
+  <div id="boot-overlay" class="hidden"><span class="label">Entering sector&hellip;</span></div>
   <script type="module" src="/src/index.ts"></script>
 </body>
 </html>

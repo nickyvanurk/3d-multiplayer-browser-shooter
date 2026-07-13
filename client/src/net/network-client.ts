@@ -95,6 +95,13 @@ export class NetworkClient {
   // Leaderboard update (Leaderboard), throttled, for the top-right panel.
   onLeaderboard: ((leaderboard: LeaderboardData) => void) | null;
   timeSync: TimeSyncManager;
+  // Join handshake gating. The socket opens on load so Launch is instant, but the
+  // Hello — which is what spawns the ship — is withheld until the player commits
+  // to a callsign on the landing screen. goReceived: the server sent GO; joined:
+  // the player hit Launch. Hello goes out only once both are true (trySendHello).
+  goReceived = false;
+  joined = false;
+  private helloSent = false;
   // Smoothed round-trip time (ms) from the last PONGs, for the stats overlay.
   pingMs = 0;
   _cameraDummy: Object3D;
@@ -128,14 +135,35 @@ export class NetworkClient {
     this._cameraDummy = new Object3D();
   }
 
+  // The player committed to a callsign on the landing screen and hit Launch.
+  // Record it and complete the handshake if the server has already greeted us;
+  // otherwise trySendHello fires when GO arrives.
+  join(name: string): void {
+    this.name = name;
+    this.joined = true;
+    this.trySendHello();
+  }
+
+  // Send the join handshake exactly once, and only when both sides are ready:
+  // the server has sent GO and the player has launched. Idempotent, so both the
+  // GO handler and join() can call it without racing.
+  private trySendHello(): void {
+    if (this.helloSent || !this.goReceived || !this.joined) {
+      return;
+    }
+    this.helloSent = true;
+    this.connection.pushMessage(new Messages.Hello(this.name));
+    this.connection.sendOutgoingMessages();
+  }
+
   processMessages(): void {
     while (this.connection.hasIncomingMessage()) {
       const message = this.connection.popMessage();
 
       switch (message!.type) {
         case Types.Messages.GO:
-          this.connection.pushMessage(new Messages.Hello(this.name));
-          this.connection.sendOutgoingMessages();
+          this.goReceived = true;
+          this.trySendHello();
           break;
         case Types.Messages.WELCOME: {
           const { id } = message!.data;
