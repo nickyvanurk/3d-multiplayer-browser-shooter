@@ -13,6 +13,10 @@ export interface SnapshotBudget {
   entityBits: number;
 }
 
+// Per-object priority for this snapshot. Return > 0 to weight the object (larger
+// = sooner); return <= 0 to cull it entirely (out of interest, not sent at all).
+export type PriorityFn = (entity: Entity) => number;
+
 // Fiedler's priority accumulator. Each snapshot, every changed object's priority
 // is added to a per-object accumulator; objects are then sorted by accumulator
 // (largest first) and packed into the packet up to the bandwidth budget. Objects
@@ -32,7 +36,11 @@ export class PriorityAccumulator {
     this.accumulator = new Map();
   }
 
-  select(world: World, budget: SnapshotBudget): PriorityEntry[] {
+  select(
+    world: World,
+    budget: SnapshotBudget,
+    priorityOf: PriorityFn = () => 1,
+  ): PriorityEntry[] {
     const candidates: { id: number; state: number[]; key: string }[] = [];
     const seen = new Set<number>();
 
@@ -41,6 +49,10 @@ export class PriorityAccumulator {
       if (entity.alive === false) {
         continue; // dead entities are handled by Despawn, not snapshots
       }
+      const priority = priorityOf(entity);
+      if (priority <= 0) {
+        continue; // outside this viewer's interest — cull (keeps its baseline)
+      }
       const state = quantizeState(entity.serializeNetworkState());
       const key = state.join(',');
       if (this.baseline.get(entity.id!) === key) {
@@ -48,7 +60,7 @@ export class PriorityAccumulator {
       }
       this.accumulator.set(
         entity.id!,
-        (this.accumulator.get(entity.id!) ?? 0) + this.priorityFor(entity),
+        (this.accumulator.get(entity.id!) ?? 0) + priority,
       );
       candidates.push({ id: entity.id!, state, key });
     }
@@ -72,12 +84,6 @@ export class PriorityAccumulator {
       this.accumulator.set(candidate.id, 0);
     }
     return out;
-  }
-
-  // Per-object, per-snapshot priority. Constant for now (fair round-robin among
-  // changed objects); a distance/importance weighting hooks in here later.
-  private priorityFor(_entity: Entity): number {
-    return 1;
   }
 
   private prune(seen: Set<number>): void {

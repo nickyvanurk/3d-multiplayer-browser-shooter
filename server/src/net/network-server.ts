@@ -18,7 +18,10 @@ import {
   type CombatEntity,
 } from '../../../shared/sim/subsystems/combat.ts';
 import { InputCommand } from '../../../shared/sim/input.ts';
-import { PriorityAccumulator } from '../../../shared/sim/net/priority.ts';
+import {
+  PriorityAccumulator,
+  type PriorityFn,
+} from '../../../shared/sim/net/priority.ts';
 import { pickSpawnPosition } from '../../../shared/sim/spawn.ts';
 import {
   sellCargo,
@@ -65,12 +68,43 @@ const SNAPSHOT_HZ = 60 / SNAPSHOT_INTERVAL;
 const SNAPSHOT_BANDWIDTH_BPS = 256 * 1024; // 256 kbit/s
 const SNAPSHOT_BUDGET_BITS = SNAPSHOT_BANDWIDTH_BPS / SNAPSHOT_HZ;
 
+// Interest management: a client is only sent entities within AOI_RADIUS of its
+// ship — 1.5x the 2 km fog-out distance, so a ship is tracked before it emerges
+// from fog (no pop-in) and everything genuinely off-screen is culled. Within the
+// radius, nearer entities carry higher priority (up to AOI_NEAR_BOOST + 1 at the
+// ship vs ~1 at the edge), so close action updates far more often than distant.
+const AOI_RADIUS = 3000; // metres
+const AOI_RADIUS_SQ = AOI_RADIUS * AOI_RADIUS;
+const AOI_NEAR_BOOST = 9;
+
+// The per-object priority a given viewer ship assigns each entity this snapshot.
+// No viewer (dead/unspawned) falls back to a flat priority so spectating still
+// receives the world within the budget.
+function viewerPriority(self: Entity | null): PriorityFn {
+  if (!self) {
+    return () => 1;
+  }
+  const origin = self.transform.position;
+  return (entity) => {
+    if (entity === self) {
+      return 1 + AOI_NEAR_BOOST; // own ship stays fresh (carries the owner's health)
+    }
+    const d2 = entity.transform.position.distanceToSquared(origin);
+    if (d2 > AOI_RADIUS_SQ) {
+      return 0; // beyond interest — cull
+    }
+    return 1 + AOI_NEAR_BOOST * (1 - Math.sqrt(d2) / AOI_RADIUS);
+  };
+}
+
 export class NetworkServer {
   gameServer: GameServer;
   world: World;
   connections: Set<Connection>;
   ships: Map<number, Ship>;
-  priority: PriorityAccumulator;
+  // One priority accumulator per connection (keyed by connection.id): each client
+  // gets its own bandwidth-budgeted, distance-prioritised view of the world.
+  priorities: Map<number, PriorityAccumulator>;
   lastAlive: Map<number, boolean>;
   // Last cargo/credits sent to each owner, so Stats only goes out on a change.
   lastStats: Map<number, { cargo: number; credits: number }>;
@@ -97,7 +131,7 @@ export class NetworkServer {
     this.world = gameServer.world;
     this.connections = new Set();
     this.ships = new Map(); // connection.id -> Ship
-    this.priority = new PriorityAccumulator();
+    this.priorities = new Map(); // connection.id -> PriorityAccumulator
     this.lastAlive = new Map(); // ship id -> boolean
     this.lastStats = new Map(); // connection.id -> { cargo, credits }
     this.lastLoadout = new Map(); // connection.id -> { hasMiningLaser, primaryItem, secondaryItem }
@@ -108,6 +142,7 @@ export class NetworkServer {
 
   addConnection(connection: Connection): void {
     this.connections.add(connection);
+    this.priorities.set(connection.id, new PriorityAccumulator());
     connection.onDisconnect(() => this.handleDisconnect(connection));
 
     connection.pushMessage(new Messages.Go());
@@ -145,6 +180,7 @@ export class NetworkServer {
     this.lastStats.delete(connection.id);
     this.lastLoadout.delete(connection.id);
     this.lastProgress.delete(connection.id);
+    this.priorities.delete(connection.id);
     this.connections.delete(connection);
     this.gameServer.connectedClients--;
   }
@@ -540,20 +576,26 @@ export class NetworkServer {
     if (++this.snapshotTick >= SNAPSHOT_INTERVAL) {
       this.snapshotTick = 0;
 
-      // Pack the highest-priority changed entities into the packet up to the
-      // bandwidth budget; the rest defer to the next snapshot.
-      const changed = this.priority.select(world, {
+      // Each client gets its own snapshot: the highest-priority changed entities
+      // within its area of interest that fit the bandwidth budget, nearest first.
+      const budget = {
         budgetBits: SNAPSHOT_BUDGET_BITS,
         headerBits: WORLD_HEADER_BITS,
         entityBits: WORLD_ENTITY_BITS,
-      });
-
-      if (changed.length) {
-        // Bullets no longer exist server-side (except bots'), so there's nothing
-        // to exclude per-connection: every client gets the same snapshot.
-        const snapshot = new Messages.World(changed, now);
-        for (const connection of this.connections) {
-          connection.pushMessage(snapshot);
+      };
+      for (const connection of this.connections) {
+        const accumulator = this.priorities.get(connection.id);
+        if (!accumulator) {
+          continue;
+        }
+        const viewer = this.ships.get(connection.id) ?? null;
+        const changed = accumulator.select(
+          world,
+          budget,
+          viewerPriority(viewer),
+        );
+        if (changed.length) {
+          connection.pushMessage(new Messages.World(changed, now));
         }
       }
     }

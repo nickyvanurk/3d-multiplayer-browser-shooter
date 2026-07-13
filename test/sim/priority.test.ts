@@ -88,6 +88,50 @@ test('a sent entity resets to zero, so a fresh change does not jump the queue', 
   );
 });
 
+test('a non-positive priority culls an entity entirely (interest management)', () => {
+  const w = new World();
+  const a = w.spawn(new Entity({ type: 1 }));
+  const b = w.spawn(new Entity({ type: 1 }));
+  const pa = new PriorityAccumulator();
+  const cullB = (e: Entity) => (e.id === b.id ? 0 : 1);
+
+  assert.deepEqual(
+    pa.select(w, UNCAPPED, cullB).map((e) => e.id),
+    [a.id],
+  );
+  // Even changing + many ticks, a culled entity never enters a packet.
+  for (let i = 0; i < 5; i++) {
+    b.transform.position.set(i, 0, 0);
+    assert.deepEqual(
+      pa.select(w, UNCAPPED, cullB).map((e) => e.id),
+      [],
+    );
+  }
+});
+
+test('higher priority updates far more often but the low one still gets through', () => {
+  const w = new World();
+  const near = w.spawn(new Entity({ type: 1 }));
+  const far = w.spawn(new Entity({ type: 1 }));
+  const pa = new PriorityAccumulator();
+  const budget = { budgetBits: 10, headerBits: 0, entityBits: 10 }; // 1 per packet
+  const prio = (e: Entity) => (e.id === near.id ? 10 : 1);
+
+  let nearCount = 0;
+  let farCount = 0;
+  for (let t = 0; t < 12; t++) {
+    near.transform.position.set(t + 1, 0, 0); // both change every tick
+    far.transform.position.set(0, 0, t + 1);
+    for (const e of pa.select(w, budget, prio)) {
+      if (e.id === near.id) nearCount++;
+      else farCount++;
+    }
+  }
+
+  assert.ok(nearCount > farCount, 'near updates dominate');
+  assert.ok(farCount >= 1, 'far is still eventually delivered (no starvation)');
+});
+
 test('despawned entities are pruned and never reselected', () => {
   const w = new World();
   const a = w.spawn(new Entity({ type: 1 }));
