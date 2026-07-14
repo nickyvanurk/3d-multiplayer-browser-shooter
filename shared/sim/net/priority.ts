@@ -14,7 +14,15 @@ export interface SnapshotBudget {
 }
 
 // Per-object priority for this snapshot. Return > 0 to weight the object (larger
-// = sooner); return <= 0 to cull it entirely (out of interest, not sent at all).
+// = sooner). Returning <= 0 culls it: not deferred, but dropped from every packet
+// for as long as the priority stays <= 0.
+//
+// Culling is almost never what you want. The accumulator's guarantee is eventual
+// delivery, and a cull is the one way to forfeit it — clients dead-reckon remote
+// bodies on their last known velocity, so a culled object doesn't freeze, it
+// coasts in a straight line forever. Prefer a small positive priority (rare
+// updates) over 0 (silence); let the bandwidth budget do the rationing. Reserve 0
+// for objects the client genuinely must not know about at all.
 export type PriorityFn = (entity: Entity) => number;
 
 // Fiedler's priority accumulator. Each snapshot, every changed object's priority

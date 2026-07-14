@@ -14,6 +14,7 @@ import './visual-smoothing.test.ts';
 import './ping-server.test.ts';
 import './network-client-sync.test.ts';
 import './priority.test.ts';
+import './interest.test.ts';
 import './physics-contract.test.ts';
 import './rapier-body-sync.test.ts';
 import './rapier-thrust-gating.test.ts';

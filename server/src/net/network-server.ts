@@ -68,19 +68,31 @@ const SNAPSHOT_HZ = 60 / SNAPSHOT_INTERVAL;
 const SNAPSHOT_BANDWIDTH_BPS = 256 * 1024; // 256 kbit/s
 const SNAPSHOT_BUDGET_BITS = SNAPSHOT_BANDWIDTH_BPS / SNAPSHOT_HZ;
 
-// Interest management: a client is only sent entities within AOI_RADIUS of its
-// ship — 1.5x the 2 km fog-out distance, so a ship is tracked before it emerges
-// from fog (no pop-in) and everything genuinely off-screen is culled. Within the
-// radius, nearer entities carry higher priority (up to AOI_NEAR_BOOST + 1 at the
-// ship vs ~1 at the edge), so close action updates far more often than distant.
+// Interest management: within AOI_RADIUS of the viewer's ship — 1.5x the 2 km
+// fog-out distance, so a ship is tracked before it emerges from fog (no pop-in) —
+// nearer entities carry higher priority (up to AOI_NEAR_BOOST + 1 at the ship vs
+// ~1 at the edge), so close action updates far more often than distant.
+//
+// Past the radius an entity drops to AOI_FAR_PRIORITY but is NEVER culled.
+// Distance decides how OFTEN an object is sent, never WHETHER: a zero priority
+// tells the accumulator to drop the object from every packet forever, and the
+// client dead-reckons remote bodies on their last known velocity between
+// snapshots — so a culled object doesn't merely go stale, it coasts in a straight
+// line to infinity. Bandwidth is the budget's job, not the cull's: unchanged
+// objects never become candidates at all, and the budget caps whatever is left.
 const AOI_RADIUS = 3000; // metres
 const AOI_RADIUS_SQ = AOI_RADIUS * AOI_RADIUS;
 const AOI_NEAR_BOOST = 9;
+// Floor for anything beyond the radius. Uncontended it still rides along in every
+// snapshot; only once a packet saturates does it fall behind, and even then it
+// out-accumulates point-blank traffic within ~20 snapshots (~1s at 20 Hz), which
+// bounds how stale an off-screen entity can get.
+const AOI_FAR_PRIORITY = 0.5;
 
 // The per-object priority a given viewer ship assigns each entity this snapshot.
 // No viewer (dead/unspawned) falls back to a flat priority so spectating still
 // receives the world within the budget.
-function viewerPriority(self: Entity | null): PriorityFn {
+export function viewerPriority(self: Entity | null): PriorityFn {
   if (!self) {
     return () => 1;
   }
@@ -91,7 +103,7 @@ function viewerPriority(self: Entity | null): PriorityFn {
     }
     const d2 = entity.transform.position.distanceToSquared(origin);
     if (d2 > AOI_RADIUS_SQ) {
-      return 0; // beyond interest — cull
+      return AOI_FAR_PRIORITY; // out of sight, but still delivered eventually
     }
     return 1 + AOI_NEAR_BOOST * (1 - Math.sqrt(d2) / AOI_RADIUS);
   };
